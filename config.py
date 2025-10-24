@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     deepseek_api_key: str = "sk-66137666196b4d73b892183a876994b0"
     deepseek_model: str = "deepseek-coder"
     deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_max_tokens: int = 131072  # DeepSeek最大context长度
     
     # 服务配置
     host: str = "0.0.0.0"
