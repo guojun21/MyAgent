@@ -265,6 +265,67 @@
             cursor: not-allowed;
         }
 
+        /* Context使用量圆环 */
+        .context-usage {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 15px;
+        }
+
+        .circle-progress {
+            position: relative;
+            width: 40px;
+            height: 40px;
+        }
+
+        .circle-progress svg {
+            transform: rotate(-90deg);
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: #e0e0e0;
+            stroke-width: 3;
+        }
+
+        .circle-fill {
+            fill: none;
+            stroke: #2c2c2c;
+            stroke-width: 3;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.3s ease;
+        }
+
+        .circle-fill.warning {
+            stroke: #ff9800;
+        }
+
+        .circle-fill.danger {
+            stroke: #f44336;
+        }
+
+        .circle-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10px;
+            font-weight: 600;
+            color: #2c2c2c;
+        }
+
+        .context-label {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .context-value {
+            font-size: 12px;
+            color: #2c2c2c;
+            font-weight: 500;
+        }
+
         /* 测试页面 */
         .test-panel {
             padding: 30px 40px;
@@ -561,6 +622,22 @@
                            placeholder="描述你的需求..." 
                            onkeypress="handleKeyPress(event)">
                     <button class="btn-send" onclick="sendMessage()" id="sendBtn">发送</button>
+                    
+                    <!-- Context用量圆环 -->
+                    <div class="context-usage">
+                        <div class="circle-progress">
+                            <svg width="40" height="40">
+                                <circle class="circle-bg" cx="20" cy="20" r="16"></circle>
+                                <circle class="circle-fill" id="contextCircle" cx="20" cy="20" r="16" 
+                                        stroke-dasharray="100.48" stroke-dashoffset="100.48"></circle>
+                            </svg>
+                            <div class="circle-text" id="contextPercent">0%</div>
+                        </div>
+                        <div>
+                            <div class="context-label">Context</div>
+                            <div class="context-value" id="contextTokens">0K/131K</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -778,6 +855,9 @@
             document.getElementById('completionTokens').textContent = (usage.completion_tokens / 1000).toFixed(1);
             document.getElementById('totalTokens').textContent = (usage.total_tokens / 1000).toFixed(1);
             document.getElementById('messageCount').textContent = data.message_count || 0;
+            
+            // 更新对话Tab的圆环进度
+            updateContextCircle(usage.total_tokens);
             
             // 渲染消息列表
             const listEl = document.getElementById('contextMessageList');
@@ -1076,6 +1156,36 @@
         function applyZoom() {
             document.body.style.zoom = currentZoom + '%';
             document.getElementById('zoomDisplay').textContent = currentZoom + '%';
+        }
+        
+        // 更新Context用量圆环
+        function updateContextCircle(totalTokens) {
+            const maxTokens = 131072;  // DeepSeek最大tokens
+            const percentage = (totalTokens / maxTokens) * 100;
+            const circumference = 2 * Math.PI * 16;  // 半径16的圆周长
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            // 更新圆环
+            const circle = document.getElementById('contextCircle');
+            circle.style.strokeDashoffset = offset;
+            
+            // 根据百分比改变颜色
+            if (percentage >= 90) {
+                circle.classList.add('danger');
+                circle.classList.remove('warning');
+            } else if (percentage >= 70) {
+                circle.classList.add('warning');
+                circle.classList.remove('danger');
+            } else {
+                circle.classList.remove('warning', 'danger');
+            }
+            
+            // 更新百分比文字
+            document.getElementById('contextPercent').textContent = percentage.toFixed(0) + '%';
+            
+            // 更新Token显示
+            const tokensK = (totalTokens / 1000).toFixed(1);
+            document.getElementById('contextTokens').textContent = tokensK + 'K/131K';
         }
     </script>
 </body>

@@ -14,6 +14,7 @@ class ContextManager:
         self.contexts: Dict[str, Dict[str, Any]] = {}
         self.max_context_length = 20  # 最多保留20轮对话上下文
         self.total_tokens_used = {}  # 记录每个Context的token使用量
+        self.max_context_tokens = 131072  # DeepSeek最大context tokens
     
     def create_context(self) -> str:
         """
@@ -181,12 +182,26 @@ class ContextManager:
         
         self.total_tokens_used[context_id] = context["token_usage"]["total_tokens"]
     
-    def get_token_usage(self, context_id: str) -> Dict[str, int]:
+    def get_token_usage(self, context_id: str) -> Dict[str, Any]:
         """获取token使用统计"""
         context = self.get_context(context_id)
         if not context:
-            return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-        return context["token_usage"]
+            return {
+                "prompt_tokens": 0, 
+                "completion_tokens": 0, 
+                "total_tokens": 0,
+                "percentage": 0.0,
+                "max_tokens": self.max_context_tokens
+            }
+        
+        usage = context["token_usage"]
+        percentage = (usage["total_tokens"] / self.max_context_tokens) * 100
+        
+        return {
+            **usage,
+            "percentage": round(percentage, 1),
+            "max_tokens": self.max_context_tokens
+        }
     
     def cleanup_old_contexts(self, max_age_seconds: int = 3600):
         """
