@@ -4,6 +4,7 @@ LLM服务模块 - DeepSeek专用
 from typing import Dict, Any, List, Optional
 from config import settings
 import json
+from utils.logger import safe_print as print
 
 
 class LLMService:

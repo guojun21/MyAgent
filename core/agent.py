@@ -6,6 +6,7 @@ import json
 import asyncio
 from services.llm_service import get_llm_service, LLMService
 from core.tool_manager import ToolManager
+from utils.logger import safe_print as print
 
 
 class Agent:

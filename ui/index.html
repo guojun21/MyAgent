@@ -578,11 +578,12 @@
                 </div>
 
                 <div class="test-status" id="testStatus">
-                    <div>就绪，等待运行测试</div>
+                    <div>就绪，点击"运行测试prompt"开始自动测试</div>
+                    <div id="testProgress" style="margin-top: 10px; color: #999; font-size: 12px;"></div>
                 </div>
 
-                <div class="test-list" id="testList">
-                    <div style="text-align: center; padding: 20px; color: #999;">加载测试用例中...</div>
+                <div class="test-list" id="testList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; max-height: 400px; overflow-y: auto;">
+                    <!-- 测试用例列表 -->
                 </div>
             </div>
         </div>
@@ -603,7 +604,44 @@
         let bridge = null;
         let isProcessing = false;
         let currentZoom = 100;
-        let testPrompts = [];
+        let testPrompts = [
+            // 基础文件操作
+            {id: 1, name: "列出Python文件", prompt: "列出当前目录的所有Python文件", category: "文件操作"},
+            {id: 2, name: "创建测试文件", prompt: "创建一个test.txt文件，内容写入Hello World", category: "文件操作"},
+            {id: 3, name: "读取README", prompt: "读取README.md的内容", category: "文件操作"},
+            {id: 4, name: "编辑文件", prompt: "把config.py文件中的deepseek-chat改成deepseek-coder", category: "文件操作"},
+            {id: 5, name: "递归列出", prompt: "列出services目录下的所有文件，包括子目录", category: "文件操作"},
+            {id: 6, name: "创建目录和文件", prompt: "创建一个新文件夹叫temp，然后在里面创建一个hello.py文件", category: "文件操作"},
+            
+            // 代码搜索
+            {id: 7, name: "基础搜索", prompt: "在项目中搜索所有包含Agent的代码", category: "代码搜索"},
+            {id: 8, name: "类型过滤搜索", prompt: "在所有Python文件中搜索def 开头的函数定义", category: "代码搜索"},
+            {id: 9, name: "项目结构", prompt: "分析这个项目的目录结构，告诉我有哪些主要模块", category: "代码搜索"},
+            {id: 10, name: "导入分析", prompt: "分析main.py文件导入了哪些模块", category: "代码搜索"},
+            
+            // 终端命令
+            {id: 11, name: "查看目录", prompt: "查看当前工作目录的路径", category: "终端命令"},
+            {id: 12, name: "Git状态", prompt: "查看这个项目的git状态", category: "终端命令"},
+            {id: 13, name: "系统信息", prompt: "告诉我当前系统的信息", category: "终端命令"},
+            
+            // 复杂任务
+            {id: 14, name: "多步骤操作", prompt: "创建一个Python脚本test_hello.py，写入一个打印Hello World的函数，然后读取文件确认内容", category: "复杂任务"},
+            {id: 15, name: "代码分析", prompt: "分析services目录下的所有服务文件，告诉我每个文件的主要功能", category: "复杂任务"},
+            {id: 16, name: "技术栈分析", prompt: "分析这个项目用了哪些技术栈和第三方库", category: "复杂任务"},
+            {id: 17, name: "代码建议", prompt: "读取main_qt.py文件，给我一些代码优化建议", category: "复杂任务"},
+            {id: 18, name: "创建模块", prompt: "创建一个新的service叫做logger_service.py，实现一个简单的日志记录功能", category: "复杂任务"},
+            
+            // 边界测试
+            {id: 19, name: "文件分析", prompt: "列出所有文件，然后告诉我哪个文件最大", category: "边界测试"},
+            {id: 20, name: "嵌套目录", prompt: "创建一个data文件夹，在里面创建一个config子文件夹，然后在config里创建settings.json文件", category: "边界测试"},
+            
+            // 高级测试
+            {id: 21, name: "错误处理", prompt: "读取一个不存在的文件abcdefg.txt", category: "高级测试"},
+            {id: 22, name: "复杂搜索", prompt: "搜索所有包含class和def __init__的Python文件，这些可能是类定义", category: "高级测试"},
+            {id: 23, name: "文档生成", prompt: "分析整个项目结构，生成一份项目说明文档PROJECT_INFO.md", category: "高级测试"},
+            {id: 24, name: "代码检查", prompt: "读取main_qt.py，检查有没有超过80字符的行，如果有告诉我", category: "高级测试"},
+            {id: 25, name: "综合任务", prompt: "创建一个utils文件夹，在里面创建helper.py，写入3个常用工具函数", category: "高级测试"}
+        ];
         let isTestingRunning = false;
         let currentTestIndex = 0;
 
@@ -624,8 +662,8 @@
             // 获取工作空间路径
             updateWorkspace();
             
-            // 加载测试prompts
-            loadTestPrompts();
+            // 渲染测试用例列表
+            renderTestList();
         });
 
         function handleBridgeMessage(data) {
@@ -691,57 +729,6 @@
             }
         }
 
-        // 加载测试prompts
-        function loadTestPrompts() {
-            if (!bridge) {
-                setTimeout(loadTestPrompts, 100);
-                return;
-            }
-            
-            try {
-                const jsonStr = bridge.loadTestPrompts();
-                console.log('加载的JSON:', jsonStr);
-                
-                const data = JSON.parse(jsonStr);
-                if (data.error) {
-                    document.getElementById('testList').innerHTML = 
-                        `<div style="color: #999;">加载失败: ${data.error}</div>`;
-                    return;
-                }
-                
-                testPrompts = data.test_cases || [];
-                console.log('测试用例数:', testPrompts.length);
-                renderTestList();
-            } catch (e) {
-                console.error('解析错误:', e);
-                document.getElementById('testList').innerHTML = 
-                    `<div style="color: #999;">解析失败: ${e.message}</div>`;
-            }
-        }
-
-        function renderTestList() {
-            const listEl = document.getElementById('testList');
-            
-            if (testPrompts.length === 0) {
-                listEl.innerHTML = '<div style="color: #999;">没有测试用例</div>';
-                return;
-            }
-            
-            let html = '';
-            testPrompts.forEach(test => {
-                html += `
-                    <div class="test-item">
-                        <div class="test-item-header">
-                            <span class="test-item-name">${test.id}. ${test.name}</span>
-                            <span class="test-item-category">${test.category}</span>
-                        </div>
-                        <div class="test-item-prompt">${test.prompt}</div>
-                    </div>
-                `;
-            });
-            
-            listEl.innerHTML = html;
-        }
 
         // 运行所有测试
         function runAllTests() {
@@ -799,9 +786,45 @@
             updateTestStatus(`测试已停止，执行了 ${currentTestIndex} 个用例`);
         }
 
+        function renderTestList() {
+            const listEl = document.getElementById('testList');
+            
+            if (testPrompts.length === 0) {
+                listEl.innerHTML = '<div style="color: #999; text-align: center; padding: 20px;">没有测试用例</div>';
+                return;
+            }
+            
+            let html = '<div style="font-weight: 500; margin-bottom: 15px; color: #2c2c2c;">测试用例列表 (共' + testPrompts.length + '个)</div>';
+            
+            testPrompts.forEach(test => {
+                html += `
+                    <div style="padding: 10px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span style="font-weight: 500; color: #2c2c2c;">${test.id}. ${test.name}</span>
+                            <span style="font-size: 11px; color: #999; background: #f5f5f5; padding: 2px 8px; border-radius: 2px;">${test.category}</span>
+                        </div>
+                        <div style="color: #666; font-size: 12px;">${test.prompt}</div>
+                    </div>
+                `;
+            });
+            
+            listEl.innerHTML = html;
+        }
+
         function updateTestStatus(message) {
-            document.getElementById('testStatus').innerHTML = 
-                `<div class="test-running">${message}</div>`;
+            const statusEl = document.getElementById('testStatus');
+            statusEl.querySelector('div').textContent = message;
+            
+            // 更新进度
+            const progressEl = document.getElementById('testProgress');
+            if (isTestingRunning && currentTestIndex <= testPrompts.length) {
+                const current = testPrompts[currentTestIndex - 1];
+                if (current) {
+                    progressEl.textContent = `当前: ${current.name} - ${current.prompt}`;
+                }
+            } else {
+                progressEl.textContent = '';
+            }
         }
 
         function sendMessage() {

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import fnmatch
+from utils.logger import safe_print as print
 
 
 class FileService:
