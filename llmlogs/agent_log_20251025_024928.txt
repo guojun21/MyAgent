@@ -1,0 +1,322 @@
+================================================================================
+AI编程助手 - 运行日志
+启动时间: 2025-10-25 02:49:28
+日志文件: llmlogs\agent_log_20251025_024928.txt
+================================================================================
+
+[ToolManager] 初始化工作空间: C:\!002Projects\MyAgent
+[FileService] 工作空间: C:\!002Projects\MyAgent
+[AgentBridge._load_and_emit_test_prompts] 开始加载测试用例
+[AgentBridge._load_and_emit_test_prompts] 文件路径: C:\!002Projects\MyAgent\测试prompts.json
+[AgentBridge._load_and_emit_test_prompts] 读取成功，长度: 1739
+[AgentBridge._load_and_emit_test_prompts] 发送到前端
+
+********************************************************************************
+[AgentBridge.sendMessage] 收到用户消息
+[AgentBridge.sendMessage] 内容: 123123123123
+********************************************************************************
+
+[AgentBridge.sendMessage] 发送'思考中'状态到前端
+[AgentBridge.sendMessage] 创建工作线程...
+[AgentBridge.sendMessage] 当前工作空间: C:\!002Projects\MyAgent
+[AgentBridge.sendMessage] 启动工作线程
+
+================================================================================
+[Agent.run] 开始处理用户请求
+[Agent.run] 用户消息: 123123123123
+[Agent.run] 历史对话数: 0
+================================================================================
+
+[Agent.run] 构建消息列表...
+[Agent.run] 消息总数: 2
+[Agent.run] 获取工具定义...
+[Agent.run] 可用工具数: 8
+[Agent.run] 工具列表: ['read_file', 'write_file', 'edit_file', 'list_files', 'search_code', 'get_project_structure', 'run_terminal', 'analyze_file_imports']
+
+[Agent.run] 开始执行循环（最大迭代次数: 10）
+
+
+============================================================
+[Agent.run] 第 1 次迭代
+============================================================
+[Agent.run] 调用LLM服务...
+[Agent.run] 当前消息数: 2
+
+    [DeepSeek.chat] 准备调用DeepSeek API
+    [DeepSeek.chat] 模型: deepseek-coder
+    [DeepSeek.chat] 消息数: 2
+    [DeepSeek.chat] 工具数: 8
+    [DeepSeek.chat] 温度: 0.7
+    [DeepSeek.chat] 工具选择策略: auto
+    [DeepSeek.chat] 发送API请求...
+    [DeepSeek.chat] ✅ API响应成功
+
+    [DeepSeek.chat] API响应完整字段:
+      - id: 2235d598-4fb5-4e74-8dc2-294dea7a93f3
+      - object: chat.completion
+      - created: 1761331781
+      - model: deepseek-chat
+      - choices数量: 1
+      - usage.prompt_tokens: 1053
+      - usage.completion_tokens: 70
+      - usage.total_tokens: 1123
+      - system_fingerprint: fp_ffc7281d48_prod0820_fp8_kvcache
+
+    [DeepSeek.chat] Choice[0]详细字段:
+      - index: 0
+      - finish_reason: stop
+      - logprobs: None
+
+    [DeepSeek.chat] Message详细字段:
+      - role: assistant
+      - content长度: 123
+      - 有tool_calls: None
+      - function_call: None
+      - refusal: None
+    [DeepSeek.chat] 返回响应
+
+[Agent.run] LLM响应:
+  - Role: assistant
+  - 是否有工具调用: False
+  - Content长度: 123 字符
+
+[Agent.run] 无工具调用，任务完成
+
+[Agent.run] 任务执行完毕
+  - 总迭代次数: 1
+  - 工具调用次数: 0
+
+[Agent.run] 最终返回给用户的消息:
+┌────────────────────────────────────────────────────────────────────────────┐
+│ 我看到您输入了一串数字"123123123123"，但我不确定您想要我做什么。
+│ 
+│ 如果您需要我帮助处理某个编程任务，比如：
+│ - 查看或编辑文件
+│ - 搜索代码
+│ - 分析项目结构
+│ - 执行终端命令
+│ 
+│ 请告诉我具体需要什么帮助，我会很乐意为您提供协助！
+└────────────────────────────────────────────────────────────────────────────┘
+================================================================================
+
+
+********************************************************************************
+[AgentBridge._on_agent_finished] Agent执行完成
+[AgentBridge._on_agent_finished] 成功: True
+[AgentBridge._on_agent_finished] 迭代次数: 1
+[AgentBridge._on_agent_finished] 工具调用数: 0
+********************************************************************************
+
+[AgentBridge._on_agent_finished] 发送结果到前端
+
+********************************************************************************
+[AgentBridge.sendMessage] 收到用户消息
+[AgentBridge.sendMessage] 内容: 12312312312312314234234
+********************************************************************************
+
+[AgentBridge.sendMessage] 发送'思考中'状态到前端
+[AgentBridge.sendMessage] 创建工作线程...
+[AgentBridge.sendMessage] 当前工作空间: C:\!002Projects\MyAgent
+[AgentBridge.sendMessage] 启动工作线程
+
+================================================================================
+[Agent.run] 开始处理用户请求
+[Agent.run] 用户消息: 12312312312312314234234
+[Agent.run] 历史对话数: 2
+================================================================================
+
+[Agent.run] 构建消息列表...
+[Agent.run] 消息总数: 4
+[Agent.run] 获取工具定义...
+[Agent.run] 可用工具数: 8
+[Agent.run] 工具列表: ['read_file', 'write_file', 'edit_file', 'list_files', 'search_code', 'get_project_structure', 'run_terminal', 'analyze_file_imports']
+
+[Agent.run] 开始执行循环（最大迭代次数: 10）
+
+
+============================================================
+[Agent.run] 第 1 次迭代
+============================================================
+[Agent.run] 调用LLM服务...
+[Agent.run] 当前消息数: 4
+
+    [DeepSeek.chat] 准备调用DeepSeek API
+    [DeepSeek.chat] 模型: deepseek-coder
+    [DeepSeek.chat] 消息数: 4
+    [DeepSeek.chat] 工具数: 8
+    [DeepSeek.chat] 温度: 0.7
+    [DeepSeek.chat] 工具选择策略: auto
+    [DeepSeek.chat] 发送API请求...
+    [DeepSeek.chat] ✅ API响应成功
+
+    [DeepSeek.chat] API响应完整字段:
+      - id: c32d3e1a-a96b-4a20-9d18-3f15028d4c8e
+      - object: chat.completion
+      - created: 1761331810
+      - model: deepseek-chat
+      - choices数量: 1
+      - usage.prompt_tokens: 1135
+      - usage.completion_tokens: 81
+      - usage.total_tokens: 1216
+      - system_fingerprint: fp_ffc7281d48_prod0820_fp8_kvcache
+
+    [DeepSeek.chat] Choice[0]详细字段:
+      - index: 0
+      - finish_reason: stop
+      - logprobs: None
+
+    [DeepSeek.chat] Message详细字段:
+      - role: assistant
+      - content长度: 153
+      - 有tool_calls: None
+      - function_call: None
+      - refusal: None
+    [DeepSeek.chat] 返回响应
+
+[Agent.run] LLM响应:
+  - Role: assistant
+  - 是否有工具调用: False
+  - Content长度: 153 字符
+
+[Agent.run] 无工具调用，任务完成
+
+[Agent.run] 任务执行完毕
+  - 总迭代次数: 1
+  - 工具调用次数: 0
+
+[Agent.run] 最终返回给用户的消息:
+┌────────────────────────────────────────────────────────────────────────────┐
+│ 我看到您又输入了一串数字"12312312312312314234234"。看起来您可能在测试我的响应，或者想要我处理这些数字？
+│ 
+│ 如果您需要我：
+│ - 处理这些数字（比如计算、分析等）
+│ - 查看项目文件
+│ - 执行编程任务
+│ - 搜索代码
+│ 
+│ 请告诉我具体需要什么帮助，我会根据您的需求使用相应的工具来完成任务！
+└────────────────────────────────────────────────────────────────────────────┘
+================================================================================
+
+
+********************************************************************************
+[AgentBridge._on_agent_finished] Agent执行完成
+[AgentBridge._on_agent_finished] 成功: True
+[AgentBridge._on_agent_finished] 迭代次数: 1
+[AgentBridge._on_agent_finished] 工具调用数: 0
+********************************************************************************
+
+[AgentBridge._on_agent_finished] 发送结果到前端
+
+********************************************************************************
+[AgentBridge.sendMessage] 收到用户消息
+[AgentBridge.sendMessage] 内容: 我看到您又输入了一串数字"12312312312312314234234"。看起来您可能在测试我的响应，或者想要我处理这些数字？  如果您需要我： 处理这些数字（比如计算、分析等）  查看项目文件  执行编程任务  搜索代码   请告诉我具体需要什么帮助，我会根据您的需求使用相应的工具来完成任务！
+********************************************************************************
+
+[AgentBridge.sendMessage] 发送'思考中'状态到前端
+[AgentBridge.sendMessage] 创建工作线程...
+[AgentBridge.sendMessage] 当前工作空间: C:\!002Projects\MyAgent
+[AgentBridge.sendMessage] 启动工作线程
+
+================================================================================
+[Agent.run] 开始处理用户请求
+[Agent.run] 用户消息: 我看到您又输入了一串数字"12312312312312314234234"。看起来您可能在测试我的响应，或者想要我处理这些数字？  如果您需要我： 处理这些数字（比如计算、分析等）  查看项目文件  执行编程任务  搜索代码   请告诉我具体需要什么帮助，我会根据您的需求使用相应的工具来完成任务！
+[Agent.run] 历史对话数: 4
+================================================================================
+
+[Agent.run] 构建消息列表...
+[Agent.run] 消息总数: 6
+[Agent.run] 获取工具定义...
+[Agent.run] 可用工具数: 8
+[Agent.run] 工具列表: ['read_file', 'write_file', 'edit_file', 'list_files', 'search_code', 'get_project_structure', 'run_terminal', 'analyze_file_imports']
+
+[Agent.run] 开始执行循环（最大迭代次数: 10）
+
+
+============================================================
+[Agent.run] 第 1 次迭代
+============================================================
+[Agent.run] 调用LLM服务...
+[Agent.run] 当前消息数: 6
+
+    [DeepSeek.chat] 准备调用DeepSeek API
+    [DeepSeek.chat] 模型: deepseek-coder
+    [DeepSeek.chat] 消息数: 6
+    [DeepSeek.chat] 工具数: 8
+    [DeepSeek.chat] 温度: 0.7
+    [DeepSeek.chat] 工具选择策略: auto
+    [DeepSeek.chat] 发送API请求...
+    [DeepSeek.chat] ✅ API响应成功
+
+    [DeepSeek.chat] API响应完整字段:
+      - id: f2471464-0c97-46ac-95e9-10eab606d4ab
+      - object: chat.completion
+      - created: 1761331831
+      - model: deepseek-chat
+      - choices数量: 1
+      - usage.prompt_tokens: 1296
+      - usage.completion_tokens: 167
+      - usage.total_tokens: 1463
+      - system_fingerprint: fp_ffc7281d48_prod0820_fp8_kvcache
+
+    [DeepSeek.chat] Choice[0]详细字段:
+      - index: 0
+      - finish_reason: stop
+      - logprobs: None
+
+    [DeepSeek.chat] Message详细字段:
+      - role: assistant
+      - content长度: 311
+      - 有tool_calls: None
+      - function_call: None
+      - refusal: None
+    [DeepSeek.chat] 返回响应
+
+[Agent.run] LLM响应:
+  - Role: assistant
+  - 是否有工具调用: False
+  - Content长度: 311 字符
+
+[Agent.run] 无工具调用，任务完成
+
+[Agent.run] 任务执行完毕
+  - 总迭代次数: 1
+  - 工具调用次数: 0
+
+[Agent.run] 最终返回给用户的消息:
+┌────────────────────────────────────────────────────────────────────────────┐
+│ 您说得对！我刚才确实是在重复您的输入内容，这确实不是一个有用的回复。
+│ 
+│ 让我重新开始：我看到您输入了一些数字，但我不确定您的具体需求。作为编程助手，我可以帮您：
+│ 
+│ 1. **查看和分析项目文件** - 我可以读取文件内容，分析项目结构
+│ 2. **搜索代码** - 在项目中搜索特定的代码片段或文本
+│ 3. **执行终端命令** - 运行安全的命令来构建、测试或管理项目
+│ 4. **编辑代码** - 修改文件内容，添加功能或修复问题
+│ 
+│ 请告诉我您想要做什么？比如：
+│ - "我想查看当前项目有哪些文件"
+│ - "我想搜索包含某个关键字的代码"
+│ - "我想运行某个命令"
+│ - "我想修改某个文件"
+│ 
+│ 这样我就能为您提供具体的帮助了！
+└────────────────────────────────────────────────────────────────────────────┘
+================================================================================
+
+
+********************************************************************************
+[AgentBridge._on_agent_finished] Agent执行完成
+[AgentBridge._on_agent_finished] 成功: True
+[AgentBridge._on_agent_finished] 迭代次数: 1
+[AgentBridge._on_agent_finished] 工具调用数: 0
+********************************************************************************
+
+[AgentBridge._on_agent_finished] 发送结果到前端
+
+[主程序] 应用退出，关闭日志文件
+
+================================================================================
+结束时间: 2025-10-25 03:00:49
+================================================================================

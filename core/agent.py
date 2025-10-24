@@ -26,14 +26,14 @@ class Agent:
     async def run(
         self, 
         user_message: str,
-        conversation_history: Optional[List[Dict[str, Any]]] = None
+        context_history: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         运行Agent处理用户请求
         
         Args:
             user_message: 用户消息
-            conversation_history: 对话历史
+            context_history: Context历史（对标Cursor的Context）
             
         Returns:
             Agent响应结果
@@ -41,16 +41,16 @@ class Agent:
         print("\n" + "="*80)
         print(f"[Agent.run] 开始处理用户请求")
         print(f"[Agent.run] 用户消息: {user_message}")
-        print(f"[Agent.run] 历史对话数: {len(conversation_history) if conversation_history else 0}")
+        print(f"[Agent.run] Context消息数: {len(context_history) if context_history else 0}")
         print("="*80 + "\n")
         
-        # 初始化对话历史
-        if conversation_history is None:
-            conversation_history = []
+        # 初始化Context历史
+        if context_history is None:
+            context_history = []
         
-        # 构建消息列表
-        print(f"[Agent.run] 构建消息列表...")
-        messages = self._build_messages(user_message, conversation_history)
+        # 构建消息列表（从Context中）
+        print(f"[Agent.run] 从Context构建消息列表...")
+        messages = self._build_messages(user_message, context_history)
         print(f"[Agent.run] 消息总数: {len(messages)}")
         
         # 获取工具定义
@@ -148,12 +148,18 @@ class Agent:
         
         print("="*80 + "\n")
         
+        # 提取token使用量（如果有）
+        token_usage = {}
+        if "usage" in llm_response:
+            token_usage = llm_response["usage"]
+        
         final_response = {
             "success": True,
             "message": llm_response.get("content", ""),
             "tool_calls": tool_calls_history,
             "iterations": iterations,
-            "conversation": messages
+            "conversation": messages,
+            "token_usage": token_usage  # 添加token使用统计
         }
         
         return final_response
@@ -161,9 +167,9 @@ class Agent:
     def _build_messages(
         self, 
         user_message: str,
-        conversation_history: List[Dict[str, Any]]
+        context_history: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """构建消息列表"""
+        """从Context构建消息列表"""
         messages = []
         
         # 添加系统提示词
@@ -172,8 +178,8 @@ class Agent:
             "content": self.llm_service.AGENT_SYSTEM_PROMPT
         })
         
-        # 添加历史对话
-        messages.extend(conversation_history)
+        # 添加Context历史（对标Cursor的Context窗口）
+        messages.extend(context_history)
         
         # 添加当前用户消息
         messages.append({
@@ -210,14 +216,14 @@ class Agent:
     def run_sync(
         self,
         user_message: str,
-        conversation_history: Optional[List[Dict[str, Any]]] = None
+        context_history: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         同步版本的run方法
         
         Args:
             user_message: 用户消息
-            conversation_history: 对话历史
+            context_history: Context历史
             
         Returns:
             Agent响应结果
@@ -228,7 +234,7 @@ class Agent:
         
         try:
             result = loop.run_until_complete(
-                self.run(user_message, conversation_history)
+                self.run(user_message, context_history)
             )
             return result
         finally:

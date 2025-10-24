@@ -10,6 +10,7 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebChannel import QWebChannel
 
 from core.agent import Agent
+from core.context_manager import context_manager
 from utils.logger import safe_print as print
 
 
@@ -17,18 +18,18 @@ class AgentWorker(QThread):
     """Agent工作线程"""
     finished = pyqtSignal(dict)
     
-    def __init__(self, agent, message, session_history=None):
+    def __init__(self, agent, message, context_history=None):
         super().__init__()
         self.agent = agent
         self.message = message
-        self.session_history = session_history or []
+        self.context_history = context_history or []
     
     def run(self):
         """在后台线程运行Agent"""
         try:
             result = self.agent.run_sync(
                 user_message=self.message,
-                conversation_history=self.session_history
+                context_history=self.context_history
             )
             self.finished.emit(result)
         except Exception as e:
@@ -48,14 +49,18 @@ class AgentBridge(QObject):
     workspaceChanged = pyqtSignal(str)
     # 信号：测试用例加载
     testPromptsLoaded = pyqtSignal(str)
+    # 信号：Context更新
+    contextUpdated = pyqtSignal(str)
     
     def __init__(self, parent_window=None):
         super().__init__()
         self.parent_window = parent_window
         self.workspace_root = Path(".").resolve()
         self.agent = Agent(workspace_root=str(self.workspace_root))
-        self.session_history = []
+        self.context_id = context_manager.create_context()  # 创建Context
         self.current_worker = None
+        
+        print(f"[AgentBridge] Context ID: {self.context_id}")
         
         # 加载测试用例
         self._load_and_emit_test_prompts()
@@ -84,13 +89,17 @@ class AgentBridge(QObject):
             "message": "Agent正在思考..."
         })
         
+        # 获取Context历史
+        context_history = context_manager.get_context_messages(self.context_id)
+        
         # 创建工作线程
         print(f"[AgentBridge.sendMessage] 创建工作线程...")
         print(f"[AgentBridge.sendMessage] 当前工作空间: {self.workspace_root}")
+        print(f"[AgentBridge.sendMessage] Context消息数: {len(context_history)}")
         self.current_worker = AgentWorker(
             self.agent,
             message,
-            self.session_history
+            context_history
         )
         self.current_worker.finished.connect(self._on_agent_finished)
         print(f"[AgentBridge.sendMessage] 启动工作线程")
@@ -105,17 +114,32 @@ class AgentBridge(QObject):
         print(f"[AgentBridge._on_agent_finished] 工具调用数: {len(result.get('tool_calls', []))}")
         print(f"{'*'*80}\n")
         
-        # 添加到会话历史
-        self.session_history.append({
-            "role": "user",
-            "content": self.current_worker.message
-        })
+        # 添加到Context
+        context_manager.add_to_context(
+            self.context_id,
+            "user",
+            self.current_worker.message
+        )
         
         if result.get("success"):
-            self.session_history.append({
-                "role": "assistant",
-                "content": result.get("message", "")
-            })
+            context_manager.add_to_context(
+                self.context_id,
+                "assistant",
+                result.get("message", "")
+            )
+        
+        # 记录token使用（如果有）
+        if "token_usage" in result:
+            usage = result["token_usage"]
+            context_manager.add_token_usage(
+                self.context_id,
+                usage.get("prompt_tokens", 0),
+                usage.get("completion_tokens", 0),
+                usage.get("total_tokens", 0)
+            )
+        
+        # 通知前端Context已更新
+        self._emit_context_update()
         
         print(f"[AgentBridge._on_agent_finished] 发送结果到前端")
         # 发送结果到前端
@@ -129,11 +153,11 @@ class AgentBridge(QObject):
     
     @pyqtSlot()
     def clearHistory(self):
-        """清空会话历史"""
-        self.session_history = []
+        """清空Context历史"""
+        context_manager.clear_context(self.context_id)
         self._send_to_frontend({
             "type": "info",
-            "message": "会话历史已清空"
+            "message": "Context已清空"
         })
     
     @pyqtSlot(result=str)
@@ -166,8 +190,9 @@ class AgentBridge(QObject):
             self.agent = Agent(workspace_root=str(self.workspace_root))
             print(f"[Agent重新初始化] 工作空间: {self.workspace_root}")
             
-            # 清空会话历史
-            self.session_history = []
+            # 清空Context历史（切换工作空间时重置上下文）
+            context_manager.clear_context(self.context_id)
+            print(f"[切换工作空间] Context已重置")
             
             # 通知前端
             self.workspaceChanged.emit(str(self.workspace_root))
@@ -199,6 +224,23 @@ class AgentBridge(QObject):
         except Exception as e:
             print(f"[AgentBridge._load_and_emit_test_prompts] 异常: {e}")
             self.testPromptsLoaded.emit(json.dumps({"error": str(e)}, ensure_ascii=False))
+    
+    def _emit_context_update(self):
+        """发送Context更新到前端"""
+        context_data = context_manager.get_context(self.context_id)
+        if not context_data:
+            return
+        
+        token_usage = context_data["token_usage"]
+        messages = context_data["context_messages"]
+        
+        data = {
+            "messages": messages,
+            "token_usage": token_usage,
+            "message_count": len(messages)
+        }
+        
+        self.contextUpdated.emit(json.dumps(data, ensure_ascii=False))
     
     def _send_to_frontend(self, data):
         """发送数据到前端"""
