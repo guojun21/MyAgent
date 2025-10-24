@@ -128,8 +128,17 @@ class DeepSeekService(LLMService):
             
             print(f"    [DeepSeek.chat] 解析响应消息:")
             print(f"      - Role: {message.role}")
-            print(f"      - Content: {message.content[:100] if message.content else 'None'}...")
             print(f"      - 有tool_calls: {hasattr(message, 'tool_calls') and message.tool_calls}")
+            
+            # 打印完整的Content
+            if message.content:
+                print(f"\n    [DeepSeek.chat] LLM返回的完整消息:")
+                print(f"    ┌{'─'*70}┐")
+                for line in message.content.split('\n'):
+                    print(f"    │ {line}")
+                print(f"    └{'─'*70}┘\n")
+            else:
+                print(f"      - Content: None (纯工具调用)")
             
             # 返回标准化的响应
             result = {

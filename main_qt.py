@@ -267,13 +267,21 @@ class MainWindow(QMainWindow):
 
 def main():
     """主函数"""
+    from utils.logger import close_logger
+    
     app = QApplication(sys.argv)
     app.setApplicationName("AI编程助手")
     
     window = MainWindow()
     window.show()
     
-    sys.exit(app.exec())
+    # 程序退出时关闭日志
+    result = app.exec()
+    
+    print("\n[主程序] 应用退出，关闭日志文件")
+    close_logger()
+    
+    sys.exit(result)
 
 
 if __name__ == "__main__":
