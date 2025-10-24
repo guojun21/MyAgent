@@ -87,20 +87,45 @@
             color: #fff;
         }
 
-        .btn-clear {
-            font-size: 12px;
-            padding: 6px 16px;
+        /* Tab导航 */
+        .tab-nav {
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            padding: 0 30px;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
             background: transparent;
-            border: 1px solid #444;
-            color: #ccc;
-            border-radius: 3px;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #666;
             cursor: pointer;
+            font-size: 13px;
             transition: all 0.2s;
         }
 
-        .btn-clear:hover {
-            background: #444;
-            color: #fff;
+        .tab-button:hover {
+            color: #2c2c2c;
+        }
+
+        .tab-button.active {
+            color: #2c2c2c;
+            border-bottom-color: #2c2c2c;
+            font-weight: 500;
+        }
+
+        /* Tab内容区 */
+        .tab-content {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tab-content.active {
+            display: flex;
         }
 
         /* 对话区域 */
@@ -240,6 +265,123 @@
             cursor: not-allowed;
         }
 
+        /* 测试页面 */
+        .test-panel {
+            padding: 30px 40px;
+            background: #fafafa;
+            overflow-y: auto;
+        }
+
+        .test-header {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .test-header h2 {
+            font-size: 20px;
+            font-weight: 400;
+            color: #2c2c2c;
+            margin-bottom: 8px;
+        }
+
+        .test-header p {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn-test {
+            padding: 10px 20px;
+            background: #2c2c2c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-test:hover {
+            background: #1a1a1a;
+        }
+
+        .btn-test:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-test-secondary {
+            background: #fff;
+            color: #2c2c2c;
+            border: 1px solid #ddd;
+        }
+
+        .btn-test-secondary:hover {
+            background: #f5f5f5;
+        }
+
+        .test-list {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 15px;
+        }
+
+        .test-item {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+
+        .test-item:last-child {
+            border-bottom: none;
+        }
+
+        .test-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .test-item-name {
+            font-weight: 500;
+            color: #2c2c2c;
+        }
+
+        .test-item-category {
+            font-size: 11px;
+            color: #999;
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 2px;
+        }
+
+        .test-item-prompt {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .test-status {
+            padding: 15px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        .test-running {
+            color: #666;
+        }
+
         /* 底部控制栏 */
         .footer-controls {
             padding: 10px 30px;
@@ -289,20 +431,24 @@
         }
 
         /* 滚动条样式 */
-        .chat-area::-webkit-scrollbar {
+        .chat-area::-webkit-scrollbar,
+        .test-panel::-webkit-scrollbar {
             width: 8px;
         }
 
-        .chat-area::-webkit-scrollbar-track {
+        .chat-area::-webkit-scrollbar-track,
+        .test-panel::-webkit-scrollbar-track {
             background: #f0f0f0;
         }
 
-        .chat-area::-webkit-scrollbar-thumb {
+        .chat-area::-webkit-scrollbar-thumb,
+        .test-panel::-webkit-scrollbar-thumb {
             background: #ccc;
             border-radius: 4px;
         }
 
-        .chat-area::-webkit-scrollbar-thumb:hover {
+        .chat-area::-webkit-scrollbar-thumb:hover,
+        .test-panel::-webkit-scrollbar-thumb:hover {
             background: #999;
         }
 
@@ -334,7 +480,7 @@
             color: #333;
         }
 
-        /* Markdown样式优化 */
+        /* Markdown样式 */
         pre {
             background: #2c2c2c !important;
             color: #e0e0e0 !important;
@@ -390,24 +536,54 @@
             </div>
         </div>
 
-        <!-- 对话区域 -->
-        <div class="chat-area" id="chatArea">
-            <div class="empty-state">
-                <h2>📖</h2>
-                <p>欢迎使用AI编程助手</p>
-                <p>一个简洁、优雅的智能编程工具</p>
+        <!-- Tab导航 -->
+        <div class="tab-nav">
+            <button class="tab-button active" onclick="switchTab('chat')">对话</button>
+            <button class="tab-button" onclick="switchTab('test')">测试状态</button>
+        </div>
+
+        <!-- 对话Tab -->
+        <div class="tab-content active" id="chatTab">
+            <div class="chat-area" id="chatArea">
+                <div class="empty-state">
+                    <h2>📖</h2>
+                    <p>欢迎使用AI编程助手</p>
+                    <p>一个简洁、优雅的智能编程工具</p>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <input type="text" 
+                           class="input-field" 
+                           id="messageInput" 
+                           placeholder="描述你的需求..." 
+                           onkeypress="handleKeyPress(event)">
+                    <button class="btn-send" onclick="sendMessage()" id="sendBtn">发送</button>
+                </div>
             </div>
         </div>
 
-        <!-- 输入区域 -->
-        <div class="input-area">
-            <div class="input-container">
-                <input type="text" 
-                       class="input-field" 
-                       id="messageInput" 
-                       placeholder="描述你的需求..." 
-                       onkeypress="handleKeyPress(event)">
-                <button class="btn-send" onclick="sendMessage()" id="sendBtn">发送</button>
+        <!-- 测试Tab -->
+        <div class="tab-content" id="testTab">
+            <div class="test-panel">
+                <div class="test-header">
+                    <h2>自动化测试</h2>
+                    <p>自动运行测试用例，模拟用户输入</p>
+                </div>
+
+                <div class="test-controls">
+                    <button class="btn-test" onclick="runAllTests()" id="runTestBtn">运行测试prompt</button>
+                    <button class="btn-test btn-test-secondary" onclick="stopTests()" id="stopTestBtn" disabled>停止测试</button>
+                </div>
+
+                <div class="test-status" id="testStatus">
+                    <div>就绪，等待运行测试</div>
+                </div>
+
+                <div class="test-list" id="testList">
+                    <div style="text-align: center; padding: 20px; color: #999;">加载测试用例中...</div>
+                </div>
             </div>
         </div>
 
@@ -427,6 +603,9 @@
         let bridge = null;
         let isProcessing = false;
         let currentZoom = 100;
+        let testPrompts = [];
+        let isTestingRunning = false;
+        let currentTestIndex = 0;
 
         // 初始化Qt WebChannel
         new QWebChannel(qt.webChannelTransport, function(channel) {
@@ -444,6 +623,9 @@
             
             // 获取工作空间路径
             updateWorkspace();
+            
+            // 加载测试prompts
+            loadTestPrompts();
         });
 
         function handleBridgeMessage(data) {
@@ -456,16 +638,28 @@
                 addAssistantMessage(data);
                 isProcessing = false;
                 updateSendButton();
+                
+                // 如果正在测试，继续下一个
+                if (isTestingRunning) {
+                    setTimeout(() => {
+                        runNextTest();
+                    }, 1000);
+                }
             } else if (data.type === 'error') {
                 hideThinking();
                 showStatus(data.message, 'error');
                 isProcessing = false;
                 updateSendButton();
+                
+                if (isTestingRunning) {
+                    setTimeout(() => {
+                        runNextTest();
+                    }, 1000);
+                }
             } else if (data.type === 'info') {
                 showStatus(data.message, 'info');
             } else if (data.type === 'workspace_changed') {
                 showStatus(data.message || '工作空间已切换', 'info');
-                // 清空聊天
                 const chatArea = document.getElementById('chatArea');
                 chatArea.innerHTML = `
                     <div class="empty-state">
@@ -477,30 +671,157 @@
             }
         }
 
+        // Tab切换
+        function switchTab(tabName) {
+            // 切换按钮状态
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 切换内容
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            if (tabName === 'chat') {
+                document.getElementById('chatTab').classList.add('active');
+            } else if (tabName === 'test') {
+                document.getElementById('testTab').classList.add('active');
+            }
+        }
+
+        // 加载测试prompts
+        function loadTestPrompts() {
+            if (!bridge) {
+                setTimeout(loadTestPrompts, 100);
+                return;
+            }
+            
+            try {
+                const jsonStr = bridge.loadTestPrompts();
+                console.log('加载的JSON:', jsonStr);
+                
+                const data = JSON.parse(jsonStr);
+                if (data.error) {
+                    document.getElementById('testList').innerHTML = 
+                        `<div style="color: #999;">加载失败: ${data.error}</div>`;
+                    return;
+                }
+                
+                testPrompts = data.test_cases || [];
+                console.log('测试用例数:', testPrompts.length);
+                renderTestList();
+            } catch (e) {
+                console.error('解析错误:', e);
+                document.getElementById('testList').innerHTML = 
+                    `<div style="color: #999;">解析失败: ${e.message}</div>`;
+            }
+        }
+
+        function renderTestList() {
+            const listEl = document.getElementById('testList');
+            
+            if (testPrompts.length === 0) {
+                listEl.innerHTML = '<div style="color: #999;">没有测试用例</div>';
+                return;
+            }
+            
+            let html = '';
+            testPrompts.forEach(test => {
+                html += `
+                    <div class="test-item">
+                        <div class="test-item-header">
+                            <span class="test-item-name">${test.id}. ${test.name}</span>
+                            <span class="test-item-category">${test.category}</span>
+                        </div>
+                        <div class="test-item-prompt">${test.prompt}</div>
+                    </div>
+                `;
+            });
+            
+            listEl.innerHTML = html;
+        }
+
+        // 运行所有测试
+        function runAllTests() {
+            if (testPrompts.length === 0) {
+                alert('没有测试用例');
+                return;
+            }
+            
+            // 切换到对话Tab
+            document.querySelectorAll('.tab-button')[0].click();
+            
+            // 清空对话
+            const chatArea = document.getElementById('chatArea');
+            chatArea.innerHTML = '<div class="status">🧪 开始运行自动化测试...</div>';
+            
+            // 开始测试
+            isTestingRunning = true;
+            currentTestIndex = 0;
+            
+            document.getElementById('runTestBtn').disabled = true;
+            document.getElementById('stopTestBtn').disabled = false;
+            
+            updateTestStatus(`正在测试 (0/${testPrompts.length})`);
+            
+            runNextTest();
+        }
+
+        function runNextTest() {
+            if (!isTestingRunning || currentTestIndex >= testPrompts.length) {
+                // 测试完成
+                isTestingRunning = false;
+                document.getElementById('runTestBtn').disabled = false;
+                document.getElementById('stopTestBtn').disabled = true;
+                updateTestStatus(`测试完成！已执行 ${testPrompts.length} 个用例`);
+                return;
+            }
+            
+            const test = testPrompts[currentTestIndex];
+            updateTestStatus(`正在测试 (${currentTestIndex + 1}/${testPrompts.length}): ${test.name}`);
+            
+            // 模拟用户输入
+            const input = document.getElementById('messageInput');
+            input.value = test.prompt;
+            
+            // 发送消息
+            sendMessage();
+            
+            currentTestIndex++;
+        }
+
+        function stopTests() {
+            isTestingRunning = false;
+            document.getElementById('runTestBtn').disabled = false;
+            document.getElementById('stopTestBtn').disabled = true;
+            updateTestStatus(`测试已停止，执行了 ${currentTestIndex} 个用例`);
+        }
+
+        function updateTestStatus(message) {
+            document.getElementById('testStatus').innerHTML = 
+                `<div class="test-running">${message}</div>`;
+        }
+
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
             if (!message || !bridge || isProcessing) return;
             
-            // 添加用户消息到界面
             addUserMessage(message);
-            
-            // 清空输入框
             input.value = '';
             
-            // 标记为处理中
             isProcessing = true;
             updateSendButton();
             
-            // 发送到Qt
             bridge.sendMessage(message);
         }
 
         function addUserMessage(text) {
             const chatArea = document.getElementById('chatArea');
             
-            // 移除空状态
             const emptyState = chatArea.querySelector('.empty-state');
             if (emptyState) {
                 emptyState.remove();
@@ -525,7 +846,6 @@
             let content = `<div class="message-content">`;
             content += formatMarkdown(data.message);
             
-            // 如果有工具调用，显示
             if (data.tool_calls && data.tool_calls.length > 0) {
                 content += '<div class="tool-calls">';
                 content += `<div style="font-weight: 600; margin-bottom: 8px; color: #666;">执行了 ${data.tool_calls.length} 个工具</div>`;
@@ -548,32 +868,19 @@
         }
         
         function formatMarkdown(text) {
-            // 简单的Markdown渲染
             let html = escapeHtml(text);
             
-            // 代码块 ```code```
             html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, lang, code) {
                 return `<pre><code>${code.trim()}</code></pre>`;
             });
             
-            // 行内代码 `code`
             html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            
-            // 粗体 **text**
             html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            
-            // 斜体 *text*
             html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-            
-            // 列表 - item
             html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-            
-            // 标题
             html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
             html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
             html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
-            
-            // 换行
             html = html.replace(/\n/g, '<br>');
             
             return html;
@@ -611,22 +918,6 @@
             setTimeout(() => {
                 statusDiv.remove();
             }, 3000);
-        }
-
-        function clearChat() {
-            if (confirm('确定要清空对话历史吗？')) {
-                const chatArea = document.getElementById('chatArea');
-                chatArea.innerHTML = `
-                    <div class="empty-state">
-                        <h2>📖</h2>
-                        <p>对话已清空</p>
-                    </div>
-                `;
-                
-                if (bridge) {
-                    bridge.clearHistory();
-                }
-            }
         }
 
         function handleKeyPress(event) {

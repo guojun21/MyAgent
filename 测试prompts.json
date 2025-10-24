@@ -1,0 +1,95 @@
+{
+  "test_cases": [
+    {
+      "id": 1,
+      "name": "列出Python文件",
+      "prompt": "列出当前目录的所有Python文件",
+      "category": "文件操作"
+    },
+    {
+      "id": 2,
+      "name": "创建测试文件",
+      "prompt": "创建一个test.txt文件，内容写入Hello World",
+      "category": "文件操作"
+    },
+    {
+      "id": 3,
+      "name": "读取README",
+      "prompt": "读取README.md的内容",
+      "category": "文件操作"
+    },
+    {
+      "id": 4,
+      "name": "列出目录结构",
+      "prompt": "列出services目录下的所有文件",
+      "category": "文件操作"
+    },
+    {
+      "id": 5,
+      "name": "创建目录",
+      "prompt": "创建一个temp文件夹",
+      "category": "文件操作"
+    },
+    {
+      "id": 6,
+      "name": "搜索代码",
+      "prompt": "在项目中搜索Agent",
+      "category": "代码搜索"
+    },
+    {
+      "id": 7,
+      "name": "项目结构",
+      "prompt": "分析这个项目的目录结构",
+      "category": "代码搜索"
+    },
+    {
+      "id": 8,
+      "name": "分析导入",
+      "prompt": "分析main.py文件导入了哪些模块",
+      "category": "代码搜索"
+    },
+    {
+      "id": 9,
+      "name": "查看工作目录",
+      "prompt": "查看当前工作目录",
+      "category": "终端命令"
+    },
+    {
+      "id": 10,
+      "name": "系统信息",
+      "prompt": "显示系统信息",
+      "category": "终端命令"
+    },
+    {
+      "id": 11,
+      "name": "多步骤任务",
+      "prompt": "创建一个hello.py文件，写入print('Hello')，然后读取确认内容",
+      "category": "复杂任务"
+    },
+    {
+      "id": 12,
+      "name": "分析项目",
+      "prompt": "分析这个项目用了哪些技术栈",
+      "category": "复杂任务"
+    },
+    {
+      "id": 13,
+      "name": "文件信息",
+      "prompt": "获取main.py的文件信息",
+      "category": "文件操作"
+    },
+    {
+      "id": 14,
+      "name": "搜索Python函数",
+      "prompt": "搜索所有Python文件中的def ",
+      "category": "代码搜索"
+    },
+    {
+      "id": 15,
+      "name": "创建配置文件",
+      "prompt": "创建config.json文件，写入空的JSON对象{}",
+      "category": "文件操作"
+    }
+  ]
+}
+
