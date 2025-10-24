@@ -1,5 +1,11 @@
 """
 LLM服务模块 - DeepSeek专用
+
+这个模块负责与大语言模型（LLM）进行交互，是Agent的"大脑"部分。
+主要功能：
+1. 发送用户消息和工具定义给LLM
+2. 接收LLM的响应（可能包含工具调用）
+3. 管理对话上下文和System Prompt
 """
 from typing import Dict, Any, List, Optional
 from config import settings
@@ -8,9 +14,16 @@ from utils.logger import safe_print as print
 
 
 class LLMService:
-    """LLM服务基类"""
+    """
+    LLM服务基类
     
-    # Agent系统提示词
+    这是一个抽象基类，定义了所有LLM服务必须实现的接口。
+    为什么要用基类？方便以后切换到其他LLM（如GPT-4、Claude等）
+    """
+    
+    # ============================================================
+    # Agent系统提示词 - 这是告诉AI"你是谁"和"你能做什么"的关键
+    # ============================================================
     AGENT_SYSTEM_PROMPT = """你是一个智能编程助手Agent，可以帮助用户完成各种编程和开发任务。
 
 你的能力：
@@ -38,7 +51,10 @@ class LLMService:
 - 如果工具执行失败，尝试其他方法
 """
     
+    # ============================================================
     # 旧的Shell命令系统提示词（向后兼容）
+    # 这是早期版本的功能，现在已经被更强大的Agent系统取代
+    # ============================================================
     SHELL_SYSTEM_PROMPT = """你是一个专业的Shell命令助手。你的任务是将用户的自然语言需求转换为Shell命令。
 
 规则：
@@ -60,13 +76,46 @@ class LLMService:
         """
         与LLM对话（支持Function Calling）
         
+        这是整个Agent系统最核心的方法！
+        它负责：
+        1. 把用户消息和可用工具发送给LLM
+        2. 让LLM决定要不要调用工具、调用哪个工具
+        3. 返回LLM的响应（可能包含文本回复或工具调用）
+        
         Args:
-            messages: 对话消息列表
-            tools: 可用工具列表（Function Calling格式）
-            tool_choice: 工具选择策略（auto/none/required）
+            messages: 对话消息列表，格式如下：
+                     [
+                         {"role": "system", "content": "系统提示词"},
+                         {"role": "user", "content": "用户消息"},
+                         {"role": "assistant", "content": "AI回复"},
+                         {"role": "tool", "tool_call_id": "xxx", "content": "工具执行结果"}
+                     ]
+            
+            tools: 可用工具列表（OpenAI Function Calling格式）
+                  每个工具包含name、description、parameters等信息
+                  就像给AI发的"工具使用手册"
+            
+            tool_choice: 工具选择策略
+                        - "auto": 让AI自己决定要不要调用工具（最常用）
+                        - "none": 禁止调用工具，只返回文本
+                        - "required": 强制AI必须调用至少一个工具
             
         Returns:
-            LLM响应
+            LLM响应，格式如下：
+            {
+                "role": "assistant",
+                "content": "AI的文本回复（可能为None）",
+                "tool_calls": [  # 如果AI决定调用工具，这里会有值
+                    {
+                        "id": "call_xxx",
+                        "type": "function",
+                        "function": {
+                            "name": "read_file",
+                            "arguments": '{"path": "config.py"}'
+                        }
+                    }
+                ]
+            }
         """
         raise NotImplementedError("子类必须实现此方法")
     
@@ -74,25 +123,48 @@ class LLMService:
         """
         解析用户查询，返回shell命令（向后兼容的旧方法）
         
+        这是早期版本的功能，用于简单的命令行转换。
+        现在已经被更强大的Agent系统取代，但保留以便向后兼容。
+        
         Args:
             query: 用户的自然语言查询
+                  例如："查看当前目录文件"
             
         Returns:
             包含command和explanation的字典
+            例如：{"command": "ls -la", "explanation": "列出所有文件"}
         """
         raise NotImplementedError("子类必须实现此方法")
 
 
 class DeepSeekService(LLMService):
-    """DeepSeek服务（兼容OpenAI API格式）"""
+    """
+    DeepSeek服务（兼容OpenAI API格式）
+    
+    这是LLMService的具体实现，使用DeepSeek的API。
+    DeepSeek是国产大模型，性价比高，支持Function Calling。
+    
+    为什么用DeepSeek？
+    1. 便宜：比GPT-4便宜很多
+    2. 快速：响应速度快
+    3. 编程能力强：专门优化过代码理解和生成
+    4. 兼容OpenAI格式：可以直接用openai库
+    """
     
     def __init__(self):
+        """
+        初始化DeepSeek客户端
+        
+        这里使用OpenAI的Python库，因为DeepSeek的API完全兼容OpenAI格式。
+        只需要修改base_url就可以了。
+        """
         from openai import OpenAI
+        # 创建OpenAI客户端，但指向DeepSeek的API地址
         self.client = OpenAI(
-            api_key=settings.deepseek_api_key,
-            base_url=settings.deepseek_base_url
+            api_key=settings.deepseek_api_key,      # 从配置文件读取API密钥
+            base_url=settings.deepseek_base_url      # DeepSeek的API地址
         )
-        self.model = settings.deepseek_model
+        self.model = settings.deepseek_model         # 使用的模型名称（如deepseek-chat）
     
     def chat(
         self, 
@@ -100,7 +172,12 @@ class DeepSeekService(LLMService):
         tools: Optional[List[Dict[str, Any]]] = None,
         tool_choice: str = "auto"
     ) -> Dict[str, Any]:
-        """与DeepSeek对话（支持Function Calling）"""
+        """
+        与DeepSeek对话（支持Function Calling）
+        
+        这是整个系统的核心！每次Agent需要"思考"时都会调用这个方法。
+        """
+        # ======== 日志：记录调用信息，方便调试 ========
         print(f"\n    [DeepSeek.chat] 准备调用DeepSeek API")
         print(f"    [DeepSeek.chat] 模型: {self.model}")
         print(f"    [DeepSeek.chat] 消息数: {len(messages)}")
@@ -108,29 +185,33 @@ class DeepSeekService(LLMService):
         print(f"    [DeepSeek.chat] 温度: 0.7")
         
         try:
+            # ======== 第一步：准备API请求参数 ========
             kwargs = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": 0.7,
+                "model": self.model,              # 使用哪个模型（deepseek-chat）
+                "messages": messages,             # 对话历史（包含用户消息、AI回复、工具结果等）
+                "temperature": 0.7,               # 温度0.7 = 平衡创造性和准确性
             }
             
-            # 如果提供了工具，添加tools参数
+            # ======== 第二步：如果有工具，把工具信息也发给AI ========
+            # 这样AI就知道它可以调用哪些工具了
             if tools:
-                kwargs["tools"] = tools
-                kwargs["tool_choice"] = tool_choice
+                kwargs["tools"] = tools                    # 工具定义列表（工具使用手册）
+                kwargs["tool_choice"] = tool_choice        # 工具选择策略（auto让AI自己决定）
                 print(f"    [DeepSeek.chat] 工具选择策略: {tool_choice}")
             
+            # ======== 第三步：发送请求到DeepSeek API ========
             print(f"    [DeepSeek.chat] 发送API请求...")
             response = self.client.chat.completions.create(**kwargs)
             print(f"    [DeepSeek.chat] ✅ API响应成功")
             
-            message = response.choices[0].message
+            # ======== 第四步：解析API返回的响应 ========
+            message = response.choices[0].message  # 获取AI的回复消息
             
             print(f"    [DeepSeek.chat] 解析响应消息:")
             print(f"      - Role: {message.role}")
             print(f"      - 有tool_calls: {hasattr(message, 'tool_calls') and message.tool_calls}")
             
-            # 打印完整的Content
+            # ======== 打印AI返回的文本内容（如果有） ========
             if message.content:
                 print(f"\n    [DeepSeek.chat] LLM返回的完整消息:")
                 print(f"    ┌{'─'*70}┐")
@@ -138,27 +219,34 @@ class DeepSeekService(LLMService):
                     print(f"    │ {line}")
                 print(f"    └{'─'*70}┘\n")
             else:
+                # 如果content为空，说明AI只想调用工具，不返回文本
                 print(f"      - Content: None (纯工具调用)")
             
-            # 返回标准化的响应
+            # ======== 第五步：构建标准化的返回结果 ========
             result = {
-                "role": message.role,
-                "content": message.content,
+                "role": message.role,          # 角色：assistant（助手）
+                "content": message.content,    # AI返回的文本内容
             }
             
-            # 如果有工具调用
+            # ======== 第六步：如果AI决定调用工具，解析工具调用信息 ========
+            # 关键！AI可能会返回一个或多个工具调用
             if hasattr(message, 'tool_calls') and message.tool_calls:
                 result["tool_calls"] = []
                 print(f"    [DeepSeek.chat] 解析工具调用:")
+                
+                # 遍历所有工具调用（AI可能同时调用多个工具）
                 for idx, tool_call in enumerate(message.tool_calls, 1):
                     print(f"      工具 {idx}: {tool_call.function.name}")
                     print(f"        参数: {tool_call.function.arguments}")
+                    
+                    # 把工具调用信息添加到结果中
+                    # 格式：{id, type, function: {name, arguments}}
                     result["tool_calls"].append({
-                        "id": tool_call.id,
-                        "type": tool_call.type,
+                        "id": tool_call.id,                          # 工具调用ID（用于追踪）
+                        "type": tool_call.type,                      # 类型：function
                         "function": {
-                            "name": tool_call.function.name,
-                            "arguments": tool_call.function.arguments
+                            "name": tool_call.function.name,         # 工具名：如read_file
+                            "arguments": tool_call.function.arguments # 参数JSON字符串
                         }
                     })
             
