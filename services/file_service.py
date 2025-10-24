@@ -18,6 +18,7 @@ class FileService:
             workspace_root: 工作空间根目录
         """
         self.workspace_root = Path(workspace_root).resolve()
+        print(f"[FileService] 工作空间: {self.workspace_root}")
         
     def _get_full_path(self, path: str) -> Path:
         """
@@ -57,8 +58,13 @@ class FileService:
         Returns:
             包含文件内容的字典
         """
+        print(f"        [FileService.read_file] 读取文件")
+        print(f"        [FileService.read_file] 相对路径: {path}")
+        print(f"        [FileService.read_file] 行范围: {line_start}-{line_end}")
+        
         try:
             file_path = self._get_full_path(path)
+            print(f"        [FileService.read_file] 完整路径: {file_path}")
             
             if not file_path.exists():
                 return {
@@ -73,16 +79,21 @@ class FileService:
                 }
             
             # 读取文件
+            print(f"        [FileService.read_file] 打开文件...")
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 lines = f.readlines()
+            print(f"        [FileService.read_file] 读取完成，总行数: {len(lines)}")
             
             # 如果指定了行范围
             if line_start is not None or line_end is not None:
                 start = (line_start - 1) if line_start else 0
                 end = line_end if line_end else len(lines)
                 lines = lines[start:end]
+                print(f"        [FileService.read_file] 截取行范围 {start+1}-{end}")
             
             content = ''.join(lines)
+            
+            print(f"        [FileService.read_file] ✅ 读取成功，返回 {len(lines)} 行")
             
             return {
                 "success": True,
@@ -110,21 +121,31 @@ class FileService:
         Returns:
             操作结果
         """
+        print(f"        [FileService.write_file] 写入文件")
+        print(f"        [FileService.write_file] 路径: {path}")
+        print(f"        [FileService.write_file] 内容长度: {len(content)} 字符")
+        
         try:
             file_path = self._get_full_path(path)
+            print(f"        [FileService.write_file] 完整路径: {file_path}")
             
             # 如果需要创建目录
-            if create_dirs:
+            if create_dirs and not file_path.parent.exists():
+                print(f"        [FileService.write_file] 创建目录: {file_path.parent}")
                 file_path.parent.mkdir(parents=True, exist_ok=True)
             
             # 写入文件
+            print(f"        [FileService.write_file] 写入文件...")
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
+            
+            bytes_written = len(content.encode('utf-8'))
+            print(f"        [FileService.write_file] ✅ 写入成功，写入 {bytes_written} 字节")
             
             return {
                 "success": True,
                 "path": str(file_path.relative_to(self.workspace_root)),
-                "bytes_written": len(content.encode('utf-8'))
+                "bytes_written": bytes_written
             }
             
         except Exception as e:

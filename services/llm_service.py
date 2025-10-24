@@ -1,5 +1,5 @@
 """
-LLM服务模块 - 支持OpenAI和智谱AI，支持Function Calling
+LLM服务模块 - DeepSeek专用
 """
 from typing import Dict, Any, List, Optional
 from config import settings
@@ -82,13 +82,16 @@ class LLMService:
         raise NotImplementedError("子类必须实现此方法")
 
 
-class OpenAIService(LLMService):
-    """OpenAI服务"""
+class DeepSeekService(LLMService):
+    """DeepSeek服务（兼容OpenAI API格式）"""
     
     def __init__(self):
         from openai import OpenAI
-        self.client = OpenAI(api_key=settings.openai_api_key)
-        self.model = settings.openai_model
+        self.client = OpenAI(
+            api_key=settings.deepseek_api_key,
+            base_url=settings.deepseek_base_url
+        )
+        self.model = settings.deepseek_model
     
     def chat(
         self, 
@@ -96,7 +99,13 @@ class OpenAIService(LLMService):
         tools: Optional[List[Dict[str, Any]]] = None,
         tool_choice: str = "auto"
     ) -> Dict[str, Any]:
-        """与OpenAI对话（支持Function Calling）"""
+        """与DeepSeek对话（支持Function Calling）"""
+        print(f"\n    [DeepSeek.chat] 准备调用DeepSeek API")
+        print(f"    [DeepSeek.chat] 模型: {self.model}")
+        print(f"    [DeepSeek.chat] 消息数: {len(messages)}")
+        print(f"    [DeepSeek.chat] 工具数: {len(tools) if tools else 0}")
+        print(f"    [DeepSeek.chat] 温度: 0.7")
+        
         try:
             kwargs = {
                 "model": self.model,
@@ -108,10 +117,18 @@ class OpenAIService(LLMService):
             if tools:
                 kwargs["tools"] = tools
                 kwargs["tool_choice"] = tool_choice
+                print(f"    [DeepSeek.chat] 工具选择策略: {tool_choice}")
             
+            print(f"    [DeepSeek.chat] 发送API请求...")
             response = self.client.chat.completions.create(**kwargs)
+            print(f"    [DeepSeek.chat] ✅ API响应成功")
             
             message = response.choices[0].message
+            
+            print(f"    [DeepSeek.chat] 解析响应消息:")
+            print(f"      - Role: {message.role}")
+            print(f"      - Content: {message.content[:100] if message.content else 'None'}...")
+            print(f"      - 有tool_calls: {hasattr(message, 'tool_calls') and message.tool_calls}")
             
             # 返回标准化的响应
             result = {
@@ -122,7 +139,10 @@ class OpenAIService(LLMService):
             # 如果有工具调用
             if hasattr(message, 'tool_calls') and message.tool_calls:
                 result["tool_calls"] = []
-                for tool_call in message.tool_calls:
+                print(f"    [DeepSeek.chat] 解析工具调用:")
+                for idx, tool_call in enumerate(message.tool_calls, 1):
+                    print(f"      工具 {idx}: {tool_call.function.name}")
+                    print(f"        参数: {tool_call.function.arguments}")
                     result["tool_calls"].append({
                         "id": tool_call.id,
                         "type": tool_call.type,
@@ -132,6 +152,7 @@ class OpenAIService(LLMService):
                         }
                     })
             
+            print(f"    [DeepSeek.chat] 返回响应\n")
             return result
             
         except Exception as e:
@@ -142,112 +163,7 @@ class OpenAIService(LLMService):
             }
     
     def parse_query(self, query: str) -> Dict[str, str]:
-        """使用OpenAI解析查询（向后兼容）"""
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": self.SHELL_SYSTEM_PROMPT},
-                    {"role": "user", "content": query}
-                ],
-                temperature=0.3,
-                max_tokens=500
-            )
-            
-            content = response.choices[0].message.content.strip()
-            
-            # 尝试解析JSON
-            result = self._parse_json_response(content)
-            return result
-            
-        except Exception as e:
-            return {
-                "command": "",
-                "explanation": f"LLM调用失败: {str(e)}"
-            }
-    
-    def _parse_json_response(self, content: str) -> Dict[str, str]:
-        """解析LLM返回的JSON内容"""
-        try:
-            # 尝试直接解析
-            return json.loads(content)
-        except json.JSONDecodeError:
-            # 尝试提取JSON部分
-            import re
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            if json_match:
-                try:
-                    return json.loads(json_match.group())
-                except:
-                    pass
-            
-            return {
-                "command": "",
-                "explanation": f"无法解析LLM返回: {content}"
-            }
-
-
-class ZhipuAIService(LLMService):
-    """智谱AI服务"""
-    
-    def __init__(self):
-        from zhipuai import ZhipuAI
-        self.client = ZhipuAI(api_key=settings.zhipuai_api_key)
-        self.model = settings.zhipuai_model
-    
-    def chat(
-        self, 
-        messages: List[Dict[str, str]], 
-        tools: Optional[List[Dict[str, Any]]] = None,
-        tool_choice: str = "auto"
-    ) -> Dict[str, Any]:
-        """与智谱AI对话（支持Function Calling）"""
-        try:
-            kwargs = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": 0.7,
-            }
-            
-            # 如果提供了工具，添加tools参数
-            if tools:
-                kwargs["tools"] = tools
-                kwargs["tool_choice"] = tool_choice
-            
-            response = self.client.chat.completions.create(**kwargs)
-            
-            message = response.choices[0].message
-            
-            # 返回标准化的响应
-            result = {
-                "role": message.role,
-                "content": message.content,
-            }
-            
-            # 如果有工具调用
-            if hasattr(message, 'tool_calls') and message.tool_calls:
-                result["tool_calls"] = []
-                for tool_call in message.tool_calls:
-                    result["tool_calls"].append({
-                        "id": tool_call.id,
-                        "type": tool_call.type,
-                        "function": {
-                            "name": tool_call.function.name,
-                            "arguments": tool_call.function.arguments
-                        }
-                    })
-            
-            return result
-            
-        except Exception as e:
-            return {
-                "role": "assistant",
-                "content": f"LLM调用失败: {str(e)}",
-                "error": str(e)
-            }
-    
-    def parse_query(self, query: str) -> Dict[str, str]:
-        """使用智谱AI解析查询（向后兼容）"""
+        """使用DeepSeek解析查询（向后兼容）"""
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -293,13 +209,5 @@ class ZhipuAIService(LLMService):
 
 
 def get_llm_service() -> LLMService:
-    """获取LLM服务实例"""
-    if settings.llm_provider == "openai":
-        return OpenAIService()
-    elif settings.llm_provider == "zhipuai":
-        return ZhipuAIService()
-    else:
-        raise ValueError(f"不支持的LLM提供商: {settings.llm_provider}")
-
-
-
+    """获取LLM服务实例（直接返回DeepSeek）"""
+    return DeepSeekService()

@@ -37,29 +37,53 @@ class Agent:
         Returns:
             Agent响应结果
         """
+        print("\n" + "="*80)
+        print(f"[Agent.run] 开始处理用户请求")
+        print(f"[Agent.run] 用户消息: {user_message}")
+        print(f"[Agent.run] 历史对话数: {len(conversation_history) if conversation_history else 0}")
+        print("="*80 + "\n")
+        
         # 初始化对话历史
         if conversation_history is None:
             conversation_history = []
         
         # 构建消息列表
+        print(f"[Agent.run] 构建消息列表...")
         messages = self._build_messages(user_message, conversation_history)
+        print(f"[Agent.run] 消息总数: {len(messages)}")
         
         # 获取工具定义
+        print(f"[Agent.run] 获取工具定义...")
         tools = self.tool_manager.get_tool_definitions()
+        print(f"[Agent.run] 可用工具数: {len(tools)}")
+        print(f"[Agent.run] 工具列表: {[t['function']['name'] for t in tools]}")
         
         # Agent执行循环
         iterations = 0
         tool_calls_history = []
         
+        print(f"\n[Agent.run] 开始执行循环（最大迭代次数: {self.max_iterations}）\n")
+        
         while iterations < self.max_iterations:
             iterations += 1
+            print(f"\n{'='*60}")
+            print(f"[Agent.run] 第 {iterations} 次迭代")
+            print(f"{'='*60}")
             
             # 调用LLM
+            print(f"[Agent.run] 调用LLM服务...")
+            print(f"[Agent.run] 当前消息数: {len(messages)}")
+            
             llm_response = self.llm_service.chat(
                 messages=messages,
                 tools=tools,
                 tool_choice="auto"
             )
+            
+            print(f"[Agent.run] LLM响应:")
+            print(f"  - Role: {llm_response.get('role')}")
+            print(f"  - Content: {llm_response.get('content', '')[:100]}...")
+            print(f"  - 是否有工具调用: {'tool_calls' in llm_response}")
             
             # 添加助手消息到历史
             messages.append({
@@ -69,12 +93,21 @@ class Agent:
             
             # 如果有工具调用
             if "tool_calls" in llm_response and llm_response["tool_calls"]:
+                print(f"\n[Agent.run] 检测到 {len(llm_response['tool_calls'])} 个工具调用")
                 # 记录工具调用
                 messages[-1]["tool_calls"] = llm_response["tool_calls"]
                 
                 # 执行所有工具调用
-                for tool_call in llm_response["tool_calls"]:
+                for idx, tool_call in enumerate(llm_response["tool_calls"], 1):
+                    print(f"\n[Agent.run] 执行工具 {idx}/{len(llm_response['tool_calls'])}")
+                    print(f"  - 工具名: {tool_call['function']['name']}")
+                    print(f"  - 参数: {tool_call['function']['arguments']}")
+                    
                     tool_result = await self._execute_tool_call(tool_call)
+                    
+                    print(f"  - 执行结果: {tool_result.get('success', False)}")
+                    if not tool_result.get('success'):
+                        print(f"  - 错误信息: {tool_result.get('error', 'Unknown')}")
                     
                     # 记录工具执行历史
                     tool_calls_history.append({
@@ -90,13 +123,21 @@ class Agent:
                         "content": json.dumps(tool_result, ensure_ascii=False)
                     })
                 
+                print(f"\n[Agent.run] 所有工具执行完毕，进入下一轮迭代")
                 # 继续下一轮循环，让LLM看到工具结果
                 continue
             
             # 没有工具调用，任务完成
+            print(f"\n[Agent.run] 无工具调用，任务完成")
             break
         
         # 构建最终响应
+        print(f"\n[Agent.run] 任务执行完毕")
+        print(f"  - 总迭代次数: {iterations}")
+        print(f"  - 工具调用次数: {len(tool_calls_history)}")
+        print(f"  - 最终消息: {llm_response.get('content', '')[:100]}...")
+        print("="*80 + "\n")
+        
         final_response = {
             "success": True,
             "message": llm_response.get("content", ""),
@@ -136,17 +177,23 @@ class Agent:
         """执行单个工具调用"""
         function_name = tool_call["function"]["name"]
         
+        print(f"    [_execute_tool_call] 准备执行工具: {function_name}")
+        
         try:
             # 解析参数
             arguments = json.loads(tool_call["function"]["arguments"])
-        except json.JSONDecodeError:
+            print(f"    [_execute_tool_call] 解析参数成功: {arguments}")
+        except json.JSONDecodeError as e:
+            print(f"    [_execute_tool_call] 参数解析失败: {e}")
             return {
                 "success": False,
                 "error": "工具参数解析失败"
             }
         
         # 执行工具
+        print(f"    [_execute_tool_call] 调用 ToolManager.execute_tool()")
         result = self.tool_manager.execute_tool(function_name, arguments)
+        print(f"    [_execute_tool_call] 工具执行完成: success={result.get('success', False)}")
         
         return result
     
