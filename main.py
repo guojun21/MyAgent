@@ -13,7 +13,7 @@ from services.llm_service import get_llm_service
 from services.security_service import SecurityService
 from services.terminal_service import TerminalService
 from core.agent import Agent
-from core.session_manager import session_manager
+from core.context_manager import context_manager
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 

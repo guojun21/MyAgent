@@ -204,22 +204,43 @@ class DeepSeekService(LLMService):
             response = self.client.chat.completions.create(**kwargs)
             print(f"    [DeepSeek.chat] ✅ API响应成功")
             
+            # ======== 打印API完整响应 ========
+            print(f"\n    [DeepSeek.chat] API响应完整字段:")
+            print(f"      - id: {response.id}")
+            print(f"      - object: {response.object}")
+            print(f"      - created: {response.created}")
+            print(f"      - model: {response.model}")
+            print(f"      - choices数量: {len(response.choices)}")
+            
+            if hasattr(response, 'usage') and response.usage:
+                print(f"      - usage.prompt_tokens: {response.usage.prompt_tokens}")
+                print(f"      - usage.completion_tokens: {response.usage.completion_tokens}")
+                print(f"      - usage.total_tokens: {response.usage.total_tokens}")
+            
+            if hasattr(response, 'system_fingerprint') and response.system_fingerprint:
+                print(f"      - system_fingerprint: {response.system_fingerprint}")
+            
             # ======== 第四步：解析API返回的响应 ========
             message = response.choices[0].message  # 获取AI的回复消息
+            choice = response.choices[0]
             
-            print(f"    [DeepSeek.chat] 解析响应消息:")
-            print(f"      - Role: {message.role}")
+            print(f"\n    [DeepSeek.chat] Choice[0]详细字段:")
+            print(f"      - index: {choice.index}")
+            print(f"      - finish_reason: {choice.finish_reason}")
+            if hasattr(choice, 'logprobs'):
+                print(f"      - logprobs: {choice.logprobs}")
+            
+            print(f"\n    [DeepSeek.chat] Message详细字段:")
+            print(f"      - role: {message.role}")
+            print(f"      - content长度: {len(message.content) if message.content else 0}")
             print(f"      - 有tool_calls: {hasattr(message, 'tool_calls') and message.tool_calls}")
+            if hasattr(message, 'function_call'):
+                print(f"      - function_call: {message.function_call}")
+            if hasattr(message, 'refusal'):
+                print(f"      - refusal: {message.refusal}")
             
-            # ======== 打印AI返回的文本内容（如果有） ========
-            if message.content:
-                print(f"\n    [DeepSeek.chat] LLM返回的完整消息:")
-                print(f"    ┌{'─'*70}┐")
-                for line in message.content.split('\n'):
-                    print(f"    │ {line}")
-                print(f"    └{'─'*70}┘\n")
-            else:
-                # 如果content为空，说明AI只想调用工具，不返回文本
+            # 不在这里打印content，避免重复（Agent.run会打印最终消息）
+            if not message.content:
                 print(f"      - Content: None (纯工具调用)")
             
             # ======== 第五步：构建标准化的返回结果 ========
@@ -227,6 +248,14 @@ class DeepSeekService(LLMService):
                 "role": message.role,          # 角色：assistant（助手）
                 "content": message.content,    # AI返回的文本内容
             }
+            
+            # 添加token使用统计
+            if hasattr(response, 'usage') and response.usage:
+                result["usage"] = {
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens
+                }
             
             # ======== 第六步：如果AI决定调用工具，解析工具调用信息 ========
             # 关键！AI可能会返回一个或多个工具调用

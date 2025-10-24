@@ -1,0 +1,225 @@
+================================================================================
+AI编程助手 - 运行日志
+启动时间: 2025-10-25 03:02:05
+日志文件: llmlogs\agent_log_20251025_030205.txt
+================================================================================
+
+[ToolManager] 初始化工作空间: C:\!002Projects\MyAgent
+[FileService] 工作空间: C:\!002Projects\MyAgent
+[AgentBridge] Context ID: 98e9aa52-3330-4134-83e6-022f26b81d44
+[AgentBridge._load_and_emit_test_prompts] 开始加载测试用例
+[AgentBridge._load_and_emit_test_prompts] 文件路径: C:\!002Projects\MyAgent\测试prompts.json
+[AgentBridge._load_and_emit_test_prompts] 读取成功，长度: 1739
+[AgentBridge._load_and_emit_test_prompts] 发送到前端
+
+********************************************************************************
+[AgentBridge.sendMessage] 收到用户消息
+[AgentBridge.sendMessage] 内容: 111
+********************************************************************************
+
+[AgentBridge.sendMessage] 发送'思考中'状态到前端
+[AgentBridge.sendMessage] 创建工作线程...
+[AgentBridge.sendMessage] 当前工作空间: C:\!002Projects\MyAgent
+[AgentBridge.sendMessage] Context消息数: 0
+[AgentBridge.sendMessage] 启动工作线程
+
+================================================================================
+[Agent.run] 开始处理用户请求
+[Agent.run] 用户消息: 111
+[Agent.run] Context消息数: 0
+================================================================================
+
+[Agent.run] 从Context构建消息列表...
+[Agent.run] 消息总数: 2
+[Agent.run] 获取工具定义...
+[Agent.run] 可用工具数: 8
+[Agent.run] 工具列表: ['read_file', 'write_file', 'edit_file', 'list_files', 'search_code', 'get_project_structure', 'run_terminal', 'analyze_file_imports']
+
+[Agent.run] 开始执行循环（最大迭代次数: 10）
+
+
+============================================================
+[Agent.run] 第 1 次迭代
+============================================================
+[Agent.run] 调用LLM服务...
+[Agent.run] 当前消息数: 2
+
+    [DeepSeek.chat] 准备调用DeepSeek API
+    [DeepSeek.chat] 模型: deepseek-coder
+    [DeepSeek.chat] 消息数: 2
+    [DeepSeek.chat] 工具数: 8
+    [DeepSeek.chat] 温度: 0.7
+    [DeepSeek.chat] 工具选择策略: auto
+    [DeepSeek.chat] 发送API请求...
+    [DeepSeek.chat] ✅ API响应成功
+
+    [DeepSeek.chat] API响应完整字段:
+      - id: d1992ad3-c190-44bf-b194-17217a0dc521
+      - object: chat.completion
+      - created: 1761332536
+      - model: deepseek-chat
+      - choices数量: 1
+      - usage.prompt_tokens: 1050
+      - usage.completion_tokens: 116
+      - usage.total_tokens: 1166
+      - system_fingerprint: fp_ffc7281d48_prod0820_fp8_kvcache
+
+    [DeepSeek.chat] Choice[0]详细字段:
+      - index: 0
+      - finish_reason: stop
+      - logprobs: None
+
+    [DeepSeek.chat] Message详细字段:
+      - role: assistant
+      - content长度: 200
+      - 有tool_calls: None
+      - function_call: None
+      - refusal: None
+    [DeepSeek.chat] 返回响应
+
+[Agent.run] LLM响应:
+  - Role: assistant
+  - 是否有工具调用: False
+  - Content长度: 200 字符
+
+[Agent.run] 无工具调用，任务完成
+
+[Agent.run] 任务执行完毕
+  - 总迭代次数: 1
+  - 工具调用次数: 0
+
+[Agent.run] 最终返回给用户的消息:
+┌────────────────────────────────────────────────────────────────────────────┐
+│ 我注意到您输入了"111"，但我不确定您的具体需求。作为智能编程助手，我可以帮助您完成各种编程和开发任务，比如：
+│ 
+│ - 读取和编辑代码文件
+│ - 搜索特定代码片段
+│ - 分析项目结构
+│ - 执行终端命令
+│ - 理解和修改代码
+│ 
+│ 请告诉我您需要什么帮助？比如：
+│ - 您想查看某个文件的内容？
+│ - 需要搜索特定的代码？
+│ - 想要了解项目结构？
+│ - 还是其他编程相关的任务？
+│ 
+│ 请详细描述您的需求，我会尽力协助您！
+└────────────────────────────────────────────────────────────────────────────┘
+================================================================================
+
+
+********************************************************************************
+[AgentBridge._on_agent_finished] Agent执行完成
+[AgentBridge._on_agent_finished] 成功: True
+[AgentBridge._on_agent_finished] 迭代次数: 1
+[AgentBridge._on_agent_finished] 工具调用数: 0
+********************************************************************************
+
+[AgentBridge._on_agent_finished] 发送结果到前端
+
+********************************************************************************
+[AgentBridge.sendMessage] 收到用户消息
+[AgentBridge.sendMessage] 内容: 老子日你妈
+********************************************************************************
+
+[AgentBridge.sendMessage] 发送'思考中'状态到前端
+[AgentBridge.sendMessage] 创建工作线程...
+[AgentBridge.sendMessage] 当前工作空间: C:\!002Projects\MyAgent
+[AgentBridge.sendMessage] Context消息数: 2
+[AgentBridge.sendMessage] 启动工作线程
+
+================================================================================
+[Agent.run] 开始处理用户请求
+[Agent.run] 用户消息: 老子日你妈
+[Agent.run] Context消息数: 2
+================================================================================
+
+[Agent.run] 从Context构建消息列表...
+[Agent.run] 消息总数: 4
+[Agent.run] 获取工具定义...
+[Agent.run] 可用工具数: 8
+[Agent.run] 工具列表: ['read_file', 'write_file', 'edit_file', 'list_files', 'search_code', 'get_project_structure', 'run_terminal', 'analyze_file_imports']
+
+[Agent.run] 开始执行循环（最大迭代次数: 10）
+
+
+============================================================
+[Agent.run] 第 1 次迭代
+============================================================
+[Agent.run] 调用LLM服务...
+[Agent.run] 当前消息数: 4
+
+    [DeepSeek.chat] 准备调用DeepSeek API
+    [DeepSeek.chat] 模型: deepseek-coder
+    [DeepSeek.chat] 消息数: 4
+    [DeepSeek.chat] 工具数: 8
+    [DeepSeek.chat] 温度: 0.7
+    [DeepSeek.chat] 工具选择策略: auto
+    [DeepSeek.chat] 发送API请求...
+    [DeepSeek.chat] ✅ API响应成功
+
+    [DeepSeek.chat] API响应完整字段:
+      - id: 4d9eb8b3-abb2-4a90-9b87-aeef0a3370d9
+      - object: chat.completion
+      - created: 1761332556
+      - model: deepseek-chat
+      - choices数量: 1
+      - usage.prompt_tokens: 1174
+      - usage.completion_tokens: 79
+      - usage.total_tokens: 1253
+      - system_fingerprint: fp_ffc7281d48_prod0820_fp8_kvcache
+
+    [DeepSeek.chat] Choice[0]详细字段:
+      - index: 0
+      - finish_reason: stop
+      - logprobs: None
+
+    [DeepSeek.chat] Message详细字段:
+      - role: assistant
+      - content长度: 139
+      - 有tool_calls: None
+      - function_call: None
+      - refusal: None
+    [DeepSeek.chat] 返回响应
+
+[Agent.run] LLM响应:
+  - Role: assistant
+  - 是否有工具调用: False
+  - Content长度: 139 字符
+
+[Agent.run] 无工具调用，任务完成
+
+[Agent.run] 任务执行完毕
+  - 总迭代次数: 1
+  - 工具调用次数: 0
+
+[Agent.run] 最终返回给用户的消息:
+┌────────────────────────────────────────────────────────────────────────────┐
+│ 我理解您可能有些情绪，但我无法处理这类不适当的语言。作为编程助手，我的目的是帮助您解决技术问题。
+│ 
+│ 如果您有任何编程或开发相关的问题，我很乐意为您提供帮助。比如：
+│ - 代码调试
+│ - 项目分析
+│ - 文件操作
+│ - 终端命令执行
+│ 
+│ 请告诉我您需要什么技术帮助，我会尽力协助您解决问题。
+└────────────────────────────────────────────────────────────────────────────┘
+================================================================================
+
+
+********************************************************************************
+[AgentBridge._on_agent_finished] Agent执行完成
+[AgentBridge._on_agent_finished] 成功: True
+[AgentBridge._on_agent_finished] 迭代次数: 1
+[AgentBridge._on_agent_finished] 工具调用数: 0
+********************************************************************************
+
+[AgentBridge._on_agent_finished] 发送结果到前端
+
+[主程序] 应用退出，关闭日志文件
+
+================================================================================
+结束时间: 2025-10-25 03:02:58
+================================================================================

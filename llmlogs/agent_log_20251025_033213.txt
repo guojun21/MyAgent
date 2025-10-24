@@ -1,0 +1,18 @@
+================================================================================
+AI编程助手 - 运行日志
+启动时间: 2025-10-25 03:32:13
+日志文件: llmlogs\agent_log_20251025_033213.txt
+================================================================================
+
+[ToolManager] 初始化工作空间: C:\!002Projects\MyAgent
+[FileService] 工作空间: C:\!002Projects\MyAgent
+[AgentBridge] Context ID: 04584369-17d3-4316-9e74-d7fe757c7fc6
+[AgentBridge._load_and_emit_test_prompts] 开始加载测试用例
+[AgentBridge._load_and_emit_test_prompts] 文件路径: C:\!002Projects\MyAgent\测试prompts.json
+[AgentBridge._load_and_emit_test_prompts] 读取成功，长度: 1739
+[AgentBridge._load_and_emit_test_prompts] 发送到前端
+[切换工作空间] C:\!002Projects\111
+[ToolManager] 初始化工作空间: C:\!002Projects\111
+[FileService] 工作空间: C:\!002Projects\111
+[Agent重新初始化] 工作空间: C:\!002Projects\111
+[切换工作空间] Context已重置
