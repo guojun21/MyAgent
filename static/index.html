@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Terminal Agent - 智能终端助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .examples {
+            margin-bottom: 20px;
+        }
+
+        .examples h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .example-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .example-tag {
+            padding: 8px 15px;
+            background: #f5f5f5;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .example-tag:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .result-section {
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .result-card.error {
+            background: #fee;
+            border-left: 4px solid #f44336;
+        }
+
+        .result-card.success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+
+        .result-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .result-content {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .command-box {
+            background: #2d2d2d;
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+
+        .output-box {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .system-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        .system-info span {
+            display: inline-block;
+            margin-right: 15px;
+            color: #666;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+            border-top: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 LLM Terminal Agent</h1>
+            <p>用自然语言控制你的终端 | 安全 · 智能 · 高效</p>
+        </div>
+
+        <div class="content">
+            <div class="examples">
+                <h3>💡 试试这些示例：</h3>
+                <div class="example-tags">
+                    <span class="example-tag" onclick="setQuery('查看当前目录下的所有文件')">查看当前目录文件</span>
+                    <span class="example-tag" onclick="setQuery('显示系统内存使用情况')">查看内存使用</span>
+                    <span class="example-tag" onclick="setQuery('列出正在运行的进程')">列出进程</span>
+                    <span class="example-tag" onclick="setQuery('查看当前时间和日期')">查看时间</span>
+                    <span class="example-tag" onclick="setQuery('显示磁盘使用情况')">磁盘使用</span>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        class="input-field" 
+                        id="queryInput" 
+                        placeholder="输入你的需求，例如：查看当前目录有哪些文件..."
+                        onkeypress="handleKeyPress(event)"
+                    >
+                    <button class="btn" onclick="executeQuery()" id="executeBtn">
+                        ▶️ 执行
+                    </button>
+                </div>
+            </div>
+
+            <div id="loadingSection" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>AI正在理解你的需求并生成命令...</p>
+            </div>
+
+            <div id="resultSection" class="result-section">
+                <div id="queryCard" class="result-card">
+                    <div class="result-label">📝 你的需求</div>
+                    <div class="result-content" id="queryText"></div>
+                </div>
+
+                <div id="commandCard" class="result-card">
+                    <div class="result-label">⚡ 生成的命令</div>
+                    <div class="result-content" id="explanationText"></div>
+                    <div class="command-box" id="commandText"></div>
+                </div>
+
+                <div id="outputCard" class="result-card">
+                    <div class="result-label">📤 执行结果</div>
+                    <div class="output-box" id="outputText"></div>
+                </div>
+            </div>
+
+            <div class="system-info" id="systemInfo">
+                <span>🖥️ 系统加载中...</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>⚠️ 本工具仅执行安全的只读命令 | 所有命令都经过严格的安全校验</p>
+            <p style="margin-top: 5px;">访问 <a href="/docs" style="color: #667eea;">/docs</a> 查看API文档</p>
+        </div>
+    </div>
+
+    <script>
+        // 加载系统信息
+        async function loadSystemInfo() {
+            try {
+                const response = await fetch('/system-info');
+                const data = await response.json();
+                document.getElementById('systemInfo').innerHTML = `
+                    <span>🖥️ 系统: ${data.system}</span>
+                    <span>💻 平台: ${data.platform}</span>
+                    <span>🐍 Python: ${data.python_version}</span>
+                `;
+            } catch (error) {
+                console.error('Failed to load system info:', error);
+            }
+        }
+
+        // 设置查询
+        function setQuery(query) {
+            document.getElementById('queryInput').value = query;
+            document.getElementById('queryInput').focus();
+        }
+
+        // 处理回车键
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                executeQuery();
+            }
+        }
+
+        // 执行查询
+        async function executeQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            
+            if (!query) {
+                alert('请输入你的需求');
+                return;
+            }
+
+            // 显示加载状态
+            document.getElementById('loadingSection').style.display = 'block';
+            document.getElementById('resultSection').classList.remove('show');
+            document.getElementById('executeBtn').disabled = true;
+
+            try {
+                const response = await fetch('/run-shell', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+
+                // 隐藏加载状态
+                document.getElementById('loadingSection').style.display = 'none';
+                document.getElementById('executeBtn').disabled = false;
+
+                // 显示结果
+                displayResult(data);
+
+            } catch (error) {
+                document.getElementById('loadingSection').style.display = 'none';
+                document.getElementById('executeBtn').disabled = false;
+                alert('请求失败: ' + error.message);
+            }
+        }
+
+        // 显示结果
+        function displayResult(data) {
+            // 显示查询
+            document.getElementById('queryText').textContent = data.query;
+
+            // 显示命令和说明
+            document.getElementById('explanationText').textContent = data.explanation;
+            document.getElementById('commandText').textContent = data.command || '(无命令)';
+
+            // 显示输出或错误
+            const outputCard = document.getElementById('outputCard');
+            const outputText = document.getElementById('outputText');
+
+            if (data.success && data.output) {
+                outputCard.className = 'result-card success';
+                outputText.textContent = data.output;
+            } else if (data.error) {
+                outputCard.className = 'result-card error';
+                outputText.textContent = '❌ ' + data.error;
+            } else {
+                outputCard.className = 'result-card';
+                outputText.textContent = '(无输出)';
+            }
+
+            // 显示结果区域
+            document.getElementById('resultSection').classList.add('show');
+        }
+
+        // 页面加载时获取系统信息
+        loadSystemInfo();
+    </script>
+</body>
+</html>
+
+
+
