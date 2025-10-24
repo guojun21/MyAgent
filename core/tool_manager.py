@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Callable
 from services.file_service import FileService
 from services.code_service import CodeService
 from services.terminal_service import TerminalService
+from utils.logger import safe_print as print
 
 
 class ToolManager:

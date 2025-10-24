@@ -10,6 +10,7 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebChannel import QWebChannel
 
 from core.agent import Agent
+from utils.logger import safe_print as print
 
 
 class AgentWorker(QThread):
@@ -45,6 +46,8 @@ class AgentBridge(QObject):
     messageReceived = pyqtSignal(str)
     # 信号：工作空间改变
     workspaceChanged = pyqtSignal(str)
+    # 信号：测试用例加载
+    testPromptsLoaded = pyqtSignal(str)
     
     def __init__(self, parent_window=None):
         super().__init__()
@@ -53,6 +56,9 @@ class AgentBridge(QObject):
         self.agent = Agent(workspace_root=str(self.workspace_root))
         self.session_history = []
         self.current_worker = None
+        
+        # 加载测试用例
+        self._load_and_emit_test_prompts()
     
     @pyqtSlot(str)
     def sendMessage(self, message):
@@ -171,31 +177,28 @@ class AgentBridge(QObject):
                 "message": f"已切换到工作空间: {self.workspace_root}"
             })
     
-    @pyqtSlot(result=str)
-    def loadTestPrompts(self):
-        """加载测试prompts"""
-        print("[AgentBridge.loadTestPrompts] 开始加载测试用例")
+    def _load_and_emit_test_prompts(self):
+        """加载并发送测试prompts"""
+        print("[AgentBridge._load_and_emit_test_prompts] 开始加载测试用例")
         try:
             test_file = Path(__file__).parent / "测试prompts.json"
-            print(f"[AgentBridge.loadTestPrompts] 文件路径: {test_file}")
+            print(f"[AgentBridge._load_and_emit_test_prompts] 文件路径: {test_file}")
             
             if not test_file.exists():
-                error_result = json.dumps({"error": "文件不存在"}, ensure_ascii=False)
-                print(f"[AgentBridge.loadTestPrompts] 文件不存在，返回: {error_result}")
-                return error_result
+                print(f"[AgentBridge._load_and_emit_test_prompts] 文件不存在")
+                self.testPromptsLoaded.emit(json.dumps({"error": "文件不存在"}, ensure_ascii=False))
+                return
             
             with open(test_file, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            print(f"[AgentBridge.loadTestPrompts] 读取成功，长度: {len(content)}")
-            print(f"[AgentBridge.loadTestPrompts] 内容前100字符: {content[:100]}")
-            return content
+            print(f"[AgentBridge._load_and_emit_test_prompts] 读取成功，长度: {len(content)}")
+            print(f"[AgentBridge._load_and_emit_test_prompts] 发送到前端")
+            self.testPromptsLoaded.emit(content)
             
         except Exception as e:
-            error_result = json.dumps({"error": str(e)}, ensure_ascii=False)
-            print(f"[AgentBridge.loadTestPrompts] 异常: {e}")
-            print(f"[AgentBridge.loadTestPrompts] 返回: {error_result}")
-            return error_result
+            print(f"[AgentBridge._load_and_emit_test_prompts] 异常: {e}")
+            self.testPromptsLoaded.emit(json.dumps({"error": str(e)}, ensure_ascii=False))
     
     def _send_to_frontend(self, data):
         """发送数据到前端"""
