@@ -17,6 +17,9 @@ class ToolManager:
         Args:
             workspace_root: 工作空间根目录
         """
+        self.workspace_root = workspace_root
+        print(f"[ToolManager] 初始化工作空间: {workspace_root}")
+        
         # 初始化各个服务
         self.file_service = FileService(workspace_root)
         self.code_service = CodeService(workspace_root)
@@ -257,7 +260,12 @@ class ToolManager:
         Returns:
             执行结果
         """
+        print(f"\n      [ToolManager.execute_tool] 开始执行工具")
+        print(f"      [ToolManager.execute_tool] 工具名: {tool_name}")
+        print(f"      [ToolManager.execute_tool] 参数: {parameters}")
+        
         if tool_name not in self.tools:
+            print(f"      [ToolManager.execute_tool] ❌ 工具不存在")
             return {
                 "success": False,
                 "error": f"未知的工具: {tool_name}"
@@ -266,13 +274,25 @@ class ToolManager:
         try:
             # 获取工具函数
             tool_func = self.tools[tool_name]
+            print(f"      [ToolManager.execute_tool] 获取工具函数: {tool_func}")
             
             # 执行工具
+            print(f"      [ToolManager.execute_tool] 调用工具函数...")
             result = tool_func(**parameters)
+            
+            print(f"      [ToolManager.execute_tool] ✅ 工具执行完成")
+            print(f"      [ToolManager.execute_tool] 结果: success={result.get('success')}")
+            if 'path' in result:
+                print(f"      [ToolManager.execute_tool] 操作路径: {result.get('path')}")
+            if 'total' in result:
+                print(f"      [ToolManager.execute_tool] 结果数量: {result.get('total')}")
             
             return result
             
         except Exception as e:
+            print(f"      [ToolManager.execute_tool] ❌ 异常: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {
                 "success": False,
                 "error": f"工具执行失败: {str(e)}"
