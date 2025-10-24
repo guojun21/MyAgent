@@ -1,0 +1,12 @@
+# Qt版本专用依赖
+PyQt6==6.6.0
+PyQt6-WebEngine==6.6.0
+
+# 原有依赖
+pydantic==2.5.0
+pydantic-settings==2.1.0
+openai==1.3.0
+zhipuai==2.0.1
+python-dotenv==1.0.0
+httpx==0.25.2
+

@@ -12,6 +12,10 @@ from models import QueryRequest, CommandResponse, SystemInfoResponse, HealthResp
 from services.llm_service import get_llm_service
 from services.security_service import SecurityService
 from services.terminal_service import TerminalService
+from core.agent import Agent
+from core.session_manager import session_manager
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
 
 
 # 创建FastAPI应用
@@ -33,6 +37,7 @@ app.add_middleware(
 # 初始化服务
 security_service = SecurityService()
 terminal_service = TerminalService()
+agent = Agent(workspace_root=".")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -152,6 +157,127 @@ async def validate_command(command: str):
         "command": command,
         "is_safe": is_safe,
         "reason": reason
+    }
+
+
+# ============ Agent API ============
+
+class AgentRequest(BaseModel):
+    """Agent请求模型"""
+    message: str
+    session_id: Optional[str] = None
+
+
+class SessionCreate(BaseModel):
+    """创建会话模型"""
+    pass
+
+
+@app.post("/agent/chat")
+async def agent_chat(request: AgentRequest):
+    """
+    与Agent对话
+    
+    支持多轮对话和自动工具调用
+    """
+    try:
+        # 如果没有提供session_id，创建新会话
+        if not request.session_id:
+            session_id = session_manager.create_session()
+        else:
+            session_id = request.session_id
+            # 验证会话是否存在
+            if not session_manager.get_session(session_id):
+                raise HTTPException(status_code=404, detail="会话不存在")
+        
+        # 添加用户消息到会话
+        session_manager.add_message(session_id, "user", request.message)
+        
+        # 获取对话历史
+        conversation_history = session_manager.get_messages(session_id)
+        
+        # 运行Agent
+        result = agent.run_sync(
+            user_message=request.message,
+            conversation_history=conversation_history
+        )
+        
+        # 添加Agent响应到会话
+        session_manager.add_message(
+            session_id,
+            "assistant",
+            result["message"]
+        )
+        
+        return {
+            "success": True,
+            "session_id": session_id,
+            "message": result["message"],
+            "tool_calls": result.get("tool_calls", []),
+            "iterations": result.get("iterations", 0)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Agent执行失败: {str(e)}")
+
+
+@app.post("/agent/session")
+async def create_session():
+    """创建新会话"""
+    session_id = session_manager.create_session()
+    return {
+        "success": True,
+        "session_id": session_id
+    }
+
+
+@app.get("/agent/session/{session_id}")
+async def get_session(session_id: str):
+    """获取会话信息"""
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    
+    return {
+        "success": True,
+        "session": session
+    }
+
+
+@app.delete("/agent/session/{session_id}")
+async def delete_session(session_id: str):
+    """删除会话"""
+    success = session_manager.delete_session(session_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    
+    return {
+        "success": True,
+        "message": "会话已删除"
+    }
+
+
+@app.post("/agent/session/{session_id}/clear")
+async def clear_session(session_id: str):
+    """清空会话历史"""
+    success = session_manager.clear_session(session_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    
+    return {
+        "success": True,
+        "message": "会话历史已清空"
+    }
+
+
+@app.get("/agent/sessions")
+async def list_sessions():
+    """列出所有会话"""
+    sessions = session_manager.list_sessions()
+    return {
+        "success": True,
+        "sessions": sessions,
+        "total": len(sessions)
     }
 
 
