@@ -83,8 +83,9 @@ class Agent:
             
             print(f"[Agent.run] LLM响应:")
             print(f"  - Role: {llm_response.get('role')}")
-            print(f"  - Content: {llm_response.get('content', '')[:100]}...")
             print(f"  - 是否有工具调用: {'tool_calls' in llm_response}")
+            if llm_response.get('content'):
+                print(f"  - Content长度: {len(llm_response.get('content', ''))} 字符")
             
             # 添加助手消息到历史
             messages.append({
@@ -136,7 +137,15 @@ class Agent:
         print(f"\n[Agent.run] 任务执行完毕")
         print(f"  - 总迭代次数: {iterations}")
         print(f"  - 工具调用次数: {len(tool_calls_history)}")
-        print(f"  - 最终消息: {llm_response.get('content', '')[:100]}...")
+        
+        final_message = llm_response.get('content', '')
+        if final_message:
+            print(f"\n[Agent.run] 最终返回给用户的消息:")
+            print(f"┌{'─'*76}┐")
+            for line in final_message.split('\n'):
+                print(f"│ {line}")
+            print(f"└{'─'*76}┘")
+        
         print("="*80 + "\n")
         
         final_response = {
