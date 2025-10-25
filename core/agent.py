@@ -163,21 +163,26 @@ class Agent:
             break
         
         # 构建最终响应
-        print(f"\n[Agent.run] 任务执行完毕")
+        print(f"\n[Agent.run] ========== 任务执行完毕 ==========")
         print(f"  - 总迭代次数: {iterations}")
-        print(f"  - 工具调用次数: {len(tool_calls_history)}")
+        print(f"  - 工具调用历史: {len(tool_calls_history)} 个")
+        
+        if len(tool_calls_history) > 0:
+            print(f"\n  工具调用详情:")
+            for i, tc in enumerate(tool_calls_history, 1):
+                print(f"    {i}. {tc.get('tool', 'unknown')}")
+        else:
+            print(f"\n  ⚠️⚠️⚠️ 警告：没有任何工具调用！")
+            print(f"  这意味着LLM只返回了文本，没有真正执行操作！")
         
         final_message = llm_response.get('content', '')
         if final_message:
-            print(f"\n[Agent.run] 最终返回给用户的消息:")
-            print(f"┌{'─'*76}┐")
-            for line in final_message.split('\n'):
-                print(f"│ {line}")
-            print(f"└{'─'*76}┘")
+            print(f"\n[Agent.run] 最终消息长度: {len(final_message)} 字符")
+            print(f"最终消息前200字符: {final_message[:200]}")
         
         print("="*80 + "\n")
         
-        # 提取token使用量（如果有）
+        # 提取token使用量
         token_usage = {}
         if "usage" in llm_response:
             token_usage = llm_response["usage"]
@@ -188,8 +193,10 @@ class Agent:
             "tool_calls": tool_calls_history,
             "iterations": iterations,
             "conversation": messages,
-            "token_usage": token_usage  # 添加token使用统计
+            "token_usage": token_usage
         }
+        
+        print(f"[Agent.run] final_response['tool_calls']: {len(final_response['tool_calls'])} 个")
         
         return final_response
     
