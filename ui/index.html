@@ -676,16 +676,42 @@
             
             let content = `<div class="message-content">${formatMarkdown(data.message)}`;
             
-            // 添加工具调用显示
+            // 详细添加工具调用显示（入参+出参）
             if (data.tool_calls && data.tool_calls.length > 0) {
-                content += `<div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; font-size: 12px; border-left: 2px solid #999;">`;
-                content += `<div style="font-weight: 600; margin-bottom: 8px; color: #666;">执行了 ${data.tool_calls.length} 个工具</div>`;
-                data.tool_calls.forEach(call => {
-                    content += `<div style="padding: 8px; margin: 6px 0; background: #fff; border-radius: 2px; border: 1px solid #e0e0e0;">`;
-                    content += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 4px; font-family: Consolas, monospace;">${call.tool}</div>`;
-                    content += `<div style="font-size: 11px; color: #999; font-family: Consolas, monospace;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                content += `<div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; font-size: 12px; border-left: 3px solid #666;">`;
+                content += `<div style="font-weight: 600; margin-bottom: 10px; color: #666;">🔧 执行了 ${data.tool_calls.length} 个工具</div>`;
+                
+                data.tool_calls.forEach((call, i) => {
+                    content += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd;">`;
+                    
+                    // 工具名
+                    content += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 13px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
+                    
+                    // 入参
+                    content += `<div style="margin-bottom: 6px;">`;
+                    content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
+                    content += `<div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                    content += `</div>`;
+                    
+                    // 出参
+                    if (call.result) {
+                        content += `<div>`;
+                        content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>`;
+                        
+                        const success = call.result.success;
+                        const statusColor = success ? '#4caf50' : '#f44336';
+                        const statusText = success ? '✅ 成功' : '❌ 失败';
+                        
+                        content += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
+                        content += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 4px;">${statusText}</div>`;
+                        content += `<div style="color: #666; white-space: pre-wrap;">${JSON.stringify(call.result, null, 2)}</div>`;
+                        content += `</div>`;
+                        content += `</div>`;
+                    }
+                    
                     content += `</div>`;
                 });
+                
                 content += `</div>`;
             }
             
@@ -876,16 +902,42 @@
                 
                 let content = `<div class="message-content">${formatMarkdown(msg.content)}`;
                 
-                // 渲染工具调用（如果有）
+                // 详细渲染工具调用（入参+出参）
                 if (msg.tool_calls && msg.tool_calls.length > 0) {
-                    content += `<div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; font-size: 12px; border-left: 2px solid #999;">`;
-                    content += `<div style="font-weight: 600; margin-bottom: 8px; color: #666;">执行了 ${msg.tool_calls.length} 个工具</div>`;
-                    msg.tool_calls.forEach(call => {
-                        content += `<div style="padding: 8px; margin: 6px 0; background: #fff; border-radius: 2px; border: 1px solid #e0e0e0;">`;
-                        content += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 4px; font-family: Consolas, monospace;">${call.tool}</div>`;
-                        content += `<div style="font-size: 11px; color: #999; font-family: Consolas, monospace;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                    content += `<div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; border-left: 3px solid #666;">`;
+                    content += `<div style="font-weight: 600; margin-bottom: 10px; color: #666; font-size: 12px;">🔧 执行了 ${msg.tool_calls.length} 个工具</div>`;
+                    
+                    msg.tool_calls.forEach((call, i) => {
+                        content += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd;">`;
+                        
+                        // 工具名
+                        content += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 13px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
+                        
+                        // 入参
+                        content += `<div style="margin-bottom: 6px;">`;
+                        content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
+                        content += `<div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                        content += `</div>`;
+                        
+                        // 出参
+                        if (call.result) {
+                            content += `<div>`;
+                            content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>`;
+                            
+                            const success = call.result.success;
+                            const statusColor = success ? '#4caf50' : '#f44336';
+                            const statusText = success ? '✅ 成功' : '❌ 失败';
+                            
+                            content += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
+                            content += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 4px;">${statusText}</div>`;
+                            content += `<div style="color: #666; white-space: pre-wrap;">${JSON.stringify(call.result, null, 2)}</div>`;
+                            content += `</div>`;
+                            content += `</div>`;
+                        }
+                        
                         content += `</div>`;
                     });
+                    
                     content += `</div>`;
                 }
                 
