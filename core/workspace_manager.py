@@ -148,10 +148,21 @@ class Conversation:
         """获取Context消息（从JSON读取）"""
         from core.persistence import persistence_manager
         
+        print(f"    [Conversation.get_context_messages] 对话ID: {self.id}")
+        print(f"    [Conversation.get_context_messages] 对话名: {self.name}")
+        
         ctx_data = persistence_manager.get_context(self.id)
+        
+        print(f"    [Conversation.get_context_messages] 从JSON读取Context: {ctx_data is not None}")
+        
         if ctx_data:
-            self.context_messages = ctx_data.get("context_messages", [])
+            messages = ctx_data.get("context_messages", [])
+            self.context_messages = messages
             self.token_usage = ctx_data.get("token_usage", self.token_usage)
+            print(f"    [Conversation.get_context_messages] ✅ 读取到{len(messages)}条消息")
+        else:
+            print(f"    [Conversation.get_context_messages] ⚠️ contexts.json中没有该对话的数据")
+            self.context_messages = []
         
         return self.context_messages
     

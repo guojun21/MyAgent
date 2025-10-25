@@ -40,10 +40,16 @@ class PersistenceManager:
         """从contexts.json读取Context"""
         contexts = self._read_json(self.contexts_file)
         
+        print(f"      [PersistenceManager.get_context] 查找conversation_id: {conversation_id}")
+        print(f"      [PersistenceManager.get_context] contexts.json中共{len(contexts)}条记录")
+        
         for ctx in contexts:
             if ctx.get("conversation_id") == conversation_id:
+                msg_count = len(ctx.get("context_messages", []))
+                print(f"      [PersistenceManager.get_context] ✅ 找到！消息数: {msg_count}")
                 return ctx
         
+        print(f"      [PersistenceManager.get_context] ❌ 未找到该对话的Context")
         return None
     
     def save_context(self, conversation_id: str, context_messages: List[Dict], token_usage: Dict):
