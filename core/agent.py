@@ -23,7 +23,7 @@ class Agent:
         """
         self.llm_service: LLMService = get_llm_service()
         self.tool_manager = ToolManager(workspace_root, workspace_manager)
-        self.max_iterations = 10  # 最大迭代次数，防止无限循环
+        self.max_iterations = 30  # 提高到30次，支持多次edit_file
     
     async def run(
         self, 

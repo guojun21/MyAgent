@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     
     # MiniMax配置（用于query_history工具，2M context）
     minimax_api_key: str = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiLpob7nnb_miJAiLCJVc2VyTmFtZSI6Iumhvuedv-aIkCIsIkFjY291bnQiOiIiLCJTdWJqZWN0SUQiOiIxOTgxNjYwMTQwMjI2NDg2ODg2IiwiUGhvbmUiOiIxODM5MDgxNDgyNSIsIkdyb3VwSUQiOiIxOTgxNjYwMTQwMjE4MDk4Mjc4IiwiUGFnZU5hbWUiOiIiLCJNYWlsIjoiIiwiQ3JlYXRlVGltZSI6IjIwMjUtMTAtMjYgMDI6MDI6MDIiLCJUb2tlblR5cGUiOjEsImlzcyI6Im1pbmltYXgifQ.Ts5K32YQcoW8mRH0eBDfu64AOE2bXo6X3pjRV8jOiIR85ynY7u_5ACWWAKA7wqUB14Lm0LotCgpTv_byGZYBHLo2N1EGk6KalXwyt7A8Tf9lwlRHxck8wrxkeSbBvAxEuL-8yVurPml3INZGjb1R6yR3Tz_PrZkHFmDvCyav5rG5vLjK7gsYnz8B0tvUBWak9MtQNtxCvi5MkNPtf1_2PxUtLjK3wcvz8Y4LtdNZDieDVnLzuPkYCvwRAFr0NEg4TEQwGoM1X-GFPdZ8HLZVt746VPCvD9qObnEGhHvsJSYnzY8durugWoMo9YKQmkwmkHVPR7zWYBY_WJGM73gY8A"
-    minimax_model: str = "MiniMax-M2"
+    minimax_model: str = "MiniMax-Text-01"
     minimax_base_url: str = "https://api.minimaxi.com/v1"
     minimax_max_tokens: int = 2000000  # 2M context窗口
     

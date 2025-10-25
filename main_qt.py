@@ -255,11 +255,28 @@ class AgentBridge(QObject):
         
         # 助手消息（带工具调用记录）
         if result.get("success"):
+            tool_calls = result.get("tool_calls", [])
+            iterations = result.get("iterations", 0)
+            
+            print(f"\n[保存助手消息] ==================")
+            print(f"  - 内容长度: {len(assistant_msg)}")
+            print(f"  - 工具调用数: {len(tool_calls)}")
+            print(f"  - 迭代次数: {iterations}")
+            
+            if len(tool_calls) > 0:
+                print(f"  - 工具列表:")
+                for i, tc in enumerate(tool_calls, 1):
+                    print(f"    {i}. {tc.get('tool', 'unknown')}")
+            
             assistant_message_data = {
                 "content": assistant_msg,
-                "tool_calls": result.get("tool_calls", []),  # 工具调用记录
-                "iterations": result.get("iterations", 0)    # 迭代次数
+                "tool_calls": tool_calls,
+                "iterations": iterations
             }
+            
+            print(f"  - assistant_message_data keys: {list(assistant_message_data.keys())}")
+            print(f"==================\n")
+            
             conversation.add_to_context_with_metadata("assistant", assistant_message_data)
         
         # 添加到工作空间的MessageHistory（直接写入message_history.json）
