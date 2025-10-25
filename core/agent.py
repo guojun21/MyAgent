@@ -6,6 +6,7 @@ import json
 import asyncio
 from services.llm_service import get_llm_service, LLMService
 from core.tool_manager import ToolManager
+from core.context_compressor import context_compressor
 from utils.logger import safe_print as print
 
 
@@ -75,11 +76,38 @@ class Agent:
             print(f"[Agent.run] 调用LLM服务...")
             print(f"[Agent.run] 当前消息数: {len(messages)}")
             
-            llm_response = self.llm_service.chat(
-                messages=messages,
-                tools=tools,
-                tool_choice="auto"
-            )
+            try:
+                llm_response = self.llm_service.chat(
+                    messages=messages,
+                    tools=tools,
+                    tool_choice="auto"
+                )
+            except Exception as e:
+                error_msg = str(e)
+                
+                # 检测是否是Context超长错误
+                if "maximum context length" in error_msg or "131072 tokens" in error_msg:
+                    print(f"\n[Agent.run] ⚠️ Context超长错误，触发Auto-Compact")
+                    print(f"[Agent.run] 不显示错误给用户，准备压缩...")
+                    
+                    # 返回特殊标记 - 不包含错误信息！
+                    return {
+                        "success": False,
+                        "need_compression": True,
+                        "message": "",  # 空消息，不显示错误
+                        "original_user_message": user_message,
+                        "context_history": context_history
+                    }
+                else:
+                    # 其他错误：包装成结果返回
+                    print(f"\n[Agent.run] ❌ 其他错误: {error_msg}")
+                    return {
+                        "success": False,
+                        "message": f"执行失败: {error_msg}",
+                        "error": error_msg,
+                        "tool_calls": [],
+                        "iterations": iterations
+                    }
             
             print(f"[Agent.run] LLM响应:")
             print(f"  - Role: {llm_response.get('role')}")

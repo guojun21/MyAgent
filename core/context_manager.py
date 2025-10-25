@@ -4,6 +4,7 @@ Context管理器 - 管理上下文和对话记忆
 from typing import Dict, Any, List, Optional
 import time
 import uuid
+from utils.logger import safe_print as print
 
 
 class ContextManager:
@@ -59,7 +60,7 @@ class ContextManager:
         **kwargs
     ) -> bool:
         """
-        添加消息到Context
+        添加消息到Context（天真地保留完整内容）
         
         Args:
             context_id: Context ID
@@ -74,6 +75,7 @@ class ContextManager:
         if not context:
             return False
         
+        # 天真地完整保留消息（第一次一定要完整）
         message = {
             "role": role,
             "content": content,
@@ -84,7 +86,7 @@ class ContextManager:
         context["context_messages"].append(message)
         context["last_active"] = time.time()
         
-        # Context长度限制（类似Cursor的Context窗口管理）
+        # Context长度限制（只限制消息条数，不限制token）
         if len(context["context_messages"]) > self.max_context_length:
             # 保留系统消息和最近的消息
             system_messages = [m for m in context["context_messages"] if m["role"] == "system"]
@@ -92,6 +94,7 @@ class ContextManager:
             context["context_messages"] = system_messages + recent_messages
         
         return True
+    
     
     def get_context_messages(self, context_id: str) -> List[Dict[str, Any]]:
         """
