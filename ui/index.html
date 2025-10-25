@@ -668,7 +668,10 @@
         }
 
         function addAssistantMessage(data) {
-            console.log('➕ addAssistantMessage, 工具调用:', data.tool_calls?.length || 0);
+            console.log('➕ addAssistantMessage被调用');
+            console.log('  - data.tool_calls:', data.tool_calls);
+            console.log('  - 工具调用数:', data.tool_calls?.length || 0);
+            console.log('  - data完整:', data);
             
             const area = document.getElementById('chatArea');
             const div = document.createElement('div');

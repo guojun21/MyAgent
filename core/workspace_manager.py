@@ -155,10 +155,16 @@ class Conversation:
         }
         
         # 添加工具调用和迭代次数（如果有）
-        if "tool_calls" in message_data:
+        if "tool_calls" in message_data and message_data["tool_calls"]:
             message["tool_calls"] = message_data["tool_calls"]
+            print(f"    [add_to_context_with_metadata] ✅ 添加tool_calls字段，数量: {len(message['tool_calls'])}")
+        else:
+            print(f"    [add_to_context_with_metadata] ⚠️ 无tool_calls")
+            
         if "iterations" in message_data:
             message["iterations"] = message_data["iterations"]
+        
+        print(f"    [add_to_context_with_metadata] message keys: {list(message.keys())}")
         
         messages.append(message)
         
@@ -169,7 +175,7 @@ class Conversation:
         self.context_messages = messages
         self.last_active = time.time()
         
-        print(f"    [Conversation.add_to_context_with_metadata] 已保存，工具调用: {len(message.get('tool_calls', []))}")
+        print(f"    [Conversation.add_to_context_with_metadata] 已保存到JSON")
     
     def get_context_messages(self) -> List[Dict]:
         """获取Context消息（从JSON读取）"""
