@@ -283,18 +283,15 @@
         
         // 统一初始化
         function init() {
-            console.log('初始化前端...');
+            console.log('🚀 初始化前端...');
             
-            // 立即加载
+            isLoadingHistory = true;  // 初始化时也要加载历史
+            
+            // 只加载一次，等信号触发
             loadWorkspaces();
             loadConversations();
             
-            // 延迟再加载一次（确保数据同步）
-            setTimeout(() => {
-                console.log('延迟刷新...');
-                loadWorkspaces();
-                loadConversations();
-            }, 600);
+            // 不再延迟刷新（避免重复渲染）
         }
         
         // RESTful API适配器（模拟Qt bridge接口）
@@ -571,10 +568,14 @@
             }
         }
 
+        let isLoadingHistory = false;  // 标记是否正在加载历史
+
         function selectConversation(convId) {
             if (!bridge) return;
             
-            console.log('切换对话:', convId);
+            console.log('🔄 切换对话:', convId);
+            
+            isLoadingHistory = true;  // 标记开始加载历史
             
             bridge.switchConversation(convId);
             currentConversationId = convId;
@@ -583,7 +584,7 @@
             const chatArea = document.getElementById('chatArea');
             chatArea.innerHTML = '<div class="thinking">加载对话历史...</div>';
             
-            // 刷新对话列表和Context（Context更新会触发MessageHistory更新）
+            // 刷新对话列表和Context
             setTimeout(() => {
                 loadConversations();
             }, 100);
@@ -755,6 +756,7 @@
             const msgs = data.messages || [];
             console.log('📨 updateHistory被调用, 消息数:', msgs.length);
             console.log('  - conversation_id:', data.conversation_id);
+            console.log('  - isLoadingHistory:', isLoadingHistory);
             
             // 统计字符（聊天记录管理模块用）
             let total = 0, chinese = 0, english = 0;
@@ -785,17 +787,26 @@
                 list.innerHTML = html;
             }
             
-            // ========== 关键：只在启动/切换时渲染历史 ==========
-            // 新消息通过handleMessage → addAssistantMessage添加，不走这里
-            // 这里只在初始化/切换对话时渲染历史
-            if (msgs.length > 0) {
-                renderChatHistory(msgs);
+            // ========== 只在切换对话/启动时渲染历史 ==========
+            if (isLoadingHistory) {
+                if (msgs.length > 0) {
+                    console.log('🔄 isLoadingHistory=true，渲染历史到聊天界面');
+                    renderChatHistory(msgs);
+                } else {
+                    console.log('⚠️ 历史为空，显示空状态');
+                    const chatArea = document.getElementById('chatArea');
+                    if (chatArea) {
+                        chatArea.innerHTML = '<div class="empty-state"><h2>📖</h2><p>开始对话</p></div>';
+                    }
+                }
+                isLoadingHistory = false;  // 重置标记（只渲染一次）
+            } else {
+                console.log('⏭️ isLoadingHistory=false，跳过聊天界面渲染');
             }
         }
         
         function renderChatHistory(msgs) {
             console.log('🎨 renderChatHistory被调用, 消息数:', msgs.length);
-            console.log('  - 这是历史加载，不是新消息');
             
             const chatArea = document.getElementById('chatArea');
             
@@ -812,20 +823,37 @@
             
             console.log('🎨 清空chatArea，重新渲染历史');
             
-            // 清空（避免重复）
+            // 清空
             chatArea.innerHTML = '';
             
-            // 渲染所有历史消息（只显示内容，不显示工具调用）
+            // 渲染所有历史消息（包含工具调用）
             msgs.forEach((msg, idx) => {
-                console.log(`  渲染消息${idx+1}: ${msg.role}, 长度${msg.content.length}`);
+                console.log(`  渲染消息${idx+1}: ${msg.role}, 工具=${msg.tool_calls?.length || 0}`);
                 
                 const div = document.createElement('div');
                 div.className = 'message ' + (msg.role === 'user' ? 'user' : 'assistant');
-                div.innerHTML = `<div class="message-content">${formatMarkdown(msg.content)}</div>`;
+                
+                let content = `<div class="message-content">${formatMarkdown(msg.content)}`;
+                
+                // 渲染工具调用（如果有）
+                if (msg.tool_calls && msg.tool_calls.length > 0) {
+                    content += `<div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; font-size: 12px; border-left: 2px solid #999;">`;
+                    content += `<div style="font-weight: 600; margin-bottom: 8px; color: #666;">执行了 ${msg.tool_calls.length} 个工具</div>`;
+                    msg.tool_calls.forEach(call => {
+                        content += `<div style="padding: 8px; margin: 6px 0; background: #fff; border-radius: 2px; border: 1px solid #e0e0e0;">`;
+                        content += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 4px; font-family: Consolas, monospace;">${call.tool}</div>`;
+                        content += `<div style="font-size: 11px; color: #999; font-family: Consolas, monospace;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                        content += `</div>`;
+                    });
+                    content += `</div>`;
+                }
+                
+                content += `</div>`;
+                div.innerHTML = content;
                 chatArea.appendChild(div);
             });
             
-            console.log('✅ 历史消息渲染完成，子元素数:', chatArea.children.length);
+            console.log('✅ 历史消息渲染完成（含工具调用），子元素数:', chatArea.children.length);
             
             // 滚动到底部
             chatArea.scrollTop = chatArea.scrollHeight;
