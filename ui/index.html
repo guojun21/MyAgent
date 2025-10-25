@@ -227,16 +227,47 @@
         if (typeof qt !== 'undefined' && qt.webChannelTransport) {
             // Qt环境 - 使用WebChannel
             isQtMode = true;
-            console.log('Qt环境 - 使用WebChannel');
+            console.log('✅ Qt环境 - 使用WebChannel');
             
             new QWebChannel(qt.webChannelTransport, function(channel) {
+                console.log('✅ QWebChannel已连接');
+                
                 bridge = channel.objects.bridge;
-                bridge.messageReceived.connect(msg => handleMessage(JSON.parse(msg)));
-                bridge.contextUpdated.connect(data => updateContext(JSON.parse(data)));
-                bridge.messageHistoryUpdated.connect(data => updateHistory(JSON.parse(data)));
-                bridge.conversationsUpdated.connect(data => updateConversations(JSON.parse(data)));
-                bridge.workspaceListUpdated.connect(data => updateWorkspaces(JSON.parse(data)));
-                bridge.workspaceChanged.connect(path => console.log('工作空间切换:', path));
+                
+                console.log('✅ bridge对象获取成功');
+                
+                // 连接信号（加LOG）
+                bridge.messageReceived.connect(msg => {
+                    console.log('🔔 收到messageReceived信号');
+                    handleMessage(JSON.parse(msg));
+                });
+                
+                bridge.contextUpdated.connect(data => {
+                    console.log('🔔 收到contextUpdated信号');
+                    updateContext(JSON.parse(data));
+                });
+                
+                bridge.messageHistoryUpdated.connect(data => {
+                    console.log('🔔 收到messageHistoryUpdated信号');
+                    updateHistory(JSON.parse(data));
+                });
+                
+                bridge.conversationsUpdated.connect(data => {
+                    console.log('🔔 收到conversationsUpdated信号');
+                    updateConversations(JSON.parse(data));
+                });
+                
+                bridge.workspaceListUpdated.connect(data => {
+                    console.log('🔔 收到workspaceListUpdated信号');
+                    updateWorkspaces(JSON.parse(data));
+                });
+                
+                bridge.workspaceChanged.connect(path => {
+                    console.log('🔔 收到workspaceChanged信号:', path);
+                });
+                
+                console.log('✅ 所有信号已连接');
+                console.log('开始初始化...');
                 
                 init();
             });

@@ -400,12 +400,19 @@ class AgentBridge(QObject):
     def _emit_conversations_update(self):
         """发送对话列表更新"""
         conv_list = self.getConversationList()
+        print(f"[_emit_conversations_update] 发送conversationsUpdated信号")
+        print(f"  - 数据: {conv_list[:100]}")
         self.conversationsUpdated.emit(conv_list)
+        print(f"[_emit_conversations_update] 信号已发送")
     
     def _emit_workspace_list(self):
         """发送工作空间列表"""
         ws_list = self.getWorkspaceList()
+        print(f"[_emit_workspace_list] 发送workspaceListUpdated信号")
+        print(f"  - 数据长度: {len(ws_list)}")
+        print(f"  - 数据内容前100字符: {ws_list[:100]}")
         self.workspaceListUpdated.emit(ws_list)
+        print(f"[_emit_workspace_list] 信号已发送")
     
     @pyqtSlot()
     def clearHistory(self):
