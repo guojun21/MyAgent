@@ -739,6 +739,30 @@ class MainWindow(QMainWindow):
         self.browser = QWebEngineView()
         self.setCentralWidget(self.browser)
         
+        # ========== 开启开发者工具（Console）==========
+        from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
+        
+        # 启用开发者工具
+        settings = self.browser.settings()
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        
+        # 创建带开发者工具的Page
+        page = QWebEnginePage(self.browser)
+        self.browser.setPage(page)
+        
+        # 开启开发者工具（快捷键F12）
+        from PyQt6.QtGui import QAction, QKeySequence
+        dev_tools_action = QAction("开发者工具", self)
+        dev_tools_action.setShortcut(QKeySequence("F12"))
+        dev_tools_action.triggered.connect(self.toggle_dev_tools)
+        self.addAction(dev_tools_action)
+        
+        # 创建开发者工具窗口
+        self.dev_tools_view = None
+        
+        print("[MainWindow] ✅ 开发者工具已启用，按F12打开Console")
+        
         # 创建桥接对象（传入父窗口引用）
         self.bridge = AgentBridge(parent_window=self)
         
@@ -750,10 +774,44 @@ class MainWindow(QMainWindow):
         # 加载HTML
         html_path = Path(__file__).parent / "ui" / "index.html"
         if html_path.exists():
-            self.browser.setUrl(QUrl.fromLocalFile(str(html_path)))
+            self.browser.page().setUrl(QUrl.fromLocalFile(str(html_path)))
+            print(f"[MainWindow] 加载HTML: {html_path}")
         else:
-            print(f"HTML文件不存在: {html_path}")
+            print(f"[MainWindow] HTML文件不存在: {html_path}")
             self.browser.setHtml(self._get_fallback_html())
+        
+        # 默认启动时自动打开开发者工具
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(800, self.auto_open_dev_tools)
+    
+    def auto_open_dev_tools(self):
+        """自动打开开发者工具"""
+        print("[MainWindow] 自动打开开发者工具...")
+        self.toggle_dev_tools()
+    
+    def toggle_dev_tools(self):
+        """切换开发者工具显示"""
+        if self.dev_tools_view is None:
+            # 创建开发者工具窗口
+            from PyQt6.QtWebEngineWidgets import QWebEngineView
+            
+            self.dev_tools_view = QWebEngineView()
+            self.dev_tools_view.setWindowTitle("开发者工具 - Console")
+            self.dev_tools_view.resize(1000, 600)
+            
+            # 设置为主页面的开发者工具
+            self.browser.page().setDevToolsPage(self.dev_tools_view.page())
+            
+            self.dev_tools_view.show()
+            print("[MainWindow] ✅ 开发者工具已打开")
+        else:
+            # 切换显示/隐藏
+            if self.dev_tools_view.isVisible():
+                self.dev_tools_view.hide()
+                print("[MainWindow] 开发者工具已隐藏")
+            else:
+                self.dev_tools_view.show()
+                print("[MainWindow] 开发者工具已显示")
     
     def _get_fallback_html(self):
         """降级HTML（如果文件不存在）"""
