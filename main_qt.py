@@ -10,7 +10,7 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebChannel import QWebChannel
 
 from core.agent import Agent
-from core.context_manager import context_manager
+from core.workspace_manager import workspace_manager
 from utils.logger import safe_print as print
 
 
@@ -59,21 +59,32 @@ class AgentBridge(QObject):
     contextUpdated = pyqtSignal(str)
     # 信号：MessageHistory更新
     messageHistoryUpdated = pyqtSignal(str)
+    # 信号：对话列表更新
+    conversationsUpdated = pyqtSignal(str)
     
     def __init__(self, parent_window=None):
         super().__init__()
         self.parent_window = parent_window
         self.workspace_root = Path(".").resolve()
         self.agent = Agent(workspace_root=str(self.workspace_root))
-        self.context_id = context_manager.create_context()  # 创建Context
-        self.current_worker = None
-        self.compression_attempts = 0  # 压缩重试次数
-        self.max_compression_attempts = 3  # 最多重试3次
         
-        print(f"[AgentBridge] Context ID: {self.context_id}")
+        # 创建工作空间和第一个对话
+        self.workspace_id = workspace_manager.create_workspace(str(self.workspace_root))
+        
+        self.current_worker = None
+        self.compression_attempts = 0
+        self.max_compression_attempts = 3
+        
+        workspace = workspace_manager.get_active_workspace()
+        conv = workspace.get_active_conversation()
+        print(f"[AgentBridge] 工作空间ID: {self.workspace_id}")
+        print(f"[AgentBridge] 活跃对话ID: {conv.id if conv else 'None'}")
         
         # 加载测试用例
         self._load_and_emit_test_prompts()
+        
+        # 发送初始对话列表
+        self._emit_conversations_update()
     
     @pyqtSlot(str)
     def sendMessage(self, message):
@@ -99,8 +110,14 @@ class AgentBridge(QObject):
             "message": "Agent正在思考..."
         })
         
-        # 获取Context历史
-        context_history = context_manager.get_context_messages(self.context_id)
+        # 获取当前对话的Context（从JSON读取）
+        conversation = workspace_manager.get_active_conversation()
+        if not conversation:
+            print(f"[AgentBridge.sendMessage] 错误：无活跃对话")
+            return
+        
+        context_history = conversation.get_context_messages()  # 从JSON读取
+        print(f"[AgentBridge.sendMessage] 从JSON加载Context: {len(context_history)}条")
         
         # 创建工作线程
         print(f"[AgentBridge.sendMessage] 创建工作线程...")
@@ -134,29 +151,36 @@ class AgentBridge(QObject):
         # 压缩成功后重置计数
         self.compression_attempts = 0
         
-        # 正常结果：添加到Context
-        context_manager.add_to_context(
-            self.context_id,
-            "user",
-            self.current_worker.message
-        )
+        # 获取当前工作空间和对话
+        workspace = workspace_manager.get_active_workspace()
+        conversation = workspace.get_active_conversation()
         
-        if result.get("success"):
-            context_manager.add_to_context(
-                self.context_id,
-                "assistant",
-                result.get("message", "")
-            )
+        if not conversation:
+            return
         
-        # 记录token使用（如果有）
-        if "token_usage" in result:
+        # 添加到Context和MessageHistory
+        user_msg = self.current_worker.message
+        assistant_msg = result.get("message", "")
+        
+        # 记录token使用
+        if "token_usage" in result and conversation:
             usage = result["token_usage"]
-            context_manager.add_token_usage(
-                self.context_id,
-                usage.get("prompt_tokens", 0),
-                usage.get("completion_tokens", 0),
-                usage.get("total_tokens", 0)
-            )
+            conversation.token_usage["prompt_tokens"] += usage.get("prompt_tokens", 0)
+            conversation.token_usage["completion_tokens"] += usage.get("completion_tokens", 0)
+            conversation.token_usage["total_tokens"] += usage.get("total_tokens", 0)
+        
+        # 添加到对话的Context（直接写入contexts.json）
+        conversation.add_to_context("user", user_msg)
+        if result.get("success"):
+            conversation.add_to_context("assistant", assistant_msg)
+        
+        # 添加到工作空间的MessageHistory（直接写入message_history.json）
+        workspace.add_to_message_history("user", user_msg)
+        if result.get("success"):
+            workspace.add_to_message_history("assistant", assistant_msg)
+        
+        # 保存对话基本信息（token统计等）
+        workspace_manager.auto_save()
         
         # 通知前端Context已更新
         self._emit_context_update()
@@ -174,20 +198,80 @@ class AgentBridge(QObject):
         else:
             print(f"[AgentBridge._on_agent_finished] 消息为空，不发送")
     
+    @pyqtSlot(result=str)
+    def createConversation(self):
+        """创建新对话"""
+        workspace = workspace_manager.get_active_workspace()
+        if not workspace:
+            return ""
+        
+        conv_id = workspace.create_conversation()
+        workspace.switch_conversation(conv_id)
+        
+        print(f"[AgentBridge.createConversation] 创建新对话: {conv_id}")
+        
+        # 保存到JSON
+        workspace_manager.auto_save()
+        
+        self._emit_conversations_update()
+        self._emit_context_update()
+        
+        return conv_id
+    
+    @pyqtSlot(str)
+    def switchConversation(self, conv_id):
+        """切换对话"""
+        workspace = workspace_manager.get_active_workspace()
+        if workspace:
+            workspace.switch_conversation(conv_id)
+            print(f"[AgentBridge.switchConversation] 切换到对话: {conv_id}")
+            
+            self._emit_context_update()
+    
+    @pyqtSlot(result=str)
+    def getConversationList(self):
+        """获取对话列表"""
+        workspace = workspace_manager.get_active_workspace()
+        if not workspace:
+            return json.dumps([])
+        
+        conversations = []
+        for conv_id, conv in workspace.conversations.items():
+            conversations.append({
+                "id": conv.id,
+                "name": conv.name,
+                "active": conv_id == workspace.active_conversation_id,
+                "message_count": len(conv.context_messages),
+                "last_active": conv.last_active
+            })
+        
+        return json.dumps(conversations, ensure_ascii=False)
+    
+    def _emit_conversations_update(self):
+        """发送对话列表更新"""
+        conv_list = self.getConversationList()
+        self.conversationsUpdated.emit(conv_list)
+    
     @pyqtSlot()
     def clearHistory(self):
-        """清空Context历史（对标/clear命令）"""
-        context_manager.clear_context(self.context_id)
-        self._send_to_frontend({
-            "type": "info",
-            "message": "Context已清空"
-        })
-        self._emit_context_update()
+        """清空当前对话的Context"""
+        conversation = workspace_manager.get_active_conversation()
+        if conversation:
+            conversation.clear_context()
+            self._send_to_frontend({
+                "type": "info",
+                "message": "Context已清空"
+            })
+            self._emit_context_update()
     
     @pyqtSlot()
     def manualCompact(self):
-        """手动压缩Context（对标/compact命令）"""
+        """手动压缩Context"""
         print(f"[AgentBridge.manualCompact] 用户触发手动压缩")
+        
+        conversation = workspace_manager.get_active_conversation()
+        if not conversation:
+            return
         
         # 显示压缩中
         self._send_to_frontend({
@@ -196,7 +280,7 @@ class AgentBridge(QObject):
         })
         
         # 获取当前Context
-        context_messages = context_manager.get_context_messages(self.context_id)
+        context_messages = conversation.context_messages
         
         if len(context_messages) <= 2:
             self._send_to_frontend({
@@ -215,19 +299,18 @@ class AgentBridge(QObject):
                 max_tokens=131072
             )
             
-            # 替换Context（只替换context_messages，不影响message_history）
-            context_data = context_manager.get_context(self.context_id)
-            if context_data:
-                system_msgs = [m for m in context_data["context_messages"] if m.get("role") == "system"]
-                context_data["context_messages"] = system_msgs
+            # 替换Context（直接操作JSON）
+            if conversation:
+                from core.persistence import persistence_manager
                 
-                # 添加压缩后的消息
-                for msg in compressed:
-                    if msg.get("role") != "system":
-                        context_data["context_messages"].append(msg)
+                new_context = [m for m in compressed if m.get("role") != "system"]
                 
-                # 重置token统计
-                context_data["token_usage"] = {
+                # 直接更新JSON文件
+                persistence_manager.update_context_messages(conversation.id, new_context)
+                
+                # 同步到内存
+                conversation.context_messages = new_context
+                conversation.token_usage = {
                     "prompt_tokens": 0,
                     "completion_tokens": 0,
                     "total_tokens": 0
@@ -276,13 +359,12 @@ class AgentBridge(QObject):
             self.workspace_root = Path(folder).resolve()
             print(f"[切换工作空间] {self.workspace_root}")
             
-            # 重新初始化Agent（使用新的工作空间）
+            # 重新创建工作空间
+            self.workspace_id = workspace_manager.create_workspace(str(self.workspace_root))
+            
+            # 重新初始化Agent
             self.agent = Agent(workspace_root=str(self.workspace_root))
             print(f"[Agent重新初始化] 工作空间: {self.workspace_root}")
-            
-            # 清空Context历史（切换工作空间时重置上下文）
-            context_manager.clear_context(self.context_id)
-            print(f"[切换工作空间] Context已重置")
             
             # 通知前端
             self.workspaceChanged.emit(str(self.workspace_root))
@@ -318,6 +400,9 @@ class AgentBridge(QObject):
     def _handle_context_compression(self, result):
         """处理Context压缩"""
         from core.context_compressor import context_compressor
+        
+        # 自动保存
+        workspace_manager.auto_save()
         
         # 检查重试次数
         self.compression_attempts += 1
@@ -382,19 +467,21 @@ class AgentBridge(QObject):
                 
                 print(f"[AgentBridge._handle_context_compression] 强制精简到: {len(compressed_history)}条")
             
-            # 替换Context（只替换context_messages，message_history保持完整！）
-            context_data = context_manager.get_context(self.context_id)
-            if context_data:
-                # 保留系统消息
-                system_msgs = [m for m in context_data["context_messages"] if m.get("role") == "system"]
+            # 替换Context（直接操作JSON）
+            conversation = workspace_manager.get_active_conversation()
+            if conversation:
+                from core.persistence import persistence_manager
                 
-                # 替换为压缩后的消息
-                context_data["context_messages"] = system_msgs + [
-                    m for m in compressed_history if m.get("role") != "system"
-                ]
+                system_msgs = [m for m in compressed_history if m.get("role") == "system"]
+                non_system = [m for m in compressed_history if m.get("role") != "system"]
+                new_context = system_msgs + non_system
                 
-                # 重置token统计
-                context_data["token_usage"] = {
+                # 直接更新JSON文件
+                persistence_manager.update_context_messages(conversation.id, new_context)
+                
+                # 同步到内存
+                conversation.context_messages = new_context
+                conversation.token_usage = {
                     "prompt_tokens": 0,
                     "completion_tokens": 0,
                     "total_tokens": 0
@@ -425,23 +512,23 @@ class AgentBridge(QObject):
             self.compression_attempts = 0
     
     def _emit_context_update(self):
-        """发送Context更新到前端"""
-        context_data = context_manager.get_context(self.context_id)
-        if not context_data:
+        """发送Context和MessageHistory更新到前端"""
+        workspace = workspace_manager.get_active_workspace()
+        conversation = workspace_manager.get_active_conversation()
+        
+        if not workspace or not conversation:
             return
         
-        token_usage = context_data["token_usage"]
-        context_messages = context_data["context_messages"]
-        message_history = context_data["message_history"]
-        
-        # Context数据
+        # Context数据（从JSON读取）
+        context_messages = conversation.get_context_messages()
         context_update = {
             "messages": context_messages,
-            "token_usage": token_usage,
+            "token_usage": conversation.token_usage,
             "message_count": len(context_messages)
         }
         
-        # MessageHistory数据
+        # MessageHistory数据（从JSON读取）
+        message_history = workspace.get_message_history()
         history_update = {
             "messages": message_history,
             "message_count": len(message_history)
@@ -518,17 +605,23 @@ class MainWindow(QMainWindow):
 def main():
     """主函数"""
     from utils.logger import close_logger
+    from core.persistence import persistence_manager
     
     app = QApplication(sys.argv)
     app.setApplicationName("AI编程助手")
     
+    print(f"\n数据目录: {persistence_manager.data_dir.resolve()}")
+    
     window = MainWindow()
     window.show()
     
-    # 程序退出时关闭日志
+    # 程序退出时保存并关闭
     result = app.exec()
     
-    print("\n[主程序] 应用退出，关闭日志文件")
+    print("\n[主程序] 应用退出，保存数据...")
+    workspace_manager.auto_save()
+    
+    print("[主程序] 关闭日志文件")
     close_logger()
     
     sys.exit(result)

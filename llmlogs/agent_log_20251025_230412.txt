@@ -1,0 +1,23 @@
+================================================================================
+AI编程助手 - 运行日志
+启动时间: 2025-10-25 23:04:12
+日志文件: llmlogs\agent_log_20251025_230412.txt
+================================================================================
+
+[PersistenceManager] 数据目录: data
+
+数据目录: C:\!002Projects\MyAgent\data
+[ToolManager] 初始化工作空间: C:\!002Projects\MyAgent
+[FileService] 工作空间: C:\!002Projects\MyAgent
+[PersistenceManager] 工作空间数据不存在: data\workspace_398628c283865f7c.json
+[WorkspaceManager] 创建新工作空间: C:\!002Projects\MyAgent
+[Workspace] 创建对话: 对话 1 (ID: 0dda16eb-a670-40f6-bfe3-1531175f990b)
+[PersistenceManager] 已保存工作空间: data\workspace_398628c283865f7c.json
+  - 对话数: 1
+  - 消息历史: 0条
+[AgentBridge] 工作空间ID: a7970dfa-47dd-465f-82b4-3b781dabb86a
+[AgentBridge] 活跃对话ID: 0dda16eb-a670-40f6-bfe3-1531175f990b
+[AgentBridge._load_and_emit_test_prompts] 开始加载测试用例
+[AgentBridge._load_and_emit_test_prompts] 文件路径: C:\!002Projects\MyAgent\测试prompts.json
+[AgentBridge._load_and_emit_test_prompts] 读取成功，长度: 1739
+[AgentBridge._load_and_emit_test_prompts] 发送到前端

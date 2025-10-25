@@ -283,6 +283,11 @@ async def list_sessions():
 
 if __name__ == "__main__":
     import uvicorn
+    
+    # 启动时显示数据目录
+    from core.persistence import persistence_manager
+    print(f"\n数据目录: {persistence_manager.data_dir}")
+    
     uvicorn.run(
         "main:app",
         host=settings.host,

@@ -1,0 +1,16 @@
+================================================================================
+AI编程助手 - 运行日志
+启动时间: 2025-10-25 22:50:32
+日志文件: llmlogs\agent_log_20251025_225032.txt
+================================================================================
+
+[ToolManager] 初始化工作空间: C:\!002Projects\MyAgent
+[FileService] 工作空间: C:\!002Projects\MyAgent
+[Workspace] 创建对话: 对话 1 (ID: 76928e52-7aa2-47a1-a0a6-c430d5367388)
+[WorkspaceManager] 创建工作空间: C:\!002Projects\MyAgent
+[AgentBridge] 工作空间ID: d868d4d2-b67b-4204-ad35-5917ca16676b
+[AgentBridge] 活跃对话ID: 76928e52-7aa2-47a1-a0a6-c430d5367388
+[AgentBridge._load_and_emit_test_prompts] 开始加载测试用例
+[AgentBridge._load_and_emit_test_prompts] 文件路径: C:\!002Projects\MyAgent\测试prompts.json
+[AgentBridge._load_and_emit_test_prompts] 读取成功，长度: 1739
+[AgentBridge._load_and_emit_test_prompts] 发送到前端
