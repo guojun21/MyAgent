@@ -746,7 +746,48 @@
                     const role = msg.role === 'user' ? 'user' : 'assistant';
                     const name = msg.role === 'user' ? '用户' : '助手';
                     const display = msg.content.length > 300 ? msg.content.substring(0, 300) + '...' : msg.content;
-                    html += `<div class="message-item ${role}"><div class="message-header">[${idx+1}] ${name}</div><div class="message-text">${escapeHtml(display)}</div></div>`;
+                    
+                    html += `<div class="message-item ${role}">`;
+                    html += `<div class="message-header">[${idx+1}] ${name}</div>`;
+                    html += `<div class="message-text">${escapeHtml(display)}</div>`;
+                    
+                    // 详细显示工具调用
+                    if (msg.tool_calls && msg.tool_calls.length > 0) {
+                        html += `<div style="margin-top: 10px; padding: 10px; background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.3); border-radius: 3px;">`;
+                        html += `<div style="font-size: 11px; color: #4caf50; font-weight: 600; margin-bottom: 8px;">🔧 执行了 ${msg.tool_calls.length} 个工具</div>`;
+                        
+                        msg.tool_calls.forEach((call, i) => {
+                            html += `<div style="padding: 8px; margin: 6px 0; background: #fff; border-radius: 2px; border: 1px solid #e0e0e0;">`;
+                            html += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 4px; font-size: 12px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
+                            
+                            // 参数
+                            if (call.arguments) {
+                                html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px;">参数:</div>`;
+                                html += `<div style="font-size: 10px; color: #666; font-family: Consolas, monospace; background: #f5f5f5; padding: 4px 6px; border-radius: 2px;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                            }
+                            
+                            // 结果（如果有）
+                            if (call.result) {
+                                const success = call.result.success;
+                                const successText = success ? '✅ 成功' : '❌ 失败';
+                                const successColor = success ? '#4caf50' : '#f44336';
+                                html += `<div style="font-size: 10px; color: ${successColor}; margin-top: 4px; font-weight: 500;">${successText}</div>`;
+                                
+                                if (call.result.path) {
+                                    html += `<div style="font-size: 10px; color: #666; margin-top: 2px;">路径: ${call.result.path}</div>`;
+                                }
+                                if (call.result.total) {
+                                    html += `<div style="font-size: 10px; color: #666; margin-top: 2px;">结果数: ${call.result.total}</div>`;
+                                }
+                            }
+                            
+                            html += `</div>`;
+                        });
+                        
+                        html += `</div>`;
+                    }
+                    
+                    html += `</div>`;
                 });
                 list.innerHTML = html;
             }

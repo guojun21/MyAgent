@@ -206,8 +206,25 @@ class Agent:
             "content": self.llm_service.AGENT_SYSTEM_PROMPT
         })
         
-        # 添加Context历史（对标Cursor的Context窗口）
-        messages.extend(context_history)
+        # 处理Context历史（将tool_calls融入content）
+        for msg in context_history:
+            content = msg.get("content", "")
+            
+            # 如果有工具调用，附加到content中
+            if msg.get("tool_calls"):
+                tool_calls = msg.get("tool_calls", [])
+                content += "\n\n[执行的工具]:\n"
+                for i, call in enumerate(tool_calls, 1):
+                    content += f"{i}. {call.get('tool', 'unknown')}"
+                    if call.get('arguments'):
+                        content += f" - 参数: {call['arguments']}"
+                    content += "\n"
+            
+            clean_msg = {
+                "role": msg.get("role", "user"),
+                "content": content
+            }
+            messages.append(clean_msg)
         
         # 添加当前用户消息
         messages.append({
