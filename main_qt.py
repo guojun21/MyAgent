@@ -57,6 +57,8 @@ class AgentBridge(QObject):
     testPromptsLoaded = pyqtSignal(str)
     # 信号：Context更新
     contextUpdated = pyqtSignal(str)
+    # 信号：MessageHistory更新
+    messageHistoryUpdated = pyqtSignal(str)
     
     def __init__(self, parent_window=None):
         super().__init__()
@@ -213,22 +215,23 @@ class AgentBridge(QObject):
                 max_tokens=131072
             )
             
-            # 替换Context
-            context_manager.clear_context(self.context_id)
-            for msg in compressed:
-                context_manager.add_to_context(
-                    self.context_id,
-                    msg["role"],
-                    msg["content"]
-                )
-            
-            # 重置token统计
+            # 替换Context（只替换context_messages，不影响message_history）
             context_data = context_manager.get_context(self.context_id)
-            context_data["token_usage"] = {
-                "prompt_tokens": 0,
-                "completion_tokens": 0,
-                "total_tokens": 0
-            }
+            if context_data:
+                system_msgs = [m for m in context_data["context_messages"] if m.get("role") == "system"]
+                context_data["context_messages"] = system_msgs
+                
+                # 添加压缩后的消息
+                for msg in compressed:
+                    if msg.get("role") != "system":
+                        context_data["context_messages"].append(msg)
+                
+                # 重置token统计
+                context_data["token_usage"] = {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0
+                }
             
             print(f"[AgentBridge.manualCompact] 手动压缩完成")
             
@@ -379,22 +382,23 @@ class AgentBridge(QObject):
                 
                 print(f"[AgentBridge._handle_context_compression] 强制精简到: {len(compressed_history)}条")
             
-            # 替换Context
-            context_manager.clear_context(self.context_id)
-            for msg in compressed_history:
-                context_manager.add_to_context(
-                    self.context_id,
-                    msg.get("role", "assistant"),
-                    msg.get("content", "")
-                )
-            
-            # 重置token统计
+            # 替换Context（只替换context_messages，message_history保持完整！）
             context_data = context_manager.get_context(self.context_id)
-            context_data["token_usage"] = {
-                "prompt_tokens": 0,
-                "completion_tokens": 0,
-                "total_tokens": 0
-            }
+            if context_data:
+                # 保留系统消息
+                system_msgs = [m for m in context_data["context_messages"] if m.get("role") == "system"]
+                
+                # 替换为压缩后的消息
+                context_data["context_messages"] = system_msgs + [
+                    m for m in compressed_history if m.get("role") != "system"
+                ]
+                
+                # 重置token统计
+                context_data["token_usage"] = {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0
+                }
             
             print(f"[AgentBridge._handle_context_compression] Context已更新，重新执行请求")
             
@@ -427,15 +431,24 @@ class AgentBridge(QObject):
             return
         
         token_usage = context_data["token_usage"]
-        messages = context_data["context_messages"]
+        context_messages = context_data["context_messages"]
+        message_history = context_data["message_history"]
         
-        data = {
-            "messages": messages,
+        # Context数据
+        context_update = {
+            "messages": context_messages,
             "token_usage": token_usage,
-            "message_count": len(messages)
+            "message_count": len(context_messages)
         }
         
-        self.contextUpdated.emit(json.dumps(data, ensure_ascii=False))
+        # MessageHistory数据
+        history_update = {
+            "messages": message_history,
+            "message_count": len(message_history)
+        }
+        
+        self.contextUpdated.emit(json.dumps(context_update, ensure_ascii=False))
+        self.messageHistoryUpdated.emit(json.dumps(history_update, ensure_ascii=False))
     
     def _send_to_frontend(self, data):
         """发送数据到前端"""

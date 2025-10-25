@@ -783,6 +783,7 @@
         <div class="tab-nav">
             <button class="tab-button active" onclick="switchTab('chat')">对话</button>
             <button class="tab-button" onclick="switchTab('context')">Context预览</button>
+            <button class="tab-button" onclick="switchTab('history')">消息历史</button>
             <button class="tab-button" onclick="switchTab('test')">测试状态</button>
         </div>
 
@@ -854,6 +855,33 @@
                 <div class="test-list" id="contextMessageList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; overflow-y: auto;">
                     <div style="text-align: center; padding: 30px; color: #999;">
                         Context为空，发送消息后会在这里显示
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MessageHistory Tab -->
+        <div class="tab-content" id="historyTab">
+            <div class="test-panel">
+                <div class="test-header">
+                    <h2>消息历史</h2>
+                    <p>完整的原始消息记录（未经压缩）</p>
+                </div>
+
+                <div class="test-status" style="background: #fff; border: 1px solid #ddd;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-weight: 500; color: #2c2c2c;">
+                            完整消息历史
+                        </div>
+                        <div style="text-align: right; font-size: 12px; color: #999;">
+                            <div>消息总数: <span id="historyCount">0</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-list" id="historyMessageList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; max-height: 500px; overflow-y: auto;">
+                    <div style="text-align: center; padding: 30px; color: #999;">
+                        暂无消息历史
                     </div>
                 </div>
             </div>
@@ -983,6 +1011,12 @@
                 updateContextView(JSON.parse(dataStr));
             });
             
+            // 监听MessageHistory更新
+            bridge.messageHistoryUpdated.connect(function(dataStr) {
+                console.log('MessageHistory更新:', dataStr.substring(0, 100));
+                updateHistoryView(JSON.parse(dataStr));
+            });
+            
             // 获取工作空间路径
             updateWorkspace();
             
@@ -1055,11 +1089,44 @@
                 document.getElementById('chatTab').classList.add('active');
             } else if (tabName === 'context') {
                 document.getElementById('contextTab').classList.add('active');
-                // 切换到context标签时调整列表高度
-                setTimeout(adjustContextListHeight, 50);
+            } else if (tabName === 'history') {
+                document.getElementById('historyTab').classList.add('active');
             } else if (tabName === 'test') {
                 document.getElementById('testTab').classList.add('active');
             }
+        }
+        
+        // 更新MessageHistory视图
+        function updateHistoryView(data) {
+            document.getElementById('historyCount').textContent = data.message_count || 0;
+            
+            const listEl = document.getElementById('historyMessageList');
+            const messages = data.messages || [];
+            
+            if (messages.length === 0) {
+                listEl.innerHTML = '<div style="text-align: center; padding: 30px; color: #999;">暂无消息历史</div>';
+                return;
+            }
+            
+            let html = '<div style="font-weight: 500; margin-bottom: 15px; color: #2c2c2c;">完整消息记录（未压缩）</div>';
+            
+            messages.forEach((msg, idx) => {
+                const roleName = msg.role === 'user' ? '用户' : msg.role === 'assistant' ? '助手' : msg.role;
+                const bgColor = msg.role === 'user' ? '#2c2c2c' : '#fff';
+                const textColor = msg.role === 'user' ? '#fff' : '#2c2c2c';
+                const borderColor = msg.role === 'user' ? '#666' : '#ddd';
+                
+                html += `
+                    <div style="margin-bottom: 15px; padding: 12px; background: ${bgColor}; color: ${textColor}; border-left: 3px solid ${borderColor}; border-radius: 3px;">
+                        <div style="font-size: 11px; opacity: 0.7; margin-bottom: 8px;">
+                            [${idx + 1}] ${roleName}
+                        </div>
+                        <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">${escapeHtml(msg.content)}</div>
+                    </div>
+                `;
+            });
+            
+            listEl.innerHTML = html;
         }
         
         // 更新Context视图
