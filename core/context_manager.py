@@ -29,7 +29,8 @@ class ContextManager:
             "id": context_id,
             "created_at": time.time(),
             "last_active": time.time(),
-            "context_messages": [],  # Context中的消息历史
+            "context_messages": [],  # Context中的消息（会被压缩）
+            "message_history": [],   # 完整的未压缩消息记录
             "metadata": {},
             "token_usage": {
                 "prompt_tokens": 0,
@@ -75,7 +76,7 @@ class ContextManager:
         if not context:
             return False
         
-        # 天真地完整保留消息（第一次一定要完整）
+        # 构建消息
         message = {
             "role": role,
             "content": content,
@@ -83,7 +84,12 @@ class ContextManager:
             **kwargs
         }
         
+        # 添加到Context（会被压缩）
         context["context_messages"].append(message)
+        
+        # 同时添加到MessageHistory（永不压缩的完整记录）
+        context["message_history"].append(message)
+        
         context["last_active"] = time.time()
         
         # Context长度限制（只限制消息条数，不限制token）
@@ -129,9 +135,30 @@ class ContextManager:
         # 只保留系统消息
         system_messages = [m for m in context["context_messages"] if m["role"] == "system"]
         context["context_messages"] = system_messages
+        
+        # MessageHistory也清空
+        system_history = [m for m in context["message_history"] if m["role"] == "system"]
+        context["message_history"] = system_history
+        
         context["last_active"] = time.time()
         
         return True
+    
+    def get_message_history(self, context_id: str) -> List[Dict[str, Any]]:
+        """
+        获取完整的MessageHistory（未压缩版本）
+        
+        Args:
+            context_id: Context ID
+            
+        Returns:
+            完整消息历史
+        """
+        context = self.get_context(context_id)
+        if not context:
+            return []
+        
+        return context.get("message_history", [])
     
     def delete_context(self, context_id: str) -> bool:
         """
