@@ -250,14 +250,27 @@ class AgentBridge(QObject):
             conversation.token_usage["total_tokens"] += usage.get("total_tokens", 0)
         
         # 添加到对话的Context（直接写入contexts.json）
+        # 用户消息
         conversation.add_to_context("user", user_msg)
+        
+        # 助手消息（带工具调用记录）
         if result.get("success"):
-            conversation.add_to_context("assistant", assistant_msg)
+            assistant_message_data = {
+                "content": assistant_msg,
+                "tool_calls": result.get("tool_calls", []),  # 工具调用记录
+                "iterations": result.get("iterations", 0)    # 迭代次数
+            }
+            conversation.add_to_context_with_metadata("assistant", assistant_message_data)
         
         # 添加到工作空间的MessageHistory（直接写入message_history.json）
         workspace.add_to_message_history("user", user_msg)
+        
         if result.get("success"):
-            workspace.add_to_message_history("assistant", assistant_msg)
+            workspace.add_to_message_history_with_metadata("assistant", {
+                "content": assistant_msg,
+                "tool_calls": result.get("tool_calls", []),
+                "iterations": result.get("iterations", 0)
+            })
         
         # 保存对话基本信息（token统计等）
         workspace_manager.auto_save()

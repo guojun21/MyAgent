@@ -67,22 +67,35 @@ class Workspace:
             print(f"[Workspace] 切换到对话: {self.conversations[conv_id].name}")
     
     def add_to_message_history(self, role: str, content: str):
-        """添加到工作空间的MessageHistory（直接写入JSON）"""
+        """添加消息到MessageHistory"""
+        message_data = {"content": content}
+        self.add_to_message_history_with_metadata(role, message_data)
+    
+    def add_to_message_history_with_metadata(self, role: str, message_data: dict):
+        """添加消息到MessageHistory（带元数据）"""
         from core.persistence import persistence_manager
         
         message = {
             "role": role,
-            "content": content,
+            "content": message_data.get("content", ""),
             "timestamp": time.time(),
             "conversation_id": self.active_conversation_id,
             "workspace_id": self.id
         }
+        
+        # 添加工具调用和迭代次数（如果有）
+        if "tool_calls" in message_data:
+            message["tool_calls"] = message_data["tool_calls"]
+        if "iterations" in message_data:
+            message["iterations"] = message_data["iterations"]
         
         # 直接追加到JSON
         persistence_manager.append_message_history(message)
         
         # 同步到内存
         self.message_history.append(message)
+        
+        print(f"  [Workspace.add_to_message_history_with_metadata] 已保存，工具调用: {len(message.get('tool_calls', []))}")
     
     def get_message_history(self) -> List[Dict]:
         """获取MessageHistory（从JSON读取）"""
@@ -119,6 +132,11 @@ class Conversation:
     
     def add_to_context(self, role: str, content: str):
         """添加消息到Context（直接写入JSON）"""
+        message_data = {"content": content}
+        self.add_to_context_with_metadata(role, message_data)
+    
+    def add_to_context_with_metadata(self, role: str, message_data: dict):
+        """添加消息到Context（带元数据）"""
         from core.persistence import persistence_manager
         
         # 从JSON读取当前Context
@@ -129,20 +147,29 @@ class Conversation:
         else:
             messages = []
         
-        # 添加新消息
+        # 构建完整消息
         message = {
             "role": role,
-            "content": content,
+            "content": message_data.get("content", ""),
             "timestamp": time.time()
         }
+        
+        # 添加工具调用和迭代次数（如果有）
+        if "tool_calls" in message_data:
+            message["tool_calls"] = message_data["tool_calls"]
+        if "iterations" in message_data:
+            message["iterations"] = message_data["iterations"]
+        
         messages.append(message)
         
         # 写回JSON
         persistence_manager.save_context(self.id, messages, self.token_usage)
         
-        # 同步到内存（仅用于快速访问）
+        # 同步到内存
         self.context_messages = messages
         self.last_active = time.time()
+        
+        print(f"    [Conversation.add_to_context_with_metadata] 已保存，工具调用: {len(message.get('tool_calls', []))}")
     
     def get_context_messages(self) -> List[Dict]:
         """获取Context消息（从JSON读取）"""
