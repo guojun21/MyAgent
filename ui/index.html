@@ -443,6 +443,130 @@
             color: #666;
         }
 
+        /* 弹窗样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            animation: fadeIn 0.2s ease-in;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: 80%;
+            max-height: 80%;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #2c2c2c;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #2c2c2c;
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+
+        .modal-body {
+            padding: 25px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: #f0f0f0;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        .detail-content {
+            font-size: 13px;
+            line-height: 1.8;
+            color: #2c2c2c;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #fafafa;
+            padding: 15px;
+            border-radius: 3px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .btn-detail {
+            margin-top: 8px;
+            padding: 4px 10px;
+            background: transparent;
+            border: 1px solid #999;
+            color: #666;
+            border-radius: 2px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-detail:hover {
+            background: #2c2c2c;
+            color: #fff;
+            border-color: #2c2c2c;
+        }
+
         /* 底部控制栏 */
         .footer-controls {
             padding: 10px 30px;
@@ -669,7 +793,7 @@
                     </div>
                 </div>
 
-                <div class="test-list" id="contextMessageList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; max-height: 500px; overflow-y: auto;">
+                <div class="test-list" id="contextMessageList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; overflow-y: auto;">
                     <div style="text-align: center; padding: 30px; color: #999;">
                         Context为空，发送消息后会在这里显示
                     </div>
@@ -709,6 +833,19 @@
                 <span class="zoom-display" id="zoomDisplay">100%</span>
                 <button class="btn-zoom" onclick="zoomIn()">+5%</button>
                 <button class="btn-zoom" onclick="resetZoom()">重置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div class="modal-overlay" id="detailModal" onclick="closeDetailModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">消息详情</div>
+                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-content" id="modalDetailContent"></div>
             </div>
         </div>
     </div>
@@ -850,6 +987,8 @@
                 document.getElementById('chatTab').classList.add('active');
             } else if (tabName === 'context') {
                 document.getElementById('contextTab').classList.add('active');
+                // 切换到context标签时调整列表高度
+                setTimeout(adjustContextListHeight, 50);
             } else if (tabName === 'test') {
                 document.getElementById('testTab').classList.add('active');
             }
@@ -882,18 +1021,24 @@
                 const bgColor = msg.role === 'user' ? '#2c2c2c' : '#fff';
                 const textColor = msg.role === 'user' ? '#fff' : '#2c2c2c';
                 const borderColor = msg.role === 'user' ? '#666' : '#ddd';
+                const isTruncated = msg.content.length > 500;
+                const displayContent = escapeHtml(isTruncated ? msg.content.substring(0, 500) + '...' : msg.content);
                 
                 html += `
                     <div style="margin-bottom: 15px; padding: 12px; background: ${bgColor}; color: ${textColor}; border-left: 3px solid ${borderColor}; border-radius: 3px;">
                         <div style="font-size: 11px; opacity: 0.7; margin-bottom: 8px;">
                             [${idx + 1}] ${roleName}
                         </div>
-                        <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(msg.content.substring(0, 500))}${msg.content.length > 500 ? '...' : ''}</div>
+                        <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${displayContent}</div>
+                        ${isTruncated ? `<button class="btn-detail" onclick="showDetailModal(${idx}, '${roleName}', \`${escapeForJs(msg.content)}\`)">显示完整内容</button>` : ''}
                     </div>
                 `;
             });
             
             listEl.innerHTML = html;
+            
+            // 动态调整列表高度
+            adjustContextListHeight();
         }
 
 
@@ -1219,6 +1364,61 @@
             const tokensK = (totalTokens / 1000).toFixed(1);
             document.getElementById('contextTokens').textContent = tokensK + 'K/131K';
         }
+        
+        // 显示详情弹窗
+        function showDetailModal(idx, roleName, content) {
+            const modal = document.getElementById('detailModal');
+            const title = document.getElementById('modalTitle');
+            const contentEl = document.getElementById('modalDetailContent');
+            
+            title.textContent = `消息详情 - [${idx + 1}] ${roleName}`;
+            contentEl.textContent = content;
+            
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // 关闭详情弹窗
+        function closeDetailModal(event) {
+            const modal = document.getElementById('detailModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+        
+        // 转义特殊字符用于JavaScript字符串
+        function escapeForJs(str) {
+            return str
+                .replace(/\\/g, '\\\\')
+                .replace(/`/g, '\\`')
+                .replace(/\$/g, '\\$')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r');
+        }
+        
+        // 动态调整Context列表高度
+        function adjustContextListHeight() {
+            const listEl = document.getElementById('contextMessageList');
+            if (!listEl) return;
+            
+            // 获取contextTab的实际高度
+            const contextTab = document.getElementById('contextTab');
+            if (!contextTab || !contextTab.classList.contains('active')) return;
+            
+            // 获取test-panel的高度
+            const testPanel = contextTab.querySelector('.test-panel');
+            if (!testPanel) return;
+            
+            // 计算可用高度：从列表顶部到底部控制栏的距离
+            const rect = listEl.getBoundingClientRect();
+            const footerHeight = document.querySelector('.footer-controls').offsetHeight;
+            const bottomMargin = 20; // 底部留白
+            
+            const availableHeight = window.innerHeight - rect.top - footerHeight - bottomMargin;
+            listEl.style.maxHeight = availableHeight + 'px';
+        }
+        
+        // 监听窗口大小变化
+        window.addEventListener('resize', adjustContextListHeight);
     </script>
 </body>
 </html>
