@@ -85,11 +85,18 @@ class AgentBridge(QObject):
     
     def _emit_initial_data(self):
         """延迟发送初始数据（确保前端已准备好）"""
-        print(f"\n[AgentBridge._emit_initial_data] 发送初始数据到前端")
+        print(f"\n[AgentBridge._emit_initial_data] ========== 发送初始数据 ==========")
+        
+        print(f"[AgentBridge._emit_initial_data] 1. 发送工作空间列表")
         self._emit_workspace_list()
+        
+        print(f"[AgentBridge._emit_initial_data] 2. 发送对话列表")
         self._emit_conversations_update()
+        
+        print(f"[AgentBridge._emit_initial_data] 3. 发送Context数据")
         self._emit_context_update()
-        print(f"[AgentBridge._emit_initial_data] 初始数据已发送\n")
+        
+        print(f"[AgentBridge._emit_initial_data] ========== 初始数据发送完毕 ==========\n")
     
     def _init_workspaces(self):
         """智能初始化工作空间"""
@@ -314,13 +321,20 @@ class AgentBridge(QObject):
         
         conversations = []
         for conv_id, conv in workspace.conversations.items():
+            # 从JSON读取真实的消息数
+            context_messages = conv.get_context_messages()
+            
             conversations.append({
                 "id": conv.id,
                 "name": conv.name,
                 "active": conv_id == workspace.active_conversation_id,
-                "message_count": len(conv.context_messages),
+                "message_count": len(context_messages),  # 真实的消息数
                 "last_active": conv.last_active
             })
+        
+        print(f"[getConversationList] 对话列表:")
+        for c in conversations:
+            print(f"  - {c['name']}: {c['message_count']}条消息, active={c['active']}")
         
         return json.dumps(conversations, ensure_ascii=False)
     

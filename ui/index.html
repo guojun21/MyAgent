@@ -401,22 +401,37 @@
         }
 
         function loadWorkspaces() {
-            if (!bridge) return;
+            if (!bridge) {
+                console.log('❌ loadWorkspaces: bridge未准备好');
+                return;
+            }
             
-            // Qt的pyqtSlot返回值可能是Promise或同步值
-            const result = bridge.getWorkspaceList();
+            console.log('📞 调用bridge.getWorkspaceList()');
             
-            // 处理Promise或直接字符串
-            if (result && typeof result.then === 'function') {
-                // 异步Promise
-                result.then(data => {
-                    workspaces = JSON.parse(data);
+            try {
+                const result = bridge.getWorkspaceList();
+                console.log('📞 getWorkspaceList返回:', typeof result);
+                
+                // 处理Promise或直接字符串
+                if (result && typeof result.then === 'function') {
+                    // 异步Promise
+                    result.then(data => {
+                        console.log('✅ Promise resolved, 数据长度:', data.length);
+                        workspaces = JSON.parse(data);
+                        console.log('✅ 解析成功:', workspaces.length, '个工作空间');
+                        renderWorkspaceTabs();
+                    });
+                } else if (typeof result === 'string') {
+                    // 同步字符串
+                    console.log('✅ 同步返回, 数据长度:', result.length);
+                    workspaces = JSON.parse(result);
+                    console.log('✅ 解析成功:', workspaces.length, '个工作空间');
                     renderWorkspaceTabs();
-                });
-            } else {
-                // 同步字符串
-                workspaces = JSON.parse(result);
-                renderWorkspaceTabs();
+                } else {
+                    console.log('❌ 未知返回类型:', typeof result, result);
+                }
+            } catch (e) {
+                console.error('❌ loadWorkspaces错误:', e);
             }
         }
 
@@ -485,28 +500,48 @@
         }
 
         function loadConversations() {
-            if (!bridge) return;
+            if (!bridge) {
+                console.log('❌ loadConversations: bridge未准备好');
+                return;
+            }
             
-            const result = bridge.getConversationList();
+            console.log('📞 调用bridge.getConversationList()');
             
-            if (result && typeof result.then === 'function') {
-                result.then(data => {
-                    conversations = JSON.parse(data);
+            try {
+                const result = bridge.getConversationList();
+                console.log('📞 getConversationList返回:', typeof result);
+                
+                if (result && typeof result.then === 'function') {
+                    result.then(data => {
+                        console.log('✅ Promise resolved, 数据:', data.substring(0, 100));
+                        conversations = JSON.parse(data);
+                        console.log('✅ 解析成功:', conversations.length, '个对话');
+                        renderConversationTabs();
+                    });
+                } else if (typeof result === 'string') {
+                    console.log('✅ 同步返回:', result.substring(0, 100));
+                    conversations = JSON.parse(result);
+                    console.log('✅ 解析成功:', conversations.length, '个对话');
                     renderConversationTabs();
-                });
-            } else {
-                conversations = JSON.parse(result);
-                renderConversationTabs();
+                } else {
+                    console.log('❌ 未知返回类型:', typeof result);
+                }
+            } catch (e) {
+                console.error('❌ loadConversations错误:', e);
             }
         }
 
         function renderConversationTabs() {
+            console.log('📝 renderConversationTabs, 对话数:', conversations.length);
+            
             const convBar = document.getElementById('conversationTabs');
             const histBar = document.getElementById('historyConversationTabs');
             
             let html = '';
-            conversations.forEach(conv => {
+            conversations.forEach((conv, idx) => {
                 const active = conv.active ? 'active' : '';
+                console.log(`  - 对话${idx+1}: ${conv.name}, active=${conv.active}, 消息=${conv.message_count}`);
+                
                 html += `
                     <button class="conversation-tab ${active}" onclick="selectConversation('${conv.id}')">
                         <span class="editable-name" ondblclick="editConversationName(this)" data-id="${conv.id}">${conv.name}</span>
@@ -514,8 +549,12 @@
                 `;
             });
             
+            console.log('📝 对话Tab HTML长度:', html.length);
+            
             convBar.innerHTML = html + '<button class="conversation-tab new" onclick="createConversation()">+ 新建对话</button>';
             histBar.innerHTML = html;
+            
+            console.log('✅ 对话Tab渲染完成');
         }
 
         function createConversation() {
