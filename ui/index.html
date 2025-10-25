@@ -38,10 +38,10 @@
         
         /* 聊天区域 */
         .chat-area { flex: 1; overflow-y: auto; padding: 30px 40px; background: #fafafa; }
-        .message { margin-bottom: 25px; }
+        .message { margin-bottom: 20px; }
         .message.user { display: flex; justify-content: flex-end; }
         .message.assistant { display: flex; justify-content: flex-start; }
-        .message-content { max-width: 75%; padding: 15px 20px; border-radius: 4px; line-height: 1.8; font-size: 14px; }
+        .message-content { max-width: 75%; padding: 12px 18px; border-radius: 4px; line-height: 1.3; font-size: 14px; }
         .message.user .message-content { background: #2c2c2c; color: #fff; border-left: 3px solid #666; }
         .message.assistant .message-content { background: #fff; color: #2c2c2c; border-left: 3px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
         
@@ -82,7 +82,7 @@
         .message-item.user { background: #2c2c2c; color: #fff; border-left-color: #666; }
         .message-item.assistant { background: #fff; border: 1px solid #e0e0e0; }
         .message-header { font-size: 11px; opacity: 0.7; margin-bottom: 8px; }
-        .message-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-family: Consolas, monospace; }
+        .message-text { font-size: 13px; line-height: 1.3; white-space: pre-wrap; font-family: Consolas, monospace; }
         
         .btn-action { padding: 8px 16px; background: #2c2c2c; color: #fff; border: none; border-radius: 3px; font-size: 12px; cursor: pointer; }
         .btn-action:hover { background: #1a1a1a; }
@@ -777,34 +777,37 @@
                     html += `<div class="message-header">[${idx+1}] ${name}</div>`;
                     html += `<div class="message-text">${escapeHtml(display)}</div>`;
                     
-                    // 详细显示工具调用
+                    // Context预览 - 工具调用（绿色主题，统一使用renderToolResult）
                     if (msg.tool_calls && msg.tool_calls.length > 0) {
                         html += `<div style="margin-top: 10px; padding: 10px; background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.3); border-radius: 3px;">`;
                         html += `<div style="font-size: 11px; color: #4caf50; font-weight: 600; margin-bottom: 8px;">🔧 执行了 ${msg.tool_calls.length} 个工具</div>`;
                         
                         msg.tool_calls.forEach((call, i) => {
-                            html += `<div style="padding: 8px; margin: 6px 0; background: #fff; border-radius: 2px; border: 1px solid #e0e0e0;">`;
-                            html += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 4px; font-size: 12px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
+                            html += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #e0e0e0;">`;
                             
-                            // 参数
-                            if (call.arguments) {
-                                html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px;">参数:</div>`;
-                                html += `<div style="font-size: 10px; color: #666; font-family: Consolas, monospace; background: #f5f5f5; padding: 4px 6px; border-radius: 2px;">${JSON.stringify(call.arguments, null, 2)}</div>`;
-                            }
+                            // 工具名
+                            html += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 12px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
                             
-                            // 结果（如果有）
+                            // 入参
+                            html += `<div style="margin-bottom: 6px;">`;
+                            html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
+                            html += `<div style="font-size: 10px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                            html += `</div>`;
+                            
+                            // 出参（使用统一的renderToolResult函数）
                             if (call.result) {
-                                const success = call.result.success;
-                                const successText = success ? '✅ 成功' : '❌ 失败';
-                                const successColor = success ? '#4caf50' : '#f44336';
-                                html += `<div style="font-size: 10px; color: ${successColor}; margin-top: 4px; font-weight: 500;">${successText}</div>`;
+                                html += `<div>`;
+                                html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>`;
                                 
-                                if (call.result.path) {
-                                    html += `<div style="font-size: 10px; color: #666; margin-top: 2px;">路径: ${call.result.path}</div>`;
-                                }
-                                if (call.result.total) {
-                                    html += `<div style="font-size: 10px; color: #666; margin-top: 2px;">结果数: ${call.result.total}</div>`;
-                                }
+                                const success = call.result.success;
+                                const statusColor = success ? '#4caf50' : '#f44336';
+                                const statusText = success ? '✅ 成功' : '❌ 失败';
+                                
+                                html += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
+                                html += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 6px;">${statusText}</div>`;
+                                html += renderToolResult(call.tool, call.result);  // 统一调用！
+                                html += `</div>`;
+                                html += `</div>`;
                             }
                             
                             html += `</div>`;
@@ -839,7 +842,7 @@
             document.getElementById('historyEnglishChars').textContent = english.toLocaleString();
             document.getElementById('historyCount').textContent = msgs.length;
             
-            // 渲染到聊天记录管理模块
+            // 渲染到聊天记录管理模块（和Context预览一样详细）
             const list = document.getElementById('historyList');
             if (msgs.length === 0) {
                 list.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">暂无消息</div>';
@@ -849,7 +852,51 @@
                     const role = msg.role === 'user' ? 'user' : 'assistant';
                     const name = msg.role === 'user' ? '用户' : '助手';
                     const display = msg.content.length > 300 ? msg.content.substring(0, 300) + '...' : msg.content;
-                    html += `<div class="message-item ${role}"><div class="message-header">[${idx+1}] ${name}</div><div class="message-text">${escapeHtml(display)}</div></div>`;
+                    
+                    html += `<div class="message-item ${role}">`;
+                    html += `<div class="message-header">[${idx+1}] ${name}</div>`;
+                    html += `<div class="message-text">${escapeHtml(display)}</div>`;
+                    
+                    // 详细显示工具调用（和Context预览一样）
+                    if (msg.tool_calls && msg.tool_calls.length > 0) {
+                        html += `<div style="margin-top: 10px; padding: 10px; background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.3); border-radius: 3px;">`;
+                        html += `<div style="font-size: 11px; color: #4caf50; font-weight: 600; margin-bottom: 8px;">🔧 执行了 ${msg.tool_calls.length} 个工具</div>`;
+                        
+                        msg.tool_calls.forEach((call, i) => {
+                            html += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #e0e0e0;">`;
+                            
+                            // 工具名
+                            html += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 12px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
+                            
+                            // 入参
+                            html += `<div style="margin-bottom: 6px;">`;
+                            html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
+                            html += `<div style="font-size: 10px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                            html += `</div>`;
+                            
+                            // 出参（使用renderToolResult）
+                            if (call.result) {
+                                html += `<div>`;
+                                html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>`;
+                                
+                                const success = call.result.success;
+                                const statusColor = success ? '#4caf50' : '#f44336';
+                                const statusText = success ? '✅ 成功' : '❌ 失败';
+                                
+                                html += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
+                                html += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 6px;">${statusText}</div>`;
+                                html += renderToolResult(call.tool, call.result);
+                                html += `</div>`;
+                                html += `</div>`;
+                            }
+                            
+                            html += `</div>`;
+                        });
+                        
+                        html += `</div>`;
+                    }
+                    
+                    html += `</div>`;
                 });
                 list.innerHTML = html;
             }
@@ -861,7 +908,7 @@
                     renderChatHistory(msgs);
                 } else {
                     console.log('⚠️ 历史为空，显示空状态');
-                    const chatArea = document.getElementById('chatArea');
+            const chatArea = document.getElementById('chatArea');
                     if (chatArea) {
                         chatArea.innerHTML = '<div class="empty-state"><h2>📖</h2><p>开始对话</p></div>';
                     }
@@ -994,7 +1041,7 @@
             
             // 代码块 ```code```
             html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, lang, code) {
-                return `<pre style="background:#2c2c2c;color:#e0e0e0;padding:12px;border-radius:3px;overflow-x:auto;margin:12px 0;"><code>${code.trim()}</code></pre>`;
+                return `<pre style="background:#2c2c2c;color:#e0e0e0;padding:8px;border-radius:3px;overflow-x:auto;margin:6px 0;line-height:1.3;"><code>${code.trim()}</code></pre>`;
             });
             
             // 行内代码 `code`
@@ -1006,16 +1053,17 @@
             // 斜体 *text*
             html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
             
-            // 列表 - item
-            html = html.replace(/^- (.+)$/gm, '<li style="margin-left:25px;color:#333;">$1</li>');
+            // 列表 - item (紧凑样式)
+            html = html.replace(/^- (.+)$/gm, '<li style="margin-left:25px;color:#333;line-height:1.3;margin-bottom:3px;">$1</li>');
             
-            // 标题
-            html = html.replace(/^### (.+)$/gm, '<h4 style="margin:15px 0 10px 0;color:#2c2c2c;font-weight:500;">$1</h4>');
-            html = html.replace(/^## (.+)$/gm, '<h3 style="margin:15px 0 10px 0;color:#2c2c2c;font-weight:500;">$1</h3>');
-            html = html.replace(/^# (.+)$/gm, '<h2 style="margin:15px 0 10px 0;color:#2c2c2c;font-weight:500;">$1</h2>');
+            // 标题 (按从多到少的顺序，避免匹配冲突)
+            html = html.replace(/^#### (.+)$/gm, '<h5 style="margin:6px 0 4px 0;color:#2c2c2c;font-weight:500;font-size:14px;line-height:1.3;">$1</h5>');
+            html = html.replace(/^### (.+)$/gm, '<h4 style="margin:6px 0 4px 0;color:#2c2c2c;font-weight:500;font-size:15px;line-height:1.3;">$1</h4>');
+            html = html.replace(/^## (.+)$/gm, '<h3 style="margin:8px 0 5px 0;color:#2c2c2c;font-weight:500;font-size:16px;line-height:1.3;">$1</h3>');
+            html = html.replace(/^# (.+)$/gm, '<h2 style="margin:8px 0 5px 0;color:#2c2c2c;font-weight:500;font-size:18px;line-height:1.3;">$1</h2>');
             
-            // 换行
-            html = html.replace(/\n/g, '<br>');
+            // 换行 (使用更紧凑的行高)
+            html = html.replace(/\n/g, '<br style="line-height:1.3;">');
             
             return html;
         }
@@ -1114,6 +1162,30 @@
                     const preview = output.substring(0, 150);
                     html += `<div style="margin-top: 6px;">输出:</div>`;
                     html += `<div style="background: #2c2c2c; color: #e0e0e0; padding: 6px; border-radius: 2px; font-size: 10px; white-space: pre-wrap; max-height: 80px; overflow-y: auto;">${escapeHtml(preview)}${output.length > 150 ? '\n...' : ''}</div>`;
+                }
+                html += `</div>`;
+            }
+            // query_history - 聊天记录查询
+            else if (toolName === 'query_history') {
+                const results = result.results || [];
+                html += `<div style="color: #666;">`;
+                html += `<div>搜索: "${result.query}"</div>`;
+                html += `<div>匹配: ${result.total || 0} 条</div>`;
+                html += `<div>搜索范围: ${result.searched_messages || 0} 条消息</div>`;
+                
+                if (results.length > 0) {
+                    html += `<div style="margin-top: 8px; font-weight: 500;">🔍 查询结果:</div>`;
+                    results.forEach((r, i) => {
+                        const content = r.content || '';
+                        const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
+                        html += `<div style="margin: 6px 0; padding: 6px; background: #f9f9f9; border-left: 2px solid #4caf50; border-radius: 2px;">`;
+                        html += `<div style="font-size: 10px; color: #4caf50; font-weight: 600;">[${r.index}] ${r.role}</div>`;
+                        html += `<div style="font-size: 10px; color: #666; margin-top: 2px;">${escapeHtml(preview)}</div>`;
+                        if (r.relevance) {
+                            html += `<div style="font-size: 9px; color: #999; margin-top: 2px; font-style: italic;">相关度: ${r.relevance}</div>`;
+                        }
+                        html += `</div>`;
+                    });
                 }
                 html += `</div>`;
             }

@@ -13,15 +13,16 @@ from utils.logger import safe_print as print
 class Agent:
     """智能编程助手Agent"""
     
-    def __init__(self, workspace_root: str = "."):
+    def __init__(self, workspace_root: str = ".", workspace_manager=None):
         """
         初始化Agent
         
         Args:
             workspace_root: 工作空间根目录
+            workspace_manager: 工作空间管理器（用于query_history工具）
         """
         self.llm_service: LLMService = get_llm_service()
-        self.tool_manager = ToolManager(workspace_root)
+        self.tool_manager = ToolManager(workspace_root, workspace_manager)
         self.max_iterations = 10  # 最大迭代次数，防止无限循环
     
     async def run(

@@ -1,0 +1,31 @@
+{
+  "tool": "edit_file",
+  "prompts": [
+    {
+      "id": 1,
+      "description": "修改配置项",
+      "prompt": "把config.py文件中的debug改成True"
+    },
+    {
+      "id": 2,
+      "description": "替换函数名",
+      "prompt": "在main.py中，把函数名get_data改成fetch_data"
+    },
+    {
+      "id": 3,
+      "description": "修改导入语句",
+      "prompt": "修改services/llm_service.py，把import openai改成from openai import OpenAI"
+    },
+    {
+      "id": 4,
+      "description": "替换字符串",
+      "prompt": "把README.md中的'AI助手'全部替换成'智能助手'"
+    },
+    {
+      "id": 5,
+      "description": "修改端口配置",
+      "prompt": "修改config.py，把端口8000改成8080"
+    }
+  ]
+}
+

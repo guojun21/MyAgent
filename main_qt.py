@@ -152,9 +152,9 @@ class AgentBridge(QObject):
             self.workspace_id = workspace_manager.create_workspace(str(self.workspace_root))
             print(f"[AgentBridge._init_workspaces] 新工作空间ID: {self.workspace_id}")
         
-        # 3. 初始化Agent
+        # 3. 初始化Agent（传入workspace_manager用于query_history工具）
         print(f"[AgentBridge._init_workspaces] 初始化Agent: {self.workspace_root}")
-        self.agent = Agent(workspace_root=str(self.workspace_root))
+        self.agent = Agent(workspace_root=str(self.workspace_root), workspace_manager=workspace_manager)
         
         # 4. 输出最终状态
         workspace = workspace_manager.get_active_workspace()
@@ -379,9 +379,9 @@ class AgentBridge(QObject):
             print(f"  - 工作空间ID: {ws_id}")
             print(f"  - 对话数: {len(workspace.conversations)}")
             
-            # 更新Agent
+            # 更新Agent（传入workspace_manager）
             self.workspace_root = Path(workspace.path).resolve()
-            self.agent = Agent(workspace_root=str(self.workspace_root))
+            self.agent = Agent(workspace_root=str(self.workspace_root), workspace_manager=workspace_manager)
             
             # 重置压缩计数
             self.compression_attempts = 0
@@ -551,8 +551,8 @@ class AgentBridge(QObject):
             # 创建/加载工作空间
             self.workspace_id = workspace_manager.create_workspace(str(self.workspace_root))
             
-            # 重新初始化Agent
-            self.agent = Agent(workspace_root=str(self.workspace_root))
+            # 重新初始化Agent（传入workspace_manager）
+            self.agent = Agent(workspace_root=str(self.workspace_root), workspace_manager=workspace_manager)
             print(f"[Agent重新初始化] 工作空间: {self.workspace_root}")
             
             # 通知前端刷新
