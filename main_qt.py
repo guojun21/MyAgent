@@ -79,47 +79,85 @@ class AgentBridge(QObject):
         # 加载测试用例
         self._load_and_emit_test_prompts()
         
-        # 发送初始数据
-        self._emit_conversations_update()
+        # 延迟发送初始数据（等前端准备好）
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(500, self._emit_initial_data)
+    
+    def _emit_initial_data(self):
+        """延迟发送初始数据（确保前端已准备好）"""
+        print(f"\n[AgentBridge._emit_initial_data] 发送初始数据到前端")
         self._emit_workspace_list()
+        self._emit_conversations_update()
+        self._emit_context_update()
+        print(f"[AgentBridge._emit_initial_data] 初始数据已发送\n")
     
     def _init_workspaces(self):
         """智能初始化工作空间"""
-        # 先加载所有已保存的工作空间
+        print(f"\n[AgentBridge._init_workspaces] ========== 开始初始化 ==========")
+        
+        # 1. 先加载所有已保存的工作空间
         if workspace_manager.persistence_manager is None:
+            print(f"[AgentBridge._init_workspaces] 初始化持久化管理器")
             from core.persistence import persistence_manager
             workspace_manager.persistence_manager = persistence_manager
+            
+            print(f"[AgentBridge._init_workspaces] 从JSON加载工作空间...")
             workspace_manager.load_from_persistence()
         
-        print(f"[AgentBridge._init_workspaces] 已加载{len(workspace_manager.workspaces)}个工作空间")
+        print(f"[AgentBridge._init_workspaces] 加载完成，共{len(workspace_manager.workspaces)}个工作空间")
+        for ws_id, ws in workspace_manager.workspaces.items():
+            print(f"  - {ws.name}: {ws.path} (对话数: {len(ws.conversations)})")
         
-        # 检查是否有已保存的工作空间
-        if len(workspace_manager.workspaces) > 0:
-            # 已有工作空间，使用第一个
+        # 2. 检查是否有已保存的工作空间
+        workspace_count = len(workspace_manager.workspaces)
+        print(f"[AgentBridge._init_workspaces] 检查工作空间数量: {workspace_count}")
+        
+        if workspace_count > 0:
+            print(f"[AgentBridge._init_workspaces] ✅ 有{workspace_count}个工作空间，使用已有的")
+            
+            # 使用第一个工作空间（如果没有active的话）
+            if workspace_manager.active_workspace_id is None:
+                first_ws_id = list(workspace_manager.workspaces.keys())[0]
+                workspace_manager.active_workspace_id = first_ws_id
+                print(f"[AgentBridge._init_workspaces] active_workspace_id为空，设置为第一个: {first_ws_id}")
+            else:
+                print(f"[AgentBridge._init_workspaces] active_workspace_id已设置: {workspace_manager.active_workspace_id}")
+            
             self.workspace_id = workspace_manager.active_workspace_id
             workspace = workspace_manager.get_active_workspace()
             
+            print(f"[AgentBridge._init_workspaces] get_active_workspace返回: {workspace}")
+            
             if workspace:
                 self.workspace_root = Path(workspace.path).resolve()
-                print(f"[AgentBridge] 加载已有工作空间: {workspace.name}")
+                print(f"[AgentBridge._init_workspaces] ✅✅✅ 使用已有工作空间: {workspace.name}")
+                print(f"  - ID: {workspace.id}")
                 print(f"  - 路径: {workspace.path}")
                 print(f"  - 对话数: {len(workspace.conversations)}")
+                print(f"[AgentBridge._init_workspaces] ⚠️⚠️⚠️ 不会创建新工作空间！")
             else:
-                # 降级：使用当前目录
-                self.workspace_id = workspace_manager.create_workspace(str(self.workspace_root))
-                print(f"[AgentBridge] 创建默认工作空间: {self.workspace_root}")
+                print(f"[AgentBridge._init_workspaces] ❌❌❌ 严重错误：workspace为None！")
+                print(f"  - active_workspace_id: {workspace_manager.active_workspace_id}")
+                print(f"  - workspaces keys: {list(workspace_manager.workspaces.keys())}")
         else:
             # 第一次启动，创建默认工作空间
-            print(f"[AgentBridge] 首次启动，创建默认工作空间")
+            print(f"[AgentBridge._init_workspaces] ⚠️ 首次启动（workspaces为空），创建默认工作空间")
             self.workspace_id = workspace_manager.create_workspace(str(self.workspace_root))
+            print(f"[AgentBridge._init_workspaces] 新工作空间ID: {self.workspace_id}")
         
-        # 初始化Agent
+        # 3. 初始化Agent
+        print(f"[AgentBridge._init_workspaces] 初始化Agent: {self.workspace_root}")
         self.agent = Agent(workspace_root=str(self.workspace_root))
         
+        # 4. 输出最终状态
         workspace = workspace_manager.get_active_workspace()
         conv = workspace.get_active_conversation() if workspace else None
-        print(f"[AgentBridge] 当前工作空间ID: {self.workspace_id}")
-        print(f"[AgentBridge] 当前对话ID: {conv.id if conv else 'None'}")
+        print(f"[AgentBridge._init_workspaces] ========== 初始化完成 ==========")
+        print(f"  - 工作空间ID: {self.workspace_id}")
+        print(f"  - 工作空间名: {workspace.name if workspace else 'None'}")
+        print(f"  - 对话ID: {conv.id if conv else 'None'}")
+        print(f"  - 对话名: {conv.name if conv else 'None'}")
+        print(f"============================================\n")
     
     @pyqtSlot(str)
     def sendMessage(self, message):
