@@ -252,8 +252,18 @@
         
         // 统一初始化
         function init() {
+            console.log('初始化前端...');
+            
+            // 立即加载
             loadWorkspaces();
             loadConversations();
+            
+            // 延迟再加载一次（确保数据同步）
+            setTimeout(() => {
+                console.log('延迟刷新...');
+                loadWorkspaces();
+                loadConversations();
+            }, 600);
         }
         
         // RESTful API适配器（模拟Qt bridge接口）
@@ -380,6 +390,7 @@
         }
 
         function updateWorkspaces(data) {
+            console.log('updateWorkspaces:', data.length, '个工作空间');
             workspaces = data;
             renderWorkspaceTabs();
         }
@@ -615,6 +626,8 @@
         }
 
         function updateContext(data) {
+            console.log('updateContext:', data.message_count, '条消息', data.token_usage.total_tokens, 'tokens');
+            
             document.getElementById('promptTokens').textContent = (data.token_usage.prompt_tokens / 1000).toFixed(1);
             document.getElementById('completionTokens').textContent = (data.token_usage.completion_tokens / 1000).toFixed(1);
             document.getElementById('totalTokens').textContent = (data.token_usage.total_tokens / 1000).toFixed(1);
@@ -638,6 +651,7 @@
 
         function updateHistory(data) {
             const msgs = data.messages || [];
+            console.log('updateHistory:', msgs.length, '条消息');
             
             // 统计字符（聊天记录管理模块用）
             let total = 0, chinese = 0, english = 0;
@@ -696,6 +710,7 @@
         }
 
         function updateConversations(data) {
+            console.log('updateConversations:', data.length, '个对话');
             conversations = data;
             renderConversationTabs();
         }
