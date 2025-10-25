@@ -617,11 +617,22 @@
         }
 
         function handleMessage(data) {
-            if (data.type === 'thinking') showThinking();
-            else if (data.type === 'compressing') showCompressing();
+            console.log('📬 handleMessage:', data.type);
+            
+            if (data.type === 'thinking') {
+                showThinking();
+            }
+            else if (data.type === 'compressing') {
+                showCompressing();
+            }
             else if (data.type === 'response') {
                 hideThinking();
-                if (data.message?.trim()) addAssistantMessage(data);
+                
+                if (data.message?.trim()) {
+                    // 只在新消息时才添加（不是历史加载）
+                    addAssistantMessage(data);
+                }
+                
                 isProcessing = false;
                 updateSendButton();
             }
@@ -656,12 +667,33 @@
         }
 
         function addAssistantMessage(data) {
+            console.log('➕ addAssistantMessage, 工具调用:', data.tool_calls?.length || 0);
+            
             const area = document.getElementById('chatArea');
             const div = document.createElement('div');
             div.className = 'message assistant';
-            div.innerHTML = `<div class="message-content">${formatMarkdown(data.message)}</div>`;
+            
+            let content = `<div class="message-content">${formatMarkdown(data.message)}`;
+            
+            // 添加工具调用显示
+            if (data.tool_calls && data.tool_calls.length > 0) {
+                content += `<div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; font-size: 12px; border-left: 2px solid #999;">`;
+                content += `<div style="font-weight: 600; margin-bottom: 8px; color: #666;">执行了 ${data.tool_calls.length} 个工具</div>`;
+                data.tool_calls.forEach(call => {
+                    content += `<div style="padding: 8px; margin: 6px 0; background: #fff; border-radius: 2px; border: 1px solid #e0e0e0;">`;
+                    content += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 4px; font-family: Consolas, monospace;">${call.tool}</div>`;
+                    content += `<div style="font-size: 11px; color: #999; font-family: Consolas, monospace;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                    content += `</div>`;
+                });
+                content += `</div>`;
+            }
+            
+            content += `</div>`;
+            div.innerHTML = content;
             area.appendChild(div);
             area.scrollTop = area.scrollHeight;
+            
+            console.log('✅ 助手消息已添加');
         }
 
         function showThinking() {
@@ -753,12 +785,17 @@
                 list.innerHTML = html;
             }
             
-            // ========== 关键：同时渲染到对话详情（聊天界面）==========
-            renderChatHistory(msgs);
+            // ========== 关键：只在启动/切换时渲染历史 ==========
+            // 新消息通过handleMessage → addAssistantMessage添加，不走这里
+            // 这里只在初始化/切换对话时渲染历史
+            if (msgs.length > 0) {
+                renderChatHistory(msgs);
+            }
         }
         
         function renderChatHistory(msgs) {
             console.log('🎨 renderChatHistory被调用, 消息数:', msgs.length);
+            console.log('  - 这是历史加载，不是新消息');
             
             const chatArea = document.getElementById('chatArea');
             
@@ -773,12 +810,12 @@
                 return;
             }
             
-            console.log('🎨 开始渲染', msgs.length, '条消息到chatArea');
+            console.log('🎨 清空chatArea，重新渲染历史');
             
-            // 清空
+            // 清空（避免重复）
             chatArea.innerHTML = '';
             
-            // 渲染所有历史消息
+            // 渲染所有历史消息（只显示内容，不显示工具调用）
             msgs.forEach((msg, idx) => {
                 console.log(`  渲染消息${idx+1}: ${msg.role}, 长度${msg.content.length}`);
                 
@@ -788,7 +825,7 @@
                 chatArea.appendChild(div);
             });
             
-            console.log('✅ chatArea渲染完成，子元素数:', chatArea.children.length);
+            console.log('✅ 历史消息渲染完成，子元素数:', chatArea.children.length);
             
             // 滚动到底部
             chatArea.scrollTop = chatArea.scrollHeight;
@@ -830,10 +867,32 @@
 
         function formatMarkdown(text) {
             let html = escapeHtml(text);
-            html = html.replace(/```[\s\S]*?```/g, m => '<pre>' + m + '</pre>');
-            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            
+            // 代码块 ```code```
+            html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, lang, code) {
+                return `<pre style="background:#2c2c2c;color:#e0e0e0;padding:12px;border-radius:3px;overflow-x:auto;margin:12px 0;"><code>${code.trim()}</code></pre>`;
+            });
+            
+            // 行内代码 `code`
+            html = html.replace(/`([^`]+)`/g, '<code style="background:#f0f0f0;padding:2px 6px;border-radius:2px;font-family:Consolas,monospace;font-size:13px;color:#2c2c2c;">$1</code>');
+            
+            // 粗体 **text**
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#1a1a1a;font-weight:600;">$1</strong>');
+            
+            // 斜体 *text*
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            
+            // 列表 - item
+            html = html.replace(/^- (.+)$/gm, '<li style="margin-left:25px;color:#333;">$1</li>');
+            
+            // 标题
+            html = html.replace(/^### (.+)$/gm, '<h4 style="margin:15px 0 10px 0;color:#2c2c2c;font-weight:500;">$1</h4>');
+            html = html.replace(/^## (.+)$/gm, '<h3 style="margin:15px 0 10px 0;color:#2c2c2c;font-weight:500;">$1</h3>');
+            html = html.replace(/^# (.+)$/gm, '<h2 style="margin:15px 0 10px 0;color:#2c2c2c;font-weight:500;">$1</h2>');
+            
+            // 换行
             html = html.replace(/\n/g, '<br>');
+            
             return html;
         }
 
