@@ -498,11 +498,11 @@
             bridge.switchConversation(convId);
             currentConversationId = convId;
             
-            // 清空聊天区域
+            // 显示加载中
             const chatArea = document.getElementById('chatArea');
-            chatArea.innerHTML = '<div class="empty-state"><h2>💬</h2><p>已切换到新对话</p></div>';
+            chatArea.innerHTML = '<div class="thinking">加载对话历史...</div>';
             
-            // 刷新对话列表和Context
+            // 刷新对话列表和Context（Context更新会触发MessageHistory更新）
             setTimeout(() => {
                 loadConversations();
             }, 100);
@@ -638,6 +638,8 @@
 
         function updateHistory(data) {
             const msgs = data.messages || [];
+            
+            // 统计字符（聊天记录管理模块用）
             let total = 0, chinese = 0, english = 0;
             msgs.forEach(m => {
                 const c = m.content || '';
@@ -651,6 +653,7 @@
             document.getElementById('historyEnglishChars').textContent = english.toLocaleString();
             document.getElementById('historyCount').textContent = msgs.length;
             
+            // 渲染到聊天记录管理模块
             const list = document.getElementById('historyList');
             if (msgs.length === 0) {
                 list.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">暂无消息</div>';
@@ -664,6 +667,32 @@
                 });
                 list.innerHTML = html;
             }
+            
+            // ========== 关键：同时渲染到对话详情（聊天界面）==========
+            renderChatHistory(msgs);
+        }
+        
+        function renderChatHistory(msgs) {
+            const chatArea = document.getElementById('chatArea');
+            
+            if (msgs.length === 0) {
+                chatArea.innerHTML = '<div class="empty-state"><h2>📖</h2><p>开始对话</p></div>';
+                return;
+            }
+            
+            // 清空
+            chatArea.innerHTML = '';
+            
+            // 渲染所有历史消息
+            msgs.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'message ' + (msg.role === 'user' ? 'user' : 'assistant');
+                div.innerHTML = `<div class="message-content">${formatMarkdown(msg.content)}</div>`;
+                chatArea.appendChild(div);
+            });
+            
+            // 滚动到底部
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
 
         function updateConversations(data) {
