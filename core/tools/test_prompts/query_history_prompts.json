@@ -1,0 +1,31 @@
+{
+  "tool": "query_history",
+  "prompts": [
+    {
+      "id": 1,
+      "description": "查找文件操作相关对话",
+      "prompt": "查询聊天记录中关于文件操作的对话"
+    },
+    {
+      "id": 2,
+      "description": "查找架构讨论",
+      "prompt": "查找我们讨论过的项目架构设计相关的对话"
+    },
+    {
+      "id": 3,
+      "description": "查找代码重构",
+      "prompt": "搜索聊天记录中关于代码重构的内容"
+    },
+    {
+      "id": 4,
+      "description": "查找Bug修复",
+      "prompt": "找出我们之前修复过哪些Bug"
+    },
+    {
+      "id": 5,
+      "description": "查找特定功能",
+      "prompt": "查询聊天记录中关于Context压缩功能的讨论"
+    }
+  ]
+}
+

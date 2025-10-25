@@ -1,0 +1,31 @@
+{
+  "tool": "run_terminal",
+  "prompts": [
+    {
+      "id": 1,
+      "description": "查看当前目录",
+      "prompt": "查看当前工作目录的路径"
+    },
+    {
+      "id": 2,
+      "description": "查看Git状态",
+      "prompt": "查看这个项目的git状态"
+    },
+    {
+      "id": 3,
+      "description": "系统信息",
+      "prompt": "显示系统信息"
+    },
+    {
+      "id": 4,
+      "description": "查看Python版本",
+      "prompt": "查看当前Python版本"
+    },
+    {
+      "id": 5,
+      "description": "列出进程",
+      "prompt": "列出正在运行的Python进程"
+    }
+  ]
+}
+

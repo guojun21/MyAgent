@@ -1,0 +1,31 @@
+{
+  "tool": "write_file",
+  "prompts": [
+    {
+      "id": 1,
+      "description": "创建简单文本文件",
+      "prompt": "创建一个test.txt文件，内容写入Hello World"
+    },
+    {
+      "id": 2,
+      "description": "创建Python脚本",
+      "prompt": "创建hello.py文件，写入一个打印Hello的函数"
+    },
+    {
+      "id": 3,
+      "description": "创建JSON配置",
+      "prompt": "创建config.json文件，写入一个空的JSON对象{}"
+    },
+    {
+      "id": 4,
+      "description": "创建Markdown文档",
+      "prompt": "创建PROJECT.md文件，写入项目说明文档的基本框架"
+    },
+    {
+      "id": 5,
+      "description": "创建Python模块",
+      "prompt": "创建一个utils.py文件，写入3个常用工具函数"
+    }
+  ]
+}
+

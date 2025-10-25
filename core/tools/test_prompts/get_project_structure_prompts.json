@@ -1,0 +1,31 @@
+{
+  "tool": "get_project_structure",
+  "prompts": [
+    {
+      "id": 1,
+      "description": "查看项目结构",
+      "prompt": "分析这个项目的目录结构"
+    },
+    {
+      "id": 2,
+      "description": "查看core目录结构",
+      "prompt": "查看core目录的结构，深度为2层"
+    },
+    {
+      "id": 3,
+      "description": "查看services结构",
+      "prompt": "分析services目录下有哪些模块"
+    },
+    {
+      "id": 4,
+      "description": "查看完整项目树",
+      "prompt": "生成项目的完整目录树结构"
+    },
+    {
+      "id": 5,
+      "description": "分析模块组织",
+      "prompt": "告诉我这个项目的主要模块和组织结构"
+    }
+  ]
+}
+

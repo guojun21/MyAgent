@@ -1,0 +1,31 @@
+{
+  "tool": "search_code",
+  "prompts": [
+    {
+      "id": 1,
+      "description": "搜索类名",
+      "prompt": "在项目中搜索所有包含Agent的代码"
+    },
+    {
+      "id": 2,
+      "description": "搜索函数定义",
+      "prompt": "在所有Python文件中搜索def开头的函数定义"
+    },
+    {
+      "id": 3,
+      "description": "搜索导入语句",
+      "prompt": "搜索所有import语句"
+    },
+    {
+      "id": 4,
+      "description": "搜索TODO注释",
+      "prompt": "在代码中搜索所有TODO和FIXME注释"
+    },
+    {
+      "id": 5,
+      "description": "搜索特定字符串",
+      "prompt": "搜索代码中所有包含'workspace'的地方"
+    }
+  ]
+}
+

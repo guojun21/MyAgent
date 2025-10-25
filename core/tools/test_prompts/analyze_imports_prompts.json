@@ -1,0 +1,31 @@
+{
+  "tool": "analyze_file_imports",
+  "prompts": [
+    {
+      "id": 1,
+      "description": "分析main.py导入",
+      "prompt": "分析main.py文件导入了哪些模块"
+    },
+    {
+      "id": 2,
+      "description": "分析LLM服务导入",
+      "prompt": "分析services/llm_service.py的导入依赖"
+    },
+    {
+      "id": 3,
+      "description": "分析Agent导入",
+      "prompt": "查看core/agent.py导入了哪些库"
+    },
+    {
+      "id": 4,
+      "description": "分析工具管理器导入",
+      "prompt": "分析core/tool_manager.py的依赖关系"
+    },
+    {
+      "id": 5,
+      "description": "分析前端依赖",
+      "prompt": "查看ui/index.html中引用的脚本"
+    }
+  ]
+}
+

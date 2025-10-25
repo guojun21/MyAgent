@@ -1,0 +1,31 @@
+{
+  "tool": "read_file",
+  "prompts": [
+    {
+      "id": 1,
+      "description": "读取README文件",
+      "prompt": "读取README.md的内容"
+    },
+    {
+      "id": 2,
+      "description": "读取配置文件",
+      "prompt": "读取config.py文件的内容"
+    },
+    {
+      "id": 3,
+      "description": "读取指定行范围",
+      "prompt": "读取main.py文件的第1到50行"
+    },
+    {
+      "id": 4,
+      "description": "读取工具管理器",
+      "prompt": "读取core/tool_manager.py的内容"
+    },
+    {
+      "id": 5,
+      "description": "读取UI文件",
+      "prompt": "读取ui/index.html的前100行"
+    }
+  ]
+}
+
