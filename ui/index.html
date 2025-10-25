@@ -13,7 +13,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', 'Microsoft YaHei', '微软雅黑', sans-serif;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
             background: #f5f5f5;
             height: 100vh;
             display: flex;
@@ -27,124 +27,157 @@
             background: #ffffff;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
         }
 
-        /* 顶部栏 */
-        .header {
-            background: #2c2c2c;
-            color: #ffffff;
-            padding: 15px 30px;
-            border-bottom: 1px solid #1a1a1a;
+        /* Level 1: 工作空间栏 */
+        .workspace-header {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 12px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 2px solid #000;
         }
 
-        .header-left {
-            flex: 1;
+        .workspace-title {
+            font-size: 14px;
+            font-weight: 500;
         }
 
-        .header h1 {
-            font-size: 18px;
-            font-weight: 400;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
-        }
-
-        .workspace-bar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .workspace {
+        .workspace-path {
             font-size: 11px;
             color: #999;
-            background: #1a1a1a;
-            padding: 4px 10px;
-            border-radius: 3px;
-            font-family: 'Consolas', monospace;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            font-family: Consolas, monospace;
+            margin-top: 3px;
         }
 
-        .btn-workspace {
-            font-size: 11px;
-            padding: 4px 12px;
-            background: transparent;
-            border: 1px solid #444;
+        .btn-workspace-change {
+            padding: 6px 14px;
+            background: #2c2c2c;
             color: #ccc;
+            border: 1px solid #444;
             border-radius: 3px;
+            font-size: 11px;
             cursor: pointer;
-            transition: all 0.2s;
         }
 
-        .btn-workspace:hover {
-            background: #444;
-            color: #fff;
+        .btn-workspace-change:hover {
+            background: #3a3a3a;
         }
 
-        /* Tab导航 */
-        .tab-nav {
-            background: #f5f5f5;
-            border-bottom: 1px solid #ddd;
-            display: flex;
+        /* Level 2: 模块Tab */
+        .module-tabs {
+            background: #2c2c2c;
             padding: 0 30px;
+            display: flex;
+            gap: 5px;
+            border-bottom: 1px solid #1a1a1a;
         }
 
-        .tab-button {
+        .module-tab {
             padding: 12px 24px;
             background: transparent;
             border: none;
-            border-bottom: 2px solid transparent;
-            color: #666;
-            cursor: pointer;
+            color: #999;
             font-size: 13px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
             transition: all 0.2s;
         }
 
-        .tab-button:hover {
+        .module-tab:hover {
+            color: #fff;
+        }
+
+        .module-tab.active {
+            color: #fff;
+            border-bottom-color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Level 3: 对话Tab */
+        .conversation-tabs {
+            background: #f5f5f5;
+            padding: 8px 20px;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .conversation-tab {
+            padding: 8px 16px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .conversation-tab:hover {
+            background: #f8f8f8;
+        }
+
+        .conversation-tab.active {
+            background: #2c2c2c;
+            color: #fff;
+            border-color: #2c2c2c;
+        }
+
+        .conversation-tab.new {
+            background: #4caf50;
+            color: #fff;
+            border-color: #4caf50;
+        }
+
+        /* Level 4: 内容Tab */
+        .content-tabs {
+            background: #fafafa;
+            padding: 0 20px;
+            display: flex;
+            gap: 2px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .content-tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: #666;
+            font-size: 12px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .content-tab:hover {
             color: #2c2c2c;
         }
 
-        .tab-button.active {
+        .content-tab.active {
             color: #2c2c2c;
             border-bottom-color: #2c2c2c;
             font-weight: 500;
         }
 
-        /* Tab内容区 */
-        .tab-content {
-            display: none;
-            flex: 1;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .tab-content.active {
-            display: flex;
-        }
-
-        /* 对话区域 */
+        /* 其他样式保持不变... */
         .chat-area {
             flex: 1;
             overflow-y: auto;
             padding: 30px 40px;
             background: #fafafa;
-            line-height: 1.8;
+        }
+
+        .input-area {
+            padding: 20px 30px;
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
         }
 
         .message {
             margin-bottom: 25px;
-            animation: fadeIn 0.3s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         .message.user {
@@ -167,54 +200,15 @@
 
         .message.user .message-content {
             background: #2c2c2c;
-            color: #ffffff;
+            color: #fff;
             border-left: 3px solid #666;
         }
 
         .message.assistant .message-content {
-            background: #ffffff;
+            background: #fff;
             color: #2c2c2c;
             border-left: 3px solid #ddd;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-        }
-
-        .tool-calls {
-            margin-top: 12px;
-            padding: 12px;
-            background: #f5f5f5;
-            border-radius: 3px;
-            font-size: 12px;
-            border-left: 2px solid #999;
-        }
-
-        .tool-call {
-            padding: 8px;
-            margin: 6px 0;
-            background: #fff;
-            border-radius: 2px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .tool-name {
-            font-weight: 600;
-            color: #2c2c2c;
-            margin-bottom: 4px;
-            font-family: 'Consolas', monospace;
-        }
-
-        .thinking {
-            text-align: center;
-            padding: 15px;
-            color: #666;
-            font-style: italic;
-            font-size: 13px;
-        }
-
-        /* 输入区域 */
-        .input-area {
-            padding: 20px 30px;
-            background: #fff;
-            border-top: 1px solid #e0e0e0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
 
         .input-container {
@@ -229,8 +223,6 @@
             border: 1px solid #ddd;
             border-radius: 3px;
             font-size: 14px;
-            transition: all 0.2s;
-            font-family: inherit;
             background: #fafafa;
         }
 
@@ -243,29 +235,22 @@
         .btn-send {
             padding: 12px 30px;
             background: #2c2c2c;
-            color: white;
+            color: #fff;
             border: none;
             border-radius: 3px;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
         }
 
         .btn-send:hover {
             background: #1a1a1a;
         }
 
-        .btn-send:active {
-            transform: translateY(1px);
-        }
-
         .btn-send:disabled {
             opacity: 0.5;
-            cursor: not-allowed;
         }
 
-        /* Context使用量圆环 */
+        /* Context圆环 */
         .context-usage {
             display: flex;
             align-items: center;
@@ -312,387 +297,14 @@
             transform: translate(-50%, -50%);
             font-size: 10px;
             font-weight: 600;
-            color: #2c2c2c;
         }
 
-        .context-label {
-            font-size: 11px;
-            color: #999;
-        }
-
-        .context-value {
-            font-size: 12px;
-            color: #2c2c2c;
-            font-weight: 500;
-        }
-
-        /* 测试页面 */
-        .test-panel {
-            padding: 30px 40px;
-            background: #fafafa;
-            overflow-y: auto;
-        }
-
-        .test-header {
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .test-header h2 {
-            font-size: 20px;
-            font-weight: 400;
-            color: #2c2c2c;
-            margin-bottom: 8px;
-        }
-
-        .test-header p {
-            font-size: 13px;
-            color: #666;
-        }
-
-        .test-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .btn-test {
-            padding: 10px 20px;
-            background: #2c2c2c;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-test:hover {
-            background: #1a1a1a;
-        }
-
-        .btn-test:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-test-secondary {
-            background: #fff;
-            color: #2c2c2c;
-            border: 1px solid #ddd;
-        }
-
-        .btn-test-secondary:hover {
-            background: #f5f5f5;
-        }
-
-        .test-list {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            padding: 15px;
-        }
-
-        .test-item {
-            padding: 10px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 13px;
-        }
-
-        .test-item:last-child {
-            border-bottom: none;
-        }
-
-        .test-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        .test-item-name {
-            font-weight: 500;
-            color: #2c2c2c;
-        }
-
-        .test-item-category {
-            font-size: 11px;
-            color: #999;
-            background: #f5f5f5;
-            padding: 2px 8px;
-            border-radius: 2px;
-        }
-
-        .test-item-prompt {
-            color: #666;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-
-        .test-status {
-            padding: 15px;
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            margin-top: 15px;
-            font-size: 13px;
-        }
-
-        .test-running {
-            color: #666;
-        }
-
-        /* 弹窗样式 */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 1000;
-            animation: fadeIn 0.2s ease-in;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: #fff;
-            border-radius: 6px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            width: 85%;
-            max-width: 1200px;
-            height: 85%;
-            display: flex;
-            flex-direction: column;
-            animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .modal-header {
-            padding: 20px 25px;
-            border-bottom: 2px solid #e0e0e0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #fafafa;
-        }
-
-        .modal-title {
-            font-size: 16px;
-            font-weight: 500;
-            color: #2c2c2c;
-            flex: 1;
-        }
-
-        .modal-title-info {
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
-            font-weight: 400;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .btn-copy {
-            padding: 6px 14px;
-            background: #2c2c2c;
-            color: #fff;
-            border: none;
-            border-radius: 3px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-copy:hover {
-            background: #1a1a1a;
-        }
-
-        .btn-copy.copied {
-            background: #4caf50;
-        }
-
-        .modal-close {
-            background: transparent;
-            border: none;
-            font-size: 24px;
-            color: #999;
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .modal-close:hover {
-            color: #2c2c2c;
-            background: #f0f0f0;
-            border-radius: 3px;
-        }
-
-        .modal-body {
-            padding: 25px;
-            overflow-y: auto;
-            flex: 1;
-        }
-
-        .modal-body::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .modal-body::-webkit-scrollbar-track {
-            background: #f0f0f0;
-        }
-
-        .modal-body::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 4px;
-        }
-
-        .modal-body::-webkit-scrollbar-thumb:hover {
-            background: #999;
-        }
-
-        .detail-content {
-            font-size: 13px;
-            line-height: 1.8;
-            color: #2c2c2c;
-            white-space: pre-wrap;
-            word-break: break-word;
-            font-family: 'Consolas', 'Monaco', monospace;
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            min-height: 100%;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        .content-stats {
-            display: flex;
-            gap: 20px;
-            padding: 10px 15px;
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 3px;
-            margin-bottom: 15px;
-            font-size: 12px;
-            color: #666;
-        }
-
-        .content-stats span {
-            color: #2c2c2c;
-            font-weight: 500;
-            margin-left: 5px;
-        }
-
-        .btn-detail {
-            margin-top: 8px;
-            padding: 4px 10px;
-            background: transparent;
-            border: 1px solid #999;
-            color: #666;
-            border-radius: 2px;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-detail:hover {
-            background: #2c2c2c;
-            color: #fff;
-            border-color: #2c2c2c;
-        }
-
-        /* 底部控制栏 */
-        .footer-controls {
-            padding: 10px 30px;
-            background: #f5f5f5;
-            border-top: 1px solid #e0e0e0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .zoom-control {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .zoom-label {
-            font-size: 11px;
-            color: #666;
-            margin-right: 5px;
-        }
-
-        .btn-zoom {
-            padding: 4px 12px;
-            background: #fff;
-            border: 1px solid #ddd;
-            color: #333;
-            border-radius: 2px;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-zoom:hover {
-            background: #2c2c2c;
-            color: #fff;
-            border-color: #2c2c2c;
-        }
-
-        .zoom-display {
-            font-size: 11px;
-            color: #999;
-            font-family: 'Consolas', monospace;
-            min-width: 45px;
+        .thinking {
             text-align: center;
-        }
-
-        /* 滚动条样式 */
-        .chat-area::-webkit-scrollbar,
-        .test-panel::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .chat-area::-webkit-scrollbar-track,
-        .test-panel::-webkit-scrollbar-track {
-            background: #f0f0f0;
-        }
-
-        .chat-area::-webkit-scrollbar-thumb,
-        .test-panel::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 4px;
-        }
-
-        .chat-area::-webkit-scrollbar-thumb:hover,
-        .test-panel::-webkit-scrollbar-thumb:hover {
-            background: #999;
+            padding: 15px;
+            color: #666;
+            font-style: italic;
+            font-size: 13px;
         }
 
         .empty-state {
@@ -707,251 +319,317 @@
             font-weight: 300;
         }
 
-        .empty-state p {
-            font-size: 14px;
-            line-height: 1.8;
+        .footer-controls {
+            padding: 10px 30px;
+            background: #f5f5f5;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .btn-zoom {
+            padding: 4px 12px;
+            background: #fff;
+            border: 1px solid #ddd;
+            color: #333;
+            border-radius: 2px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .btn-zoom:hover {
+            background: #2c2c2c;
+            color: #fff;
+        }
+
+        /* 测试和预览面板 */
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px 30px;
+            background: #fafafa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .panel-header h3 {
+            font-size: 16px;
+            font-weight: 500;
+            color: #2c2c2c;
+            margin-bottom: 5px;
+        }
+
+        .panel-header p {
+            font-size: 12px;
             color: #666;
         }
 
-        .status {
-            padding: 12px 20px;
-            background: #f5f5f5;
-            border-left: 3px solid #666;
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 30px;
+        }
+
+        .stat-box {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 15px;
             margin-bottom: 15px;
-            border-radius: 2px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
             font-size: 13px;
-            color: #333;
         }
 
-        /* Markdown样式 */
-        pre {
-            background: #2c2c2c !important;
-            color: #e0e0e0 !important;
-            padding: 12px !important;
-            border-radius: 3px !important;
-            overflow-x: auto !important;
-            margin: 12px 0 !important;
-            border: 1px solid #1a1a1a !important;
+        .stat-label {
+            color: #666;
         }
 
-        code {
-            background: #f0f0f0 !important;
-            padding: 2px 6px !important;
-            border-radius: 2px !important;
-            font-family: 'Consolas', 'Monaco', monospace !important;
-            font-size: 13px !important;
-            color: #2c2c2c !important;
+        .stat-value {
+            font-weight: 500;
+            color: #2c2c2c;
         }
 
-        pre code {
-            background: transparent !important;
-            color: #e0e0e0 !important;
-            padding: 0 !important;
+        .btn-action {
+            padding: 8px 16px;
+            background: #2c2c2c;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
         }
 
-        strong {
-            color: #1a1a1a;
-            font-weight: 600;
+        .btn-action:hover {
+            background: #1a1a1a;
         }
 
-        h2, h3, h4 {
-            color: #2c2c2c !important;
-            font-weight: 500 !important;
-            margin: 15px 0 10px 0 !important;
+        .btn-secondary {
+            background: #fff;
+            color: #2c2c2c;
+            border: 1px solid #ddd;
         }
 
-        li {
-            margin-left: 25px !important;
-            color: #333 !important;
+        .btn-secondary:hover {
+            background: #f5f5f5;
+        }
+
+        .message-list {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .message-item {
+            padding: 12px;
+            margin-bottom: 12px;
+            border-left: 3px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .message-item.user {
+            background: #2c2c2c;
+            color: #fff;
+            border-left-color: #666;
+        }
+
+        .message-item.assistant {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-left: 3px solid #ddd;
+        }
+
+        .message-header {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-bottom: 8px;
+        }
+
+        .message-text {
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            font-family: Consolas, monospace;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- 顶部栏 -->
-        <div class="header">
-            <div class="header-left">
-                <h1>AI 编程助手</h1>
-                <div class="workspace-bar">
-                    <div class="workspace" id="workspace">工作空间: 加载中...</div>
-                    <button class="btn-workspace" onclick="changeWorkspace()">选择文件夹</button>
-                </div>
+        <!-- Level 1: 工作空间头部 -->
+        <div class="workspace-header">
+            <div>
+                <div class="workspace-title">工作空间: <span id="workspaceName">MyAgent</span></div>
+                <div class="workspace-path" id="workspacePath">加载中...</div>
             </div>
+            <button class="btn-workspace-change" onclick="changeWorkspace()">选择文件夹</button>
         </div>
 
-        <!-- Tab导航 -->
-        <div class="tab-nav">
-            <button class="tab-button active" onclick="switchTab('chat')">对话</button>
-            <button class="tab-button" onclick="switchTab('context')">Context预览</button>
-            <button class="tab-button" onclick="switchTab('history')">消息历史</button>
-            <button class="tab-button" onclick="switchTab('test')">测试状态</button>
+        <!-- Level 2: 模块Tab -->
+        <div class="module-tabs">
+            <button class="module-tab active" onclick="switchModule('conversation')">对话管理</button>
+            <button class="module-tab" onclick="switchModule('history')">聊天记录管理</button>
         </div>
 
-        <!-- 对话Tab -->
-        <div class="tab-content active" id="chatTab">
-            <div class="chat-area" id="chatArea">
-                <div class="empty-state">
-                    <h2>📖</h2>
-                    <p>欢迎使用AI编程助手</p>
-                    <p>一个简洁、优雅的智能编程工具</p>
-                </div>
+        <!-- 对话管理模块 -->
+        <div id="conversationModule" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+            <!-- Level 3: 对话切换Tab -->
+            <div class="conversation-tabs" id="conversationTabsBar">
+                <button class="conversation-tab active">对话 1</button>
+                <button class="conversation-tab new" onclick="createNewConversation()">+ 新建对话</button>
             </div>
 
-            <div class="input-area">
-                <div class="input-container">
-                    <input type="text" 
-                           class="input-field" 
-                           id="messageInput" 
-                           placeholder="描述你的需求..." 
-                           onkeypress="handleKeyPress(event)">
-                    <button class="btn-send" onclick="sendMessage()" id="sendBtn">发送</button>
-                    
-                    <!-- Context用量圆环 -->
-                    <div class="context-usage">
-                        <div class="circle-progress">
-                            <svg width="40" height="40">
-                                <circle class="circle-bg" cx="20" cy="20" r="16"></circle>
-                                <circle class="circle-fill" id="contextCircle" cx="20" cy="20" r="16" 
-                                        stroke-dasharray="100.48" stroke-dashoffset="100.48"></circle>
-                            </svg>
-                            <div class="circle-text" id="contextPercent">0%</div>
-                        </div>
-                        <div>
-                            <div class="context-label">Context</div>
-                            <div class="context-value" id="contextTokens">0K/131K</div>
-                        </div>
+            <!-- Level 4: 内容Tab -->
+            <div class="content-tabs">
+                <button class="content-tab active" onclick="switchContentTab('chat')">对话详情</button>
+                <button class="content-tab" onclick="switchContentTab('context')">Context预览</button>
+                <button class="content-tab" onclick="switchContentTab('test')">测试</button>
+            </div>
+
+            <!-- 对话详情 -->
+            <div id="chatContent" class="panel" style="display: flex;">
+                <div class="chat-area" id="chatArea">
+                    <div class="empty-state">
+                        <h2>📖</h2>
+                        <p>欢迎使用AI编程助手</p>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Context预览Tab -->
-        <div class="tab-content" id="contextTab">
-            <div class="test-panel">
-                <div class="test-header">
-                    <h2>Context 预览</h2>
-                    <p>查看当前Context的消息和Token使用量</p>
-                </div>
-
-                <div class="test-status" style="background: #fff; border: 1px solid #ddd;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-weight: 500; color: #2c2c2c; margin-bottom: 8px;">Token 使用量</div>
-                            <div style="display: flex; gap: 20px; font-size: 12px; color: #666;">
-                                <div>提示: <span id="promptTokens" style="font-weight: 500; color: #2c2c2c;">0</span>K</div>
-                                <div>完成: <span id="completionTokens" style="font-weight: 500; color: #2c2c2c;">0</span>K</div>
-                                <div>总计: <span id="totalTokens" style="font-weight: 600; color: #2c2c2c; font-size: 14px;">0</span>K</div>
+                <div class="input-area">
+                    <div class="input-container">
+                        <input type="text" class="input-field" id="messageInput" 
+                               placeholder="描述你的需求..." onkeypress="handleKeyPress(event)">
+                        <button class="btn-send" onclick="sendMessage()" id="sendBtn">发送</button>
+                        
+                        <div class="context-usage">
+                            <div class="circle-progress">
+                                <svg width="40" height="40">
+                                    <circle class="circle-bg" cx="20" cy="20" r="16"></circle>
+                                    <circle class="circle-fill" id="contextCircle" cx="20" cy="20" r="16" 
+                                            stroke-dasharray="100.48" stroke-dashoffset="100.48"></circle>
+                                </svg>
+                                <div class="circle-text" id="contextPercent">0%</div>
                             </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 12px; color: #999; margin-bottom: 8px;">消息数: <span id="messageCount">0</span></div>
-                            <div style="display: flex; gap: 5px;">
-                                <button class="btn-test btn-test-secondary" onclick="toggleContextFullContent()" id="toggleContextBtn" style="font-size: 11px; padding: 4px 12px;">
-                                    显示完整内容
-                                </button>
-                                <button class="btn-test btn-test-secondary" onclick="manualCompact()" style="font-size: 11px; padding: 4px 12px;">
-                                    🗜️ Compact
-                                </button>
+                            <div>
+                                <div style="font-size: 11px; color: #999;">Context</div>
+                                <div style="font-size: 12px; font-weight: 500;" id="contextTokens">0K/131K</div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="test-list" id="contextMessageList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; overflow-y: auto;">
-                    <div style="text-align: center; padding: 30px; color: #999;">
-                        Context为空，发送消息后会在这里显示
+            <!-- Context预览 -->
+            <div id="contextContent" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h3>Context 预览</h3>
+                    <p>当前对话的Context（会被压缩）</p>
+                </div>
+                <div class="panel-content">
+                    <div class="stat-box">
+                        <div class="stat-row">
+                            <span class="stat-label">提示Tokens</span>
+                            <span class="stat-value"><span id="promptTokens">0</span>K</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">完成Tokens</span>
+                            <span class="stat-value"><span id="completionTokens">0</span>K</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">总计Tokens</span>
+                            <span class="stat-value"><span id="totalTokens">0</span>K</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">消息数</span>
+                            <span class="stat-value"><span id="messageCount">0</span></span>
+                        </div>
+                        <div style="margin-top: 15px; text-align: right;">
+                            <button class="btn-action btn-secondary" onclick="manualCompact()">🗜️ Compact</button>
+                        </div>
                     </div>
+                    <div class="message-list" id="contextMessageList">
+                        <div style="text-align: center; padding: 20px; color: #999;">Context为空</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 测试 -->
+            <div id="testContent" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h3>自动化测试</h3>
+                    <p>运行测试用例</p>
+                </div>
+                <div class="panel-content">
+                    <div style="margin-bottom: 15px;">
+                        <button class="btn-action" onclick="runAllTests()" id="runTestBtn">运行测试prompt</button>
+                        <button class="btn-action btn-secondary" onclick="stopTests()" id="stopTestBtn" disabled style="margin-left: 10px;">停止</button>
+                    </div>
+                    <div class="stat-box" id="testStatus">
+                        <div>就绪</div>
+                    </div>
+                    <div class="message-list" id="testList" style="max-height: 400px;"></div>
                 </div>
             </div>
         </div>
 
-        <!-- MessageHistory Tab -->
-        <div class="tab-content" id="historyTab">
-            <div class="test-panel">
-                <div class="test-header">
-                    <h2>消息历史</h2>
-                    <p>完整的原始消息记录（未经压缩）</p>
-                </div>
-
-                <div class="test-status" style="background: #fff; border: 1px solid #ddd;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-weight: 500; color: #2c2c2c; margin-bottom: 8px;">完整记录（未压缩）</div>
-                            <div style="display: flex; gap: 20px; font-size: 12px; color: #666;">
-                                <div>估算Tokens: <span id="historyTokens" style="font-weight: 500; color: #2c2c2c;">0</span>K</div>
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 12px; color: #999; margin-bottom: 8px;">消息数: <span id="historyCount">0</span></div>
-                            <button class="btn-test btn-test-secondary" onclick="toggleHistoryFullContent()" id="toggleHistoryBtn" style="font-size: 11px; padding: 4px 12px;">
-                                显示完整内容
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="test-list" id="historyMessageList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; overflow-y: auto;">
-                    <div style="text-align: center; padding: 30px; color: #999;">
-                        暂无消息历史
-                    </div>
-                </div>
+        <!-- 聊天记录管理模块 -->
+        <div id="historyModule" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
+            <!-- Level 3: 对话切换Tab -->
+            <div class="conversation-tabs" id="historyConversationTabs">
+                <button class="conversation-tab active">对话 1</button>
             </div>
-        </div>
 
-        <!-- 测试Tab -->
-        <div class="tab-content" id="testTab">
-            <div class="test-panel">
-                <div class="test-header">
-                    <h2>自动化测试</h2>
-                    <p>自动运行测试用例，模拟用户输入</p>
+            <!-- 消息历史内容 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>消息历史</h3>
+                    <p>完整的原始消息记录</p>
                 </div>
-
-                <div class="test-controls">
-                    <button class="btn-test" onclick="runAllTests()" id="runTestBtn">运行测试prompt</button>
-                    <button class="btn-test btn-test-secondary" onclick="stopTests()" id="stopTestBtn" disabled>停止测试</button>
-                </div>
-
-                <div class="test-status" id="testStatus">
-                    <div>就绪，点击"运行测试prompt"开始自动测试</div>
-                    <div id="testProgress" style="margin-top: 10px; color: #999; font-size: 12px;"></div>
-                </div>
-
-                <div class="test-list" id="testList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; max-height: 400px; overflow-y: auto;">
-                    <!-- 测试用例列表 -->
+                <div class="panel-content">
+                    <div class="stat-box">
+                        <div class="stat-row">
+                            <span class="stat-label">总字符</span>
+                            <span class="stat-value"><span id="historyTotalChars">0</span></span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">中文字符</span>
+                            <span class="stat-value"><span id="historyChineseChars">0</span></span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">英文字符</span>
+                            <span class="stat-value"><span id="historyEnglishChars">0</span></span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">消息数</span>
+                            <span class="stat-value"><span id="historyCount">0</span></span>
+                        </div>
+                    </div>
+                    <div class="message-list" id="historyMessageList">
+                        <div style="text-align: center; padding: 20px; color: #999;">暂无消息历史</div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- 底部控制栏 -->
         <div class="footer-controls">
-            <span class="zoom-label">缩放</span>
-            <div class="zoom-control">
+            <span style="font-size: 11px; color: #666;">缩放</span>
+            <div style="display: flex; gap: 8px;">
                 <button class="btn-zoom" onclick="zoomOut()">-5%</button>
-                <span class="zoom-display" id="zoomDisplay">100%</span>
+                <span style="font-size: 11px; color: #999; min-width: 45px; text-align: center;" id="zoomDisplay">100%</span>
                 <button class="btn-zoom" onclick="zoomIn()">+5%</button>
                 <button class="btn-zoom" onclick="resetZoom()">重置</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 详情弹窗 -->
-    <div class="modal-overlay" id="detailModal" onclick="closeDetailModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <div class="modal-title">
-                    <div id="modalTitle">消息详情</div>
-                    <div class="modal-title-info" id="modalTitleInfo"></div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-copy" id="btnCopy" onclick="copyContent()">
-                        📋 复制内容
-                    </button>
-                    <button class="modal-close" onclick="closeDetailModal()">&times;</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div class="content-stats" id="contentStats"></div>
-                <div class="detail-content" id="modalDetailContent"></div>
             </div>
         </div>
     </div>
@@ -960,372 +638,108 @@
         let bridge = null;
         let isProcessing = false;
         let currentZoom = 100;
-        let contextMessages = []; // 存储完整的context消息
-        let testPrompts = [
-            // 基础文件操作
-            {id: 1, name: "列出Python文件", prompt: "列出当前目录的所有Python文件", category: "文件操作"},
-            {id: 2, name: "创建测试文件", prompt: "创建一个test.txt文件，内容写入Hello World", category: "文件操作"},
-            {id: 3, name: "读取README", prompt: "读取README.md的内容", category: "文件操作"},
-            {id: 4, name: "编辑文件", prompt: "把config.py文件中的deepseek-chat改成deepseek-coder", category: "文件操作"},
-            {id: 5, name: "递归列出", prompt: "列出services目录下的所有文件，包括子目录", category: "文件操作"},
-            {id: 6, name: "创建目录和文件", prompt: "创建一个新文件夹叫temp，然后在里面创建一个hello.py文件", category: "文件操作"},
-            
-            // 代码搜索
-            {id: 7, name: "基础搜索", prompt: "在项目中搜索所有包含Agent的代码", category: "代码搜索"},
-            {id: 8, name: "类型过滤搜索", prompt: "在所有Python文件中搜索def 开头的函数定义", category: "代码搜索"},
-            {id: 9, name: "项目结构", prompt: "分析这个项目的目录结构，告诉我有哪些主要模块", category: "代码搜索"},
-            {id: 10, name: "导入分析", prompt: "分析main.py文件导入了哪些模块", category: "代码搜索"},
-            
-            // 终端命令
-            {id: 11, name: "查看目录", prompt: "查看当前工作目录的路径", category: "终端命令"},
-            {id: 12, name: "Git状态", prompt: "查看这个项目的git状态", category: "终端命令"},
-            {id: 13, name: "系统信息", prompt: "告诉我当前系统的信息", category: "终端命令"},
-            
-            // 复杂任务
-            {id: 14, name: "多步骤操作", prompt: "创建一个Python脚本test_hello.py，写入一个打印Hello World的函数，然后读取文件确认内容", category: "复杂任务"},
-            {id: 15, name: "代码分析", prompt: "分析services目录下的所有服务文件，告诉我每个文件的主要功能", category: "复杂任务"},
-            {id: 16, name: "技术栈分析", prompt: "分析这个项目用了哪些技术栈和第三方库", category: "复杂任务"},
-            {id: 17, name: "代码建议", prompt: "读取main_qt.py文件，给我一些代码优化建议", category: "复杂任务"},
-            {id: 18, name: "创建模块", prompt: "创建一个新的service叫做logger_service.py，实现一个简单的日志记录功能", category: "复杂任务"},
-            
-            // 边界测试
-            {id: 19, name: "文件分析", prompt: "列出所有文件，然后告诉我哪个文件最大", category: "边界测试"},
-            {id: 20, name: "嵌套目录", prompt: "创建一个data文件夹，在里面创建一个config子文件夹，然后在config里创建settings.json文件", category: "边界测试"},
-            
-            // 高级测试
-            {id: 21, name: "错误处理", prompt: "读取一个不存在的文件abcdefg.txt", category: "高级测试"},
-            {id: 22, name: "复杂搜索", prompt: "搜索所有包含class和def __init__的Python文件，这些可能是类定义", category: "高级测试"},
-            {id: 23, name: "文档生成", prompt: "分析整个项目结构，生成一份项目说明文档PROJECT_INFO.md", category: "高级测试"},
-            {id: 24, name: "代码检查", prompt: "读取main_qt.py，检查有没有超过80字符的行，如果有告诉我", category: "高级测试"},
-            {id: 25, name: "综合任务", prompt: "创建一个utils文件夹，在里面创建helper.py，写入3个常用工具函数", category: "高级测试"}
-        ];
-        let isTestingRunning = false;
-        let currentTestIndex = 0;
-        let showFullContextContent = false;
-        let showFullHistoryContent = false;
-        let contextMessages = [];
-        let historyMessages = [];
+        let currentModule = 'conversation';
+        let currentContentTab = 'chat';
+        let currentConversationId = null;
+        let conversations = [];
 
-        // 初始化Qt WebChannel
+        // 初始化
         new QWebChannel(qt.webChannelTransport, function(channel) {
             bridge = channel.objects.bridge;
             
-            // 监听来自Qt的消息
-            bridge.messageReceived.connect(function(message) {
-                handleBridgeMessage(JSON.parse(message));
-            });
+            bridge.messageReceived.connect(msg => handleMessage(JSON.parse(msg)));
+            bridge.workspaceChanged.connect(path => updateWorkspacePath(path));
+            bridge.contextUpdated.connect(data => updateContext(JSON.parse(data)));
+            bridge.messageHistoryUpdated.connect(data => updateHistory(JSON.parse(data)));
+            bridge.conversationsUpdated.connect(data => updateConversations(JSON.parse(data)));
             
-            // 监听工作空间改变
-            bridge.workspaceChanged.connect(function(workspace) {
-                document.getElementById('workspace').textContent = workspace;
-            });
-            
-            // 监听Context更新
-            bridge.contextUpdated.connect(function(dataStr) {
-                console.log('Context更新:', dataStr.substring(0, 100));
-                updateContextView(JSON.parse(dataStr));
-            });
-            
-            // 监听MessageHistory更新
-            bridge.messageHistoryUpdated.connect(function(dataStr) {
-                console.log('MessageHistory更新:', dataStr.substring(0, 100));
-                updateHistoryView(JSON.parse(dataStr));
-            });
-            
-            // 获取工作空间路径
-            updateWorkspace();
-            
-            // 渲染测试用例列表
-            renderTestList();
+            init();
         });
 
-        function handleBridgeMessage(data) {
-            console.log('收到消息:', data);
+        function init() {
+            if (!bridge) return;
+            updateWorkspacePath(bridge.getWorkspace());
+            loadConversations();
+        }
+
+        function loadConversations() {
+            if (!bridge) return;
+            const data = bridge.getConversationList();
+            conversations = JSON.parse(data);
+            renderConversationTabs();
+        }
+
+        function renderConversationTabs() {
+            const bar = document.getElementById('conversationTabsBar');
+            const historyBar = document.getElementById('historyConversationTabs');
             
+            let html = '';
+            conversations.forEach(conv => {
+                const active = conv.active ? 'active' : '';
+                html += `<button class="conversation-tab ${active}" onclick="selectConversation('${conv.id}')">${conv.name}</button>`;
+            });
+            html += '<button class="conversation-tab new" onclick="createNewConversation()">+ 新建对话</button>';
+            
+            bar.innerHTML = html;
+            historyBar.innerHTML = html.replace('新建对话', '').replace('new', '').trim();
+        }
+
+        function createNewConversation() {
+            if (!bridge) return;
+            const convId = bridge.createConversation();
+            loadConversations();
+        }
+
+        function selectConversation(convId) {
+            if (!bridge) return;
+            bridge.switchConversation(convId);
+            currentConversationId = convId;
+            loadConversations();
+        }
+
+        function switchModule(module) {
+            currentModule = module;
+            
+            document.querySelectorAll('.module-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (module === 'conversation') {
+                document.getElementById('conversationModule').style.display = 'flex';
+                document.getElementById('historyModule').style.display = 'none';
+            } else {
+                document.getElementById('conversationModule').style.display = 'none';
+                document.getElementById('historyModule').style.display = 'flex';
+            }
+        }
+
+        function switchContentTab(tab) {
+            currentContentTab = tab;
+            
+            document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('chatContent').style.display = tab === 'chat' ? 'flex' : 'none';
+            document.getElementById('contextContent').style.display = tab === 'context' ? 'flex' : 'none';
+            document.getElementById('testContent').style.display = tab === 'test' ? 'flex' : 'none';
+        }
+
+        function handleMessage(data) {
             if (data.type === 'thinking') {
                 showThinking();
             } else if (data.type === 'compressing') {
                 showCompressing();
             } else if (data.type === 'response') {
                 hideThinking();
-                // 只有有消息内容时才显示
                 if (data.message && data.message.trim()) {
                     addAssistantMessage(data);
                 }
                 isProcessing = false;
                 updateSendButton();
-                
-                // 如果正在测试，继续下一个
-                if (isTestingRunning) {
-                    setTimeout(() => {
-                        runNextTest();
-                    }, 1000);
-                }
             } else if (data.type === 'error') {
                 hideThinking();
-                showStatus(data.message, 'error');
+                showStatus(data.message);
                 isProcessing = false;
                 updateSendButton();
-                
-                if (isTestingRunning) {
-                    setTimeout(() => {
-                        runNextTest();
-                    }, 1000);
-                }
-            } else if (data.type === 'info') {
-                showStatus(data.message, 'info');
-            } else if (data.type === 'workspace_changed') {
-                showStatus(data.message || '工作空间已切换', 'info');
-                const chatArea = document.getElementById('chatArea');
-                chatArea.innerHTML = `
-                    <div class="empty-state">
-                        <h2>📁</h2>
-                        <p>已切换到新的工作空间</p>
-                        <p style="margin-top: 10px; font-size: 13px; color: #999;">${data.workspace}</p>
-                    </div>
-                `;
-            }
-        }
-
-        // Tab切换
-        function switchTab(tabName) {
-            // 切换按钮状态
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // 切换内容
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            if (tabName === 'chat') {
-                document.getElementById('chatTab').classList.add('active');
-            } else if (tabName === 'context') {
-                document.getElementById('contextTab').classList.add('active');
-            } else if (tabName === 'history') {
-                document.getElementById('historyTab').classList.add('active');
-            } else if (tabName === 'test') {
-                document.getElementById('testTab').classList.add('active');
-            }
-        }
-        
-        // 更新MessageHistory视图
-        function updateHistoryView(data) {
-            const messages = data.messages || [];
-            historyMessages = messages;
-            
-            // 估算总tokens
-            let totalChars = 0;
-            messages.forEach(msg => {
-                totalChars += (msg.content || '').length;
-            });
-            const estimatedTokens = totalChars * 1.5;
-            
-            // 更新统计
-            document.getElementById('historyCount').textContent = data.message_count || 0;
-            document.getElementById('historyTokens').textContent = (estimatedTokens / 1000).toFixed(1);
-            
-            // 渲染列表
-            renderHistoryList();
-        }
-        
-        function renderHistoryList() {
-            const listEl = document.getElementById('historyMessageList');
-            const messages = historyMessages;
-            
-            if (messages.length === 0) {
-                listEl.innerHTML = '<div style="text-align: center; padding: 30px; color: #999;">暂无消息历史</div>';
-                return;
-            }
-            
-            let html = '';
-            messages.forEach((msg, idx) => {
-                const roleName = msg.role === 'user' ? '用户' : msg.role === 'assistant' ? '助手' : msg.role;
-                const bgColor = msg.role === 'user' ? '#2c2c2c' : '#fff';
-                const textColor = msg.role === 'user' ? '#fff' : '#2c2c2c';
-                const borderColor = msg.role === 'user' ? '#666' : '#ddd';
-                
-                // 根据开关决定是否截断（和Context完全一致）
-                const isTruncated = msg.content.length > 500;
-                const displayContent = (showFullHistoryContent || !isTruncated) 
-                    ? msg.content 
-                    : msg.content.substring(0, 500) + '...';
-                
-                html += `
-                    <div style="margin-bottom: 15px; padding: 12px; background: ${bgColor}; color: ${textColor}; border-left: 3px solid ${borderColor}; border-radius: 3px;">
-                        <div style="font-size: 11px; opacity: 0.7; margin-bottom: 8px;">
-                            [${idx + 1}] ${roleName} ${isTruncated ? '(内容已截断，共' + msg.content.length + '字符)' : ''}
-                        </div>
-                        <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-family: Consolas, monospace;">${escapeHtml(displayContent)}</div>
-                    </div>
-                `;
-            });
-            
-            listEl.innerHTML = html;
-        }
-        
-        function toggleHistoryFullContent() {
-            showFullHistoryContent = !showFullHistoryContent;
-            const btn = document.getElementById('toggleHistoryBtn');
-            btn.textContent = showFullHistoryContent ? '隐藏完整内容' : '显示完整内容';
-            renderHistoryList();
-        }
-        
-        // 更新Context视图
-        function updateContextView(data) {
-            const messages = data.messages || [];
-            contextMessages = messages;  // 保存到全局
-            
-            // 更新Token统计
-            const usage = data.token_usage || {prompt_tokens: 0, completion_tokens: 0, total_tokens: 0};
-            document.getElementById('promptTokens').textContent = (usage.prompt_tokens / 1000).toFixed(1);
-            document.getElementById('completionTokens').textContent = (usage.completion_tokens / 1000).toFixed(1);
-            document.getElementById('totalTokens').textContent = (usage.total_tokens / 1000).toFixed(1);
-            document.getElementById('messageCount').textContent = data.message_count || 0;
-            
-            // 更新对话Tab的圆环进度
-            updateContextCircle(usage.total_tokens);
-            
-            // 渲染列表
-            renderContextList();
-        }
-        
-        function renderContextList() {
-            const listEl = document.getElementById('contextMessageList');
-            const messages = contextMessages;
-            
-            if (messages.length === 0) {
-                listEl.innerHTML = '<div style="text-align: center; padding: 30px; color: #999;">Context为空</div>';
-                return;
-            }
-            
-            let html = '';
-            messages.forEach((msg, idx) => {
-                const roleName = msg.role === 'user' ? '用户' : msg.role === 'assistant' ? '助手' : msg.role;
-                const bgColor = msg.role === 'user' ? '#2c2c2c' : '#fff';
-                const textColor = msg.role === 'user' ? '#fff' : '#2c2c2c';
-                const borderColor = msg.role === 'user' ? '#666' : '#ddd';
-                
-                // 根据开关决定是否截断
-                const isTruncated = msg.content.length > 500;
-                const displayContent = (showFullContextContent || !isTruncated) 
-                    ? msg.content 
-                    : msg.content.substring(0, 500) + '...';
-                
-                html += `
-                    <div style="margin-bottom: 15px; padding: 12px; background: ${bgColor}; color: ${textColor}; border-left: 3px solid ${borderColor}; border-radius: 3px;">
-                        <div style="font-size: 11px; opacity: 0.7; margin-bottom: 8px;">
-                            [${idx + 1}] ${roleName} ${isTruncated ? '(内容已截断，共' + msg.content.length + '字符)' : ''}
-                        </div>
-                        <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-family: Consolas, monospace;">${escapeHtml(displayContent)}</div>
-                        ${isTruncated ? `<button class="btn-detail" onclick="showDetailModal(${idx})">📄 显示完整内容</button>` : ''}
-                    </div>
-                `;
-            });
-            
-            listEl.innerHTML = html;
-            
-            // 动态调整列表高度
-            adjustContextListHeight();
-        }
-
-
-        // 运行所有测试
-        function runAllTests() {
-            if (testPrompts.length === 0) {
-                alert('没有测试用例');
-                return;
-            }
-            
-            // 切换到对话Tab
-            document.querySelectorAll('.tab-button')[0].click();
-            
-            // 清空对话
-            const chatArea = document.getElementById('chatArea');
-            chatArea.innerHTML = '<div class="status">🧪 开始运行自动化测试...</div>';
-            
-            // 开始测试
-            isTestingRunning = true;
-            currentTestIndex = 0;
-            
-            document.getElementById('runTestBtn').disabled = true;
-            document.getElementById('stopTestBtn').disabled = false;
-            
-            updateTestStatus(`正在测试 (0/${testPrompts.length})`);
-            
-            runNextTest();
-        }
-
-        function runNextTest() {
-            if (!isTestingRunning || currentTestIndex >= testPrompts.length) {
-                // 测试完成
-                isTestingRunning = false;
-                document.getElementById('runTestBtn').disabled = false;
-                document.getElementById('stopTestBtn').disabled = true;
-                updateTestStatus(`测试完成！已执行 ${testPrompts.length} 个用例`);
-                return;
-            }
-            
-            const test = testPrompts[currentTestIndex];
-            updateTestStatus(`正在测试 (${currentTestIndex + 1}/${testPrompts.length}): ${test.name}`);
-            
-            // 模拟用户输入
-            const input = document.getElementById('messageInput');
-            input.value = test.prompt;
-            
-            // 发送消息
-            sendMessage();
-            
-            currentTestIndex++;
-        }
-
-        function stopTests() {
-            isTestingRunning = false;
-            document.getElementById('runTestBtn').disabled = false;
-            document.getElementById('stopTestBtn').disabled = true;
-            updateTestStatus(`测试已停止，执行了 ${currentTestIndex} 个用例`);
-        }
-
-        function renderTestList() {
-            const listEl = document.getElementById('testList');
-            
-            if (testPrompts.length === 0) {
-                listEl.innerHTML = '<div style="color: #999; text-align: center; padding: 20px;">没有测试用例</div>';
-                return;
-            }
-            
-            let html = '<div style="font-weight: 500; margin-bottom: 15px; color: #2c2c2c;">测试用例列表 (共' + testPrompts.length + '个)</div>';
-            
-            testPrompts.forEach(test => {
-                html += `
-                    <div style="padding: 10px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                            <span style="font-weight: 500; color: #2c2c2c;">${test.id}. ${test.name}</span>
-                            <span style="font-size: 11px; color: #999; background: #f5f5f5; padding: 2px 8px; border-radius: 2px;">${test.category}</span>
-                        </div>
-                        <div style="color: #666; font-size: 12px;">${test.prompt}</div>
-                    </div>
-                `;
-            });
-            
-            listEl.innerHTML = html;
-        }
-
-        function updateTestStatus(message) {
-            const statusEl = document.getElementById('testStatus');
-            statusEl.querySelector('div').textContent = message;
-            
-            // 更新进度
-            const progressEl = document.getElementById('testProgress');
-            if (isTestingRunning && currentTestIndex <= testPrompts.length) {
-                const current = testPrompts[currentTestIndex - 1];
-                if (current) {
-                    progressEl.textContent = `当前: ${current.name} - ${current.prompt}`;
-                }
-            } else {
-                progressEl.textContent = '';
             }
         }
 
@@ -1346,129 +760,161 @@
 
         function addUserMessage(text) {
             const chatArea = document.getElementById('chatArea');
+            chatArea.querySelector('.empty-state')?.remove();
             
-            const emptyState = chatArea.querySelector('.empty-state');
-            if (emptyState) {
-                emptyState.remove();
-            }
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message user';
-            messageDiv.innerHTML = `
-                <div class="message-content">${escapeHtml(text)}</div>
-            `;
-            
-            chatArea.appendChild(messageDiv);
-            scrollToBottom();
+            const div = document.createElement('div');
+            div.className = 'message user';
+            div.innerHTML = `<div class="message-content">${escapeHtml(text)}</div>`;
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
 
         function addAssistantMessage(data) {
             const chatArea = document.getElementById('chatArea');
             
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message assistant';
-            
-            let content = `<div class="message-content">`;
-            content += formatMarkdown(data.message);
-            
-            if (data.tool_calls && data.tool_calls.length > 0) {
-                content += '<div class="tool-calls">';
-                content += `<div style="font-weight: 600; margin-bottom: 8px; color: #666;">执行了 ${data.tool_calls.length} 个工具</div>`;
-                data.tool_calls.forEach(call => {
-                    content += `<div class="tool-call">`;
-                    content += `<div class="tool-name">${call.tool}</div>`;
-                    content += `<div style="font-size: 11px; color: #999; font-family: Consolas, monospace;">`;
-                    content += JSON.stringify(call.arguments, null, 2);
-                    content += `</div>`;
-                    content += `</div>`;
-                });
-                content += '</div>';
-            }
-            
-            content += '</div>';
-            messageDiv.innerHTML = content;
-            
-            chatArea.appendChild(messageDiv);
-            scrollToBottom();
-        }
-        
-        function formatMarkdown(text) {
-            let html = escapeHtml(text);
-            
-            html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, lang, code) {
-                return `<pre><code>${code.trim()}</code></pre>`;
-            });
-            
-            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
-            html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
-            html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
-            html = html.replace(/\n/g, '<br>');
-            
-            return html;
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.innerHTML = `<div class="message-content">${formatMarkdown(data.message)}</div>`;
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
 
         function showThinking() {
             const chatArea = document.getElementById('chatArea');
-            
-            const thinkingDiv = document.createElement('div');
-            thinkingDiv.className = 'thinking';
-            thinkingDiv.id = 'thinking';
-            thinkingDiv.textContent = '思考中...';
-            
-            chatArea.appendChild(thinkingDiv);
-            scrollToBottom();
+            const div = document.createElement('div');
+            div.className = 'thinking';
+            div.id = 'thinking';
+            div.textContent = '思考中...';
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
 
         function showCompressing() {
-            // 先隐藏思考中
             hideThinking();
-            
             const chatArea = document.getElementById('chatArea');
-            
-            const compressingDiv = document.createElement('div');
-            compressingDiv.className = 'thinking';
-            compressingDiv.id = 'thinking';
-            compressingDiv.innerHTML = '🗜️ 正在整理对话，请稍候...';
-            
-            chatArea.appendChild(compressingDiv);
-            scrollToBottom();
+            const div = document.createElement('div');
+            div.className = 'thinking';
+            div.id = 'thinking';
+            div.innerHTML = '🗜️ 正在整理对话...';
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
 
         function hideThinking() {
-            const thinking = document.getElementById('thinking');
-            if (thinking) {
-                thinking.remove();
-            }
+            document.getElementById('thinking')?.remove();
         }
 
-        function showStatus(message, type) {
+        function showStatus(msg) {
             const chatArea = document.getElementById('chatArea');
+            const div = document.createElement('div');
+            div.style = 'padding: 12px; background: #f5f5f5; border-left: 3px solid #666; margin-bottom: 15px; border-radius: 2px;';
+            div.textContent = msg;
+            chatArea.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        function updateContext(data) {
+            document.getElementById('promptTokens').textContent = (data.token_usage.prompt_tokens / 1000).toFixed(1);
+            document.getElementById('completionTokens').textContent = (data.token_usage.completion_tokens / 1000).toFixed(1);
+            document.getElementById('totalTokens').textContent = (data.token_usage.total_tokens / 1000).toFixed(1);
+            document.getElementById('messageCount').textContent = data.message_count;
             
-            const statusDiv = document.createElement('div');
-            statusDiv.className = 'status';
-            statusDiv.textContent = message;
+            updateContextCircle(data.token_usage.total_tokens);
+            renderContextMessages(data.messages);
+        }
+
+        function renderContextMessages(messages) {
+            const list = document.getElementById('contextMessageList');
+            if (messages.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">Context为空</div>';
+                return;
+            }
             
-            chatArea.appendChild(statusDiv);
-            scrollToBottom();
+            let html = '';
+            messages.forEach((msg, idx) => {
+                const role = msg.role === 'user' ? 'user' : 'assistant';
+                const name = msg.role === 'user' ? '用户' : '助手';
+                const truncated = msg.content.length > 300;
+                const display = truncated ? msg.content.substring(0, 300) + '...' : msg.content;
+                
+                html += `
+                    <div class="message-item ${role}">
+                        <div class="message-header">[${idx+1}] ${name}</div>
+                        <div class="message-text">${escapeHtml(display)}</div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
+
+        function updateHistory(data) {
+            const messages = data.messages || [];
             
-            setTimeout(() => {
-                statusDiv.remove();
-            }, 3000);
+            let total = 0, chinese = 0, english = 0;
+            messages.forEach(msg => {
+                const content = msg.content || '';
+                total += content.length;
+                chinese += (content.match(/[\u4e00-\u9fa5]/g) || []).length;
+                english += (content.match(/[a-zA-Z]/g) || []).length;
+            });
+            
+            document.getElementById('historyTotalChars').textContent = total.toLocaleString();
+            document.getElementById('historyChineseChars').textContent = chinese.toLocaleString();
+            document.getElementById('historyEnglishChars').textContent = english.toLocaleString();
+            document.getElementById('historyCount').textContent = messages.length;
+            
+            renderHistoryMessages(messages);
+        }
+
+        function renderHistoryMessages(messages) {
+            const list = document.getElementById('historyMessageList');
+            if (messages.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">暂无消息</div>';
+                return;
+            }
+            
+            let html = '';
+            messages.forEach((msg, idx) => {
+                const role = msg.role === 'user' ? 'user' : 'assistant';
+                const name = msg.role === 'user' ? '用户' : '助手';
+                const truncated = msg.content.length > 300;
+                const display = truncated ? msg.content.substring(0, 300) + '...' : msg.content;
+                
+                html += `
+                    <div class="message-item ${role}">
+                        <div class="message-header">[${idx+1}] ${name} - ${new Date(msg.timestamp * 1000).toLocaleTimeString()}</div>
+                        <div class="message-text">${escapeHtml(display)}</div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
+
+        function updateConversations(data) {
+            conversations = data;
+            renderConversationTabs();
+        }
+
+        function updateWorkspacePath(path) {
+            document.getElementById('workspacePath').textContent = path;
+            const name = path.split('\\').pop() || path.split('/').pop() || 'Unknown';
+            document.getElementById('workspaceName').textContent = name;
+        }
+
+        function changeWorkspace() {
+            if (!bridge) return;
+            bridge.selectWorkspace();
+        }
+
+        function manualCompact() {
+            if (!bridge) return;
+            if (confirm('确定压缩Context？')) {
+                bridge.manualCompact();
+            }
         }
 
         function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        }
-
-        function scrollToBottom() {
-            const chatArea = document.getElementById('chatArea');
-            chatArea.scrollTop = chatArea.scrollHeight;
+            if (event.key === 'Enter') sendMessage();
         }
 
         function updateSendButton() {
@@ -1477,34 +923,44 @@
             btn.textContent = isProcessing ? '处理中...' : '发送';
         }
 
+        function updateContextCircle(totalTokens) {
+            const maxTokens = 131072;
+            const percentage = (totalTokens / maxTokens) * 100;
+            const circumference = 2 * Math.PI * 16;
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            const circle = document.getElementById('contextCircle');
+            circle.style.strokeDashoffset = offset;
+            
+            if (percentage >= 90) {
+                circle.classList.add('danger');
+                circle.classList.remove('warning');
+            } else if (percentage >= 70) {
+                circle.classList.add('warning');
+                circle.classList.remove('danger');
+            } else {
+                circle.classList.remove('warning', 'danger');
+            }
+            
+            document.getElementById('contextPercent').textContent = percentage.toFixed(0) + '%';
+            document.getElementById('contextTokens').textContent = (totalTokens / 1000).toFixed(1) + 'K/131K';
+        }
+
+        function formatMarkdown(text) {
+            let html = escapeHtml(text);
+            html = html.replace(/```[\s\S]*?```/g, m => '<pre>' + m + '</pre>');
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\n/g, '<br>');
+            return html;
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        function updateWorkspace() {
-            if (bridge) {
-                const workspace = bridge.getWorkspace();
-                document.getElementById('workspace').textContent = workspace;
-            }
-        }
-
-        function changeWorkspace() {
-            if (!bridge) return;
-            bridge.selectWorkspace();
-        }
-        
-        // 手动压缩Context
-        function manualCompact() {
-            if (!bridge) return;
-            
-            if (confirm('确定要压缩Context吗？\n\n将保留最近1轮对话的完整内容，其余内容将被智能压缩成摘要。')) {
-                bridge.manualCompact();
-            }
-        }
-
-        // 缩放功能
         function zoomIn() {
             currentZoom = Math.min(currentZoom + 5, 200);
             applyZoom();
@@ -1524,170 +980,15 @@
             document.body.style.zoom = currentZoom + '%';
             document.getElementById('zoomDisplay').textContent = currentZoom + '%';
         }
-        
-        // 更新Context用量圆环
-        function updateContextCircle(totalTokens) {
-            const maxTokens = 131072;  // DeepSeek最大tokens
-            const percentage = (totalTokens / maxTokens) * 100;
-            const circumference = 2 * Math.PI * 16;  // 半径16的圆周长
-            const offset = circumference - (percentage / 100) * circumference;
-            
-            // 更新圆环
-            const circle = document.getElementById('contextCircle');
-            circle.style.strokeDashoffset = offset;
-            
-            // 根据百分比改变颜色
-            if (percentage >= 90) {
-                circle.classList.add('danger');
-                circle.classList.remove('warning');
-            } else if (percentage >= 70) {
-                circle.classList.add('warning');
-                circle.classList.remove('danger');
-            } else {
-                circle.classList.remove('warning', 'danger');
-            }
-            
-            // 更新百分比文字
-            document.getElementById('contextPercent').textContent = percentage.toFixed(0) + '%';
-            
-            // 更新Token显示
-            const tokensK = (totalTokens / 1000).toFixed(1);
-            document.getElementById('contextTokens').textContent = tokensK + 'K/131K';
+
+        // 测试相关
+        function runAllTests() {
+            alert('测试功能待实现');
         }
-        
-        // 显示详情弹窗
-        function showDetailModal(idx) {
-            if (idx < 0 || idx >= contextMessages.length) {
-                console.error('无效的消息索引:', idx);
-                return;
-            }
-            
-            const msg = contextMessages[idx];
-            const roleName = msg.role === 'user' ? '用户' : msg.role === 'assistant' ? '助手' : msg.role;
-            const content = msg.content;
-            
-            // 设置标题
-            document.getElementById('modalTitle').textContent = `[${idx + 1}] ${roleName}消息`;
-            document.getElementById('modalTitleInfo').textContent = `完整内容预览`;
-            
-            // 计算统计信息
-            const charCount = content.length;
-            const lineCount = content.split('\n').length;
-            const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
-            
-            // 显示统计信息
-            const statsEl = document.getElementById('contentStats');
-            statsEl.innerHTML = `
-                <div>字符数: <span>${charCount.toLocaleString()}</span></div>
-                <div>行数: <span>${lineCount.toLocaleString()}</span></div>
-                <div>单词数: <span>${wordCount.toLocaleString()}</span></div>
-            `;
-            
-            // 显示内容
-            const contentEl = document.getElementById('modalDetailContent');
-            contentEl.textContent = content;
-            
-            // 显示弹窗
-            const modal = document.getElementById('detailModal');
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-            
-            // 重置复制按钮
-            const btnCopy = document.getElementById('btnCopy');
-            btnCopy.classList.remove('copied');
-            btnCopy.innerHTML = '📋 复制内容';
+
+        function stopTests() {
+            alert('停止测试');
         }
-        
-        // 关闭详情弹窗
-        function closeDetailModal(event) {
-            const modal = document.getElementById('detailModal');
-            modal.classList.remove('active');
-            document.body.style.overflow = 'auto';
-        }
-        
-        // 复制内容到剪贴板
-        function copyContent() {
-            const contentEl = document.getElementById('modalDetailContent');
-            const content = contentEl.textContent;
-            
-            // 使用现代剪贴板API
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(content).then(() => {
-                    // 成功复制
-                    const btnCopy = document.getElementById('btnCopy');
-                    btnCopy.classList.add('copied');
-                    btnCopy.innerHTML = '✓ 已复制';
-                    
-                    setTimeout(() => {
-                        btnCopy.classList.remove('copied');
-                        btnCopy.innerHTML = '📋 复制内容';
-                    }, 2000);
-                }).catch(err => {
-                    console.error('复制失败:', err);
-                    alert('复制失败，请手动选择文本复制');
-                });
-            } else {
-                // 降级方案：使用传统方法
-                const textarea = document.createElement('textarea');
-                textarea.value = content;
-                textarea.style.position = 'fixed';
-                textarea.style.opacity = '0';
-                document.body.appendChild(textarea);
-                textarea.select();
-                
-                try {
-                    document.execCommand('copy');
-                    const btnCopy = document.getElementById('btnCopy');
-                    btnCopy.classList.add('copied');
-                    btnCopy.innerHTML = '✓ 已复制';
-                    
-                    setTimeout(() => {
-                        btnCopy.classList.remove('copied');
-                        btnCopy.innerHTML = '📋 复制内容';
-                    }, 2000);
-                } catch (err) {
-                    console.error('复制失败:', err);
-                    alert('复制失败，请手动选择文本复制');
-                } finally {
-                    document.body.removeChild(textarea);
-                }
-            }
-        }
-        
-        // 动态调整Context列表高度
-        function adjustContextListHeight() {
-            const listEl = document.getElementById('contextMessageList');
-            if (!listEl) return;
-            
-            // 获取contextTab的实际高度
-            const contextTab = document.getElementById('contextTab');
-            if (!contextTab || !contextTab.classList.contains('active')) return;
-            
-            // 获取test-panel的高度
-            const testPanel = contextTab.querySelector('.test-panel');
-            if (!testPanel) return;
-            
-            // 计算可用高度：从列表顶部到底部控制栏的距离
-            const rect = listEl.getBoundingClientRect();
-            const footerHeight = document.querySelector('.footer-controls').offsetHeight;
-            const bottomMargin = 20; // 底部留白
-            
-            const availableHeight = window.innerHeight - rect.top - footerHeight - bottomMargin;
-            listEl.style.maxHeight = availableHeight + 'px';
-        }
-        
-        // 监听窗口大小变化
-        window.addEventListener('resize', adjustContextListHeight);
-        
-        // 监听ESC键关闭弹窗
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' || event.key === 'Esc') {
-                const modal = document.getElementById('detailModal');
-                if (modal.classList.contains('active')) {
-                    closeDetailModal();
-                }
-            }
-        });
     </script>
 </body>
 </html>
