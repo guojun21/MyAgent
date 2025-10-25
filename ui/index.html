@@ -845,9 +845,14 @@
                         </div>
                         <div style="text-align: right;">
                             <div style="font-size: 12px; color: #999; margin-bottom: 8px;">消息数: <span id="messageCount">0</span></div>
-                            <button class="btn-test btn-test-secondary" onclick="manualCompact()" style="font-size: 11px; padding: 4px 12px;">
-                                🗜️ Compact
-                            </button>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="btn-test btn-test-secondary" onclick="toggleContextFullContent()" id="toggleContextBtn" style="font-size: 11px; padding: 4px 12px;">
+                                    显示完整内容
+                                </button>
+                                <button class="btn-test btn-test-secondary" onclick="manualCompact()" style="font-size: 11px; padding: 4px 12px;">
+                                    🗜️ Compact
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -870,16 +875,22 @@
 
                 <div class="test-status" style="background: #fff; border: 1px solid #ddd;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="font-weight: 500; color: #2c2c2c;">
-                            完整消息历史
+                        <div>
+                            <div style="font-weight: 500; color: #2c2c2c; margin-bottom: 8px;">完整记录（未压缩）</div>
+                            <div style="display: flex; gap: 20px; font-size: 12px; color: #666;">
+                                <div>估算Tokens: <span id="historyTokens" style="font-weight: 500; color: #2c2c2c;">0</span>K</div>
+                            </div>
                         </div>
-                        <div style="text-align: right; font-size: 12px; color: #999;">
-                            <div>消息总数: <span id="historyCount">0</span></div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 12px; color: #999; margin-bottom: 8px;">消息数: <span id="historyCount">0</span></div>
+                            <button class="btn-test btn-test-secondary" onclick="toggleHistoryFullContent()" id="toggleHistoryBtn" style="font-size: 11px; padding: 4px 12px;">
+                                显示完整内容
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="test-list" id="historyMessageList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; max-height: 500px; overflow-y: auto;">
+                <div class="test-list" id="historyMessageList" style="margin-top: 20px; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; overflow-y: auto;">
                     <div style="text-align: center; padding: 30px; color: #999;">
                         暂无消息历史
                     </div>
@@ -990,6 +1001,10 @@
         ];
         let isTestingRunning = false;
         let currentTestIndex = 0;
+        let showFullContextContent = false;
+        let showFullHistoryContent = false;
+        let contextMessages = [];
+        let historyMessages = [];
 
         // 初始化Qt WebChannel
         new QWebChannel(qt.webChannelTransport, function(channel) {
@@ -1098,30 +1113,52 @@
         
         // 更新MessageHistory视图
         function updateHistoryView(data) {
-            document.getElementById('historyCount').textContent = data.message_count || 0;
-            
-            const listEl = document.getElementById('historyMessageList');
             const messages = data.messages || [];
+            historyMessages = messages;
+            
+            // 估算总tokens
+            let totalChars = 0;
+            messages.forEach(msg => {
+                totalChars += (msg.content || '').length;
+            });
+            const estimatedTokens = totalChars * 1.5;
+            
+            // 更新统计
+            document.getElementById('historyCount').textContent = data.message_count || 0;
+            document.getElementById('historyTokens').textContent = (estimatedTokens / 1000).toFixed(1);
+            
+            // 渲染列表
+            renderHistoryList();
+        }
+        
+        function renderHistoryList() {
+            const listEl = document.getElementById('historyMessageList');
+            const messages = historyMessages;
             
             if (messages.length === 0) {
                 listEl.innerHTML = '<div style="text-align: center; padding: 30px; color: #999;">暂无消息历史</div>';
                 return;
             }
             
-            let html = '<div style="font-weight: 500; margin-bottom: 15px; color: #2c2c2c;">完整消息记录（未压缩）</div>';
-            
+            let html = '';
             messages.forEach((msg, idx) => {
                 const roleName = msg.role === 'user' ? '用户' : msg.role === 'assistant' ? '助手' : msg.role;
                 const bgColor = msg.role === 'user' ? '#2c2c2c' : '#fff';
                 const textColor = msg.role === 'user' ? '#fff' : '#2c2c2c';
                 const borderColor = msg.role === 'user' ? '#666' : '#ddd';
                 
+                // 根据开关决定是否截断（和Context完全一致）
+                const isTruncated = msg.content.length > 500;
+                const displayContent = (showFullHistoryContent || !isTruncated) 
+                    ? msg.content 
+                    : msg.content.substring(0, 500) + '...';
+                
                 html += `
                     <div style="margin-bottom: 15px; padding: 12px; background: ${bgColor}; color: ${textColor}; border-left: 3px solid ${borderColor}; border-radius: 3px;">
                         <div style="font-size: 11px; opacity: 0.7; margin-bottom: 8px;">
-                            [${idx + 1}] ${roleName}
+                            [${idx + 1}] ${roleName} ${isTruncated ? '(内容已截断，共' + msg.content.length + '字符)' : ''}
                         </div>
-                        <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">${escapeHtml(msg.content)}</div>
+                        <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-family: Consolas, monospace;">${escapeHtml(displayContent)}</div>
                     </div>
                 `;
             });
@@ -1129,8 +1166,18 @@
             listEl.innerHTML = html;
         }
         
+        function toggleHistoryFullContent() {
+            showFullHistoryContent = !showFullHistoryContent;
+            const btn = document.getElementById('toggleHistoryBtn');
+            btn.textContent = showFullHistoryContent ? '隐藏完整内容' : '显示完整内容';
+            renderHistoryList();
+        }
+        
         // 更新Context视图
         function updateContextView(data) {
+            const messages = data.messages || [];
+            contextMessages = messages;  // 保存到全局
+            
             // 更新Token统计
             const usage = data.token_usage || {prompt_tokens: 0, completion_tokens: 0, total_tokens: 0};
             document.getElementById('promptTokens').textContent = (usage.prompt_tokens / 1000).toFixed(1);
@@ -1141,12 +1188,13 @@
             // 更新对话Tab的圆环进度
             updateContextCircle(usage.total_tokens);
             
-            // 渲染消息列表
+            // 渲染列表
+            renderContextList();
+        }
+        
+        function renderContextList() {
             const listEl = document.getElementById('contextMessageList');
-            const messages = data.messages || [];
-            
-            // 保存完整消息到全局变量
-            contextMessages = messages;
+            const messages = contextMessages;
             
             if (messages.length === 0) {
                 listEl.innerHTML = '<div style="text-align: center; padding: 30px; color: #999;">Context为空</div>';
@@ -1159,8 +1207,12 @@
                 const bgColor = msg.role === 'user' ? '#2c2c2c' : '#fff';
                 const textColor = msg.role === 'user' ? '#fff' : '#2c2c2c';
                 const borderColor = msg.role === 'user' ? '#666' : '#ddd';
+                
+                // 根据开关决定是否截断
                 const isTruncated = msg.content.length > 500;
-                const displayContent = isTruncated ? msg.content.substring(0, 500) + '...' : msg.content;
+                const displayContent = (showFullContextContent || !isTruncated) 
+                    ? msg.content 
+                    : msg.content.substring(0, 500) + '...';
                 
                 html += `
                     <div style="margin-bottom: 15px; padding: 12px; background: ${bgColor}; color: ${textColor}; border-left: 3px solid ${borderColor}; border-radius: 3px;">
