@@ -721,7 +721,8 @@
 
         function updateHistory(data) {
             const msgs = data.messages || [];
-            console.log('updateHistory:', msgs.length, '条消息');
+            console.log('📨 updateHistory被调用, 消息数:', msgs.length);
+            console.log('  - conversation_id:', data.conversation_id);
             
             // 统计字符（聊天记录管理模块用）
             let total = 0, chinese = 0, english = 0;
@@ -757,23 +758,37 @@
         }
         
         function renderChatHistory(msgs) {
+            console.log('🎨 renderChatHistory被调用, 消息数:', msgs.length);
+            
             const chatArea = document.getElementById('chatArea');
             
+            if (!chatArea) {
+                console.error('❌ chatArea元素不存在！');
+                return;
+            }
+            
             if (msgs.length === 0) {
+                console.log('⚠️ 消息为0，显示空状态');
                 chatArea.innerHTML = '<div class="empty-state"><h2>📖</h2><p>开始对话</p></div>';
                 return;
             }
+            
+            console.log('🎨 开始渲染', msgs.length, '条消息到chatArea');
             
             // 清空
             chatArea.innerHTML = '';
             
             // 渲染所有历史消息
-            msgs.forEach(msg => {
+            msgs.forEach((msg, idx) => {
+                console.log(`  渲染消息${idx+1}: ${msg.role}, 长度${msg.content.length}`);
+                
                 const div = document.createElement('div');
                 div.className = 'message ' + (msg.role === 'user' ? 'user' : 'assistant');
                 div.innerHTML = `<div class="message-content">${formatMarkdown(msg.content)}</div>`;
                 chatArea.appendChild(div);
             });
+            
+            console.log('✅ chatArea渲染完成，子元素数:', chatArea.children.length);
             
             // 滚动到底部
             chatArea.scrollTop = chatArea.scrollHeight;
