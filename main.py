@@ -4,7 +4,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 import platform
 
 from config import settings
@@ -13,7 +13,6 @@ from services.llm_service import get_llm_service
 from services.security_service import SecurityService
 from services.terminal_service import TerminalService
 from core.agent import Agent
-from core.context_manager import context_manager
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
@@ -37,25 +36,18 @@ app.add_middleware(
 # 初始化服务
 security_service = SecurityService()
 terminal_service = TerminalService()
-agent = Agent(workspace_root=".")
+
+# 注册API路由
+from api.routes import router as api_router
+app.include_router(api_router, prefix="/api", tags=["API"])
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def root():
-    """返回Web界面"""
-    try:
-        with open("static/index.html", "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        return """
-        <html>
-            <head><title>LLM Terminal Agent</title></head>
-            <body>
-                <h1>LLM Terminal Agent API</h1>
-                <p>访问 <a href="/docs">/docs</a> 查看API文档</p>
-            </body>
-        </html>
-        """
+    """返回Web界面（同一个HTML，自适应Qt和Web）"""
+    from pathlib import Path
+    html_path = Path(__file__).parent / "ui" / "index.html"
+    return FileResponse(str(html_path))
 
 
 @app.get("/health", response_model=HealthResponse)

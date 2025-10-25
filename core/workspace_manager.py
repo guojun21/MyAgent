@@ -30,9 +30,10 @@ class Workspace:
     - 每个对话有独立的Context
     """
     
-    def __init__(self, workspace_id: str, workspace_path: str):
+    def __init__(self, workspace_id: str, workspace_path: str, name: str = None):
         self.id = workspace_id
         self.path = workspace_path
+        self.name = name or Path(workspace_path).name  # 显示名称
         self.created_at = time.time()
         self.conversations: Dict[str, 'Conversation'] = {}
         self.active_conversation_id: Optional[str] = None
@@ -222,7 +223,8 @@ class WorkspaceManager:
         # 创建新的
         print(f"[WorkspaceManager] 创建新工作空间: {workspace_path}")
         workspace_id = str(uuid.uuid4())
-        workspace = Workspace(workspace_id, workspace_path)
+        workspace_name = Path(workspace_path).name
+        workspace = Workspace(workspace_id, workspace_path, workspace_name)
         
         # 自动创建第一个对话
         workspace.create_conversation("对话 1")
@@ -230,7 +232,7 @@ class WorkspaceManager:
         self.workspaces[workspace_id] = workspace
         self.active_workspace_id = workspace_id
         
-        # 保存
+        # 立即保存
         self.auto_save()
         
         return workspace_id
@@ -245,7 +247,7 @@ class WorkspaceManager:
         
         # 重建工作空间
         for ws_data in workspaces_data:
-            workspace = Workspace(ws_data["id"], ws_data["path"])
+            workspace = Workspace(ws_data["id"], ws_data["path"], ws_data.get("name"))
             workspace.created_at = ws_data.get("created_at", time.time())
             workspace.active_conversation_id = ws_data.get("active_conversation_id")
             
@@ -267,12 +269,12 @@ class WorkspaceManager:
         if not self.persistence_manager:
             return
         
-        # 只保存工作空间和对话基本信息
-        # Context和MessageHistory已经实时保存到JSON
+        # 保存工作空间和对话基本信息
         for ws_id, workspace in self.workspaces.items():
             ws_data = {
                 "id": workspace.id,
                 "path": workspace.path,
+                "name": workspace.name,  # 保存名称！
                 "created_at": workspace.created_at,
                 "active_conversation_id": workspace.active_conversation_id
             }

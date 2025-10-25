@@ -61,6 +61,8 @@ class AgentBridge(QObject):
     messageHistoryUpdated = pyqtSignal(str)
     # 信号：对话列表更新
     conversationsUpdated = pyqtSignal(str)
+    # 信号：工作空间列表更新
+    workspaceListUpdated = pyqtSignal(str)
     
     def __init__(self, parent_window=None):
         super().__init__()
@@ -83,8 +85,9 @@ class AgentBridge(QObject):
         # 加载测试用例
         self._load_and_emit_test_prompts()
         
-        # 发送初始对话列表
+        # 发送初始数据
         self._emit_conversations_update()
+        self._emit_workspace_list()
     
     @pyqtSlot(str)
     def sendMessage(self, message):
@@ -224,8 +227,12 @@ class AgentBridge(QObject):
         workspace = workspace_manager.get_active_workspace()
         if workspace:
             workspace.switch_conversation(conv_id)
-            print(f"[AgentBridge.switchConversation] 切换到对话: {conv_id}")
             
+            conv = workspace.conversations.get(conv_id)
+            print(f"[AgentBridge.switchConversation] 切换到对话: {conv.name if conv else conv_id}")
+            
+            # 刷新对话列表和Context
+            self._emit_conversations_update()
             self._emit_context_update()
     
     @pyqtSlot(result=str)
@@ -247,10 +254,88 @@ class AgentBridge(QObject):
         
         return json.dumps(conversations, ensure_ascii=False)
     
+    @pyqtSlot(result=str)
+    def getWorkspaceList(self):
+        """获取所有工作空间列表"""
+        workspaces = []
+        for ws_id, ws in workspace_manager.workspaces.items():
+            workspaces.append({
+                "id": ws.id,
+                "name": ws.name,  # 使用workspace.name字段
+                "path": ws.path,
+                "active": ws_id == workspace_manager.active_workspace_id,
+                "conversation_count": len(ws.conversations)
+            })
+        
+        print(f"[getWorkspaceList] 返回{len(workspaces)}个工作空间")
+        
+        return json.dumps(workspaces, ensure_ascii=False)
+    
+    @pyqtSlot(str)
+    def switchWorkspace(self, ws_id):
+        """切换工作空间"""
+        if ws_id in workspace_manager.workspaces:
+            workspace_manager.active_workspace_id = ws_id
+            workspace = workspace_manager.workspaces[ws_id]
+            
+            print(f"[AgentBridge.switchWorkspace] 切换工作空间: {workspace.path}")
+            print(f"  - 工作空间ID: {ws_id}")
+            print(f"  - 对话数: {len(workspace.conversations)}")
+            
+            # 更新Agent
+            self.workspace_root = Path(workspace.path).resolve()
+            self.agent = Agent(workspace_root=str(self.workspace_root))
+            
+            # 重置压缩计数
+            self.compression_attempts = 0
+            
+            # 通知前端刷新所有数据
+            self.workspaceChanged.emit(workspace.path)
+            self._emit_workspace_list()  # 刷新工作空间列表
+            self._emit_conversations_update()  # 刷新对话列表
+            self._emit_context_update()  # 刷新Context
+            
+            print(f"[AgentBridge.switchWorkspace] 切换完成")
+    
+    @pyqtSlot(str, str)
+    def renameWorkspace(self, ws_id, new_name):
+        """重命名工作空间"""
+        for wid, ws in workspace_manager.workspaces.items():
+            if wid == ws_id:
+                ws.name = new_name
+                print(f"[AgentBridge.renameWorkspace] 工作空间改名: {new_name}")
+                
+                # 保存到JSON
+                workspace_manager.auto_save()
+                self._emit_workspace_list()
+                break
+    
+    @pyqtSlot(str, str)
+    def renameConversation(self, conv_id, new_name):
+        """重命名对话"""
+        workspace = workspace_manager.get_active_workspace()
+        if not workspace:
+            return
+        
+        for cid, conv in workspace.conversations.items():
+            if cid == conv_id:
+                conv.name = new_name
+                print(f"[AgentBridge.renameConversation] 对话改名: {new_name}")
+                
+                # 保存到JSON
+                workspace_manager.auto_save()
+                self._emit_conversations_update()
+                break
+    
     def _emit_conversations_update(self):
         """发送对话列表更新"""
         conv_list = self.getConversationList()
         self.conversationsUpdated.emit(conv_list)
+    
+    def _emit_workspace_list(self):
+        """发送工作空间列表"""
+        ws_list = self.getWorkspaceList()
+        self.workspaceListUpdated.emit(ws_list)
     
     @pyqtSlot()
     def clearHistory(self):
@@ -359,15 +444,18 @@ class AgentBridge(QObject):
             self.workspace_root = Path(folder).resolve()
             print(f"[切换工作空间] {self.workspace_root}")
             
-            # 重新创建工作空间
+            # 创建/加载工作空间
             self.workspace_id = workspace_manager.create_workspace(str(self.workspace_root))
             
             # 重新初始化Agent
             self.agent = Agent(workspace_root=str(self.workspace_root))
             print(f"[Agent重新初始化] 工作空间: {self.workspace_root}")
             
-            # 通知前端
-            self.workspaceChanged.emit(str(self.workspace_root))
+            # 通知前端刷新
+            self._emit_workspace_list()  # 刷新工作空间列表
+            self._emit_conversations_update()  # 刷新对话列表
+            self._emit_context_update()
+            
             self._send_to_frontend({
                 "type": "workspace_changed",
                 "workspace": str(self.workspace_root),

@@ -2,478 +2,110 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI编程助手</title>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-            background: #f5f5f5;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .container {
-            width: 100%;
-            height: 100vh;
-            background: #ffffff;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Level 1: 工作空间栏 */
-        .workspace-header {
-            background: #1a1a1a;
-            color: #fff;
-            padding: 12px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #000;
-        }
-
-        .workspace-title {
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .workspace-path {
-            font-size: 11px;
-            color: #999;
-            font-family: Consolas, monospace;
-            margin-top: 3px;
-        }
-
-        .btn-workspace-change {
-            padding: 6px 14px;
-            background: #2c2c2c;
-            color: #ccc;
-            border: 1px solid #444;
-            border-radius: 3px;
-            font-size: 11px;
-            cursor: pointer;
-        }
-
-        .btn-workspace-change:hover {
-            background: #3a3a3a;
-        }
-
-        /* Level 2: 模块Tab */
-        .module-tabs {
-            background: #2c2c2c;
-            padding: 0 30px;
-            display: flex;
-            gap: 5px;
-            border-bottom: 1px solid #1a1a1a;
-        }
-
-        .module-tab {
-            padding: 12px 24px;
-            background: transparent;
-            border: none;
-            color: #999;
-            font-size: 13px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .module-tab:hover {
-            color: #fff;
-        }
-
-        .module-tab.active {
-            color: #fff;
-            border-bottom-color: #fff;
-            background: rgba(255,255,255,0.05);
-        }
-
-        /* Level 3: 对话Tab */
-        .conversation-tabs {
-            background: #f5f5f5;
-            padding: 8px 20px;
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .conversation-tab {
-            padding: 8px 16px;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            font-size: 12px;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-
-        .conversation-tab:hover {
-            background: #f8f8f8;
-        }
-
-        .conversation-tab.active {
-            background: #2c2c2c;
-            color: #fff;
-            border-color: #2c2c2c;
-        }
-
-        .conversation-tab.new {
-            background: #4caf50;
-            color: #fff;
-            border-color: #4caf50;
-        }
-
-        /* Level 4: 内容Tab */
-        .content-tabs {
-            background: #fafafa;
-            padding: 0 20px;
-            display: flex;
-            gap: 2px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .content-tab {
-            padding: 10px 20px;
-            background: transparent;
-            border: none;
-            color: #666;
-            font-size: 12px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-
-        .content-tab:hover {
-            color: #2c2c2c;
-        }
-
-        .content-tab.active {
-            color: #2c2c2c;
-            border-bottom-color: #2c2c2c;
-            font-weight: 500;
-        }
-
-        /* 其他样式保持不变... */
-        .chat-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 30px 40px;
-            background: #fafafa;
-        }
-
-        .input-area {
-            padding: 20px 30px;
-            background: #fff;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .message {
-            margin-bottom: 25px;
-        }
-
-        .message.user {
-            display: flex;
-            justify-content: flex-end;
-        }
-
-        .message.assistant {
-            display: flex;
-            justify-content: flex-start;
-        }
-
-        .message-content {
-            max-width: 75%;
-            padding: 15px 20px;
-            border-radius: 4px;
-            line-height: 1.8;
-            font-size: 14px;
-        }
-
-        .message.user .message-content {
-            background: #2c2c2c;
-            color: #fff;
-            border-left: 3px solid #666;
-        }
-
-        .message.assistant .message-content {
-            background: #fff;
-            color: #2c2c2c;
-            border-left: 3px solid #ddd;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        }
-
-        .input-container {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .input-field {
-            flex: 1;
-            padding: 12px 18px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            font-size: 14px;
-            background: #fafafa;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: #666;
-            background: #fff;
-        }
-
-        .btn-send {
-            padding: 12px 30px;
-            background: #2c2c2c;
-            color: #fff;
-            border: none;
-            border-radius: 3px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .btn-send:hover {
-            background: #1a1a1a;
-        }
-
-        .btn-send:disabled {
-            opacity: 0.5;
-        }
-
-        /* Context圆环 */
-        .context-usage {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-left: 15px;
-        }
-
-        .circle-progress {
-            position: relative;
-            width: 40px;
-            height: 40px;
-        }
-
-        .circle-progress svg {
-            transform: rotate(-90deg);
-        }
-
-        .circle-bg {
-            fill: none;
-            stroke: #e0e0e0;
-            stroke-width: 3;
-        }
-
-        .circle-fill {
-            fill: none;
-            stroke: #2c2c2c;
-            stroke-width: 3;
-            stroke-linecap: round;
-            transition: stroke-dashoffset 0.3s ease;
-        }
-
-        .circle-fill.warning {
-            stroke: #ff9800;
-        }
-
-        .circle-fill.danger {
-            stroke: #f44336;
-        }
-
-        .circle-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 10px;
-            font-weight: 600;
-        }
-
-        .thinking {
-            text-align: center;
-            padding: 15px;
-            color: #666;
-            font-style: italic;
-            font-size: 13px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: #999;
-        }
-
-        .empty-state h2 {
-            font-size: 48px;
-            margin-bottom: 15px;
-            font-weight: 300;
-        }
-
-        .footer-controls {
-            padding: 10px 30px;
-            background: #f5f5f5;
-            border-top: 1px solid #e0e0e0;
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        .btn-zoom {
-            padding: 4px 12px;
-            background: #fff;
-            border: 1px solid #ddd;
-            color: #333;
-            border-radius: 2px;
-            font-size: 11px;
-            cursor: pointer;
-        }
-
-        .btn-zoom:hover {
-            background: #2c2c2c;
-            color: #fff;
-        }
-
-        /* 测试和预览面板 */
-        .panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .panel-header {
-            padding: 20px 30px;
-            background: #fafafa;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .panel-header h3 {
-            font-size: 16px;
-            font-weight: 500;
-            color: #2c2c2c;
-            margin-bottom: 5px;
-        }
-
-        .panel-header p {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .panel-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px 30px;
-        }
-
-        .stat-box {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 13px;
-        }
-
-        .stat-label {
-            color: #666;
-        }
-
-        .stat-value {
-            font-weight: 500;
-            color: #2c2c2c;
-        }
-
-        .btn-action {
-            padding: 8px 16px;
-            background: #2c2c2c;
-            color: #fff;
-            border: none;
-            border-radius: 3px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .btn-action:hover {
-            background: #1a1a1a;
-        }
-
-        .btn-secondary {
-            background: #fff;
-            color: #2c2c2c;
-            border: 1px solid #ddd;
-        }
-
-        .btn-secondary:hover {
-            background: #f5f5f5;
-        }
-
-        .message-list {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            padding: 15px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .message-item {
-            padding: 12px;
-            margin-bottom: 12px;
-            border-left: 3px solid #ddd;
-            border-radius: 3px;
-        }
-
-        .message-item.user {
-            background: #2c2c2c;
-            color: #fff;
-            border-left-color: #666;
-        }
-
-        .message-item.assistant {
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-left: 3px solid #ddd;
-        }
-
-        .message-header {
-            font-size: 11px;
-            opacity: 0.7;
-            margin-bottom: 8px;
-        }
-
-        .message-text {
-            font-size: 13px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            font-family: Consolas, monospace;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #f5f5f5; height: 100vh; }
+        .container { width: 100%; height: 100vh; background: #fff; display: flex; flex-direction: column; }
+
+        /* 工作空间Tab栏 */
+        .workspace-tabs { background: #1a1a1a; padding: 0 20px; display: flex; gap: 3px; overflow-x: auto; border-bottom: 2px solid #000; }
+        .workspace-tab { padding: 10px 20px; background: transparent; border: none; color: #999; font-size: 12px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+        .workspace-tab:hover { color: #fff; }
+        .workspace-tab.active { color: #fff; border-bottom-color: #4caf50; background: rgba(255,255,255,0.05); }
+        .workspace-tab-new { background: #2c2c2c; color: #4caf50; }
+        .workspace-path { font-size: 10px; color: #666; margin-top: 2px; }
+        
+        /* 模块Tab */
+        .module-tabs { background: #2c2c2c; padding: 0 30px; display: flex; border-bottom: 1px solid #1a1a1a; }
+        .module-tab { padding: 12px 24px; background: transparent; border: none; color: #999; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; }
+        .module-tab:hover { color: #fff; }
+        .module-tab.active { color: #fff; border-bottom-color: #fff; }
+        
+        /* 对话Tab */
+        .conversation-tabs { background: #f5f5f5; padding: 8px 20px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 1px solid #ddd; }
+        .conversation-tab { padding: 8px 16px; background: #fff; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; cursor: pointer; }
+        .conversation-tab:hover { background: #f8f8f8; }
+        .conversation-tab.active { background: #2c2c2c; color: #fff; border-color: #2c2c2c; }
+        .conversation-tab.new { background: #4caf50; color: #fff; border-color: #4caf50; }
+        
+        /* 内容Tab */
+        .content-tabs { background: #fafafa; padding: 0 20px; display: flex; border-bottom: 1px solid #e0e0e0; }
+        .content-tab { padding: 10px 20px; background: transparent; border: none; color: #666; font-size: 12px; cursor: pointer; border-bottom: 2px solid transparent; }
+        .content-tab:hover { color: #2c2c2c; }
+        .content-tab.active { color: #2c2c2c; border-bottom-color: #2c2c2c; font-weight: 500; }
+        
+        /* 聊天区域 */
+        .chat-area { flex: 1; overflow-y: auto; padding: 30px 40px; background: #fafafa; }
+        .message { margin-bottom: 25px; }
+        .message.user { display: flex; justify-content: flex-end; }
+        .message.assistant { display: flex; justify-content: flex-start; }
+        .message-content { max-width: 75%; padding: 15px 20px; border-radius: 4px; line-height: 1.8; font-size: 14px; }
+        .message.user .message-content { background: #2c2c2c; color: #fff; border-left: 3px solid #666; }
+        .message.assistant .message-content { background: #fff; color: #2c2c2c; border-left: 3px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        
+        .input-area { padding: 20px 30px; background: #fff; border-top: 1px solid #e0e0e0; }
+        .input-container { display: flex; gap: 12px; align-items: center; }
+        .input-field { flex: 1; padding: 12px 18px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px; background: #fafafa; }
+        .input-field:focus { outline: none; border-color: #666; background: #fff; }
+        .btn-send { padding: 12px 30px; background: #2c2c2c; color: #fff; border: none; border-radius: 3px; cursor: pointer; }
+        .btn-send:hover { background: #1a1a1a; }
+        .btn-send:disabled { opacity: 0.5; }
+        
+        .context-usage { display: flex; align-items: center; gap: 8px; margin-left: 15px; }
+        .circle-progress { position: relative; width: 40px; height: 40px; }
+        .circle-progress svg { transform: rotate(-90deg); }
+        .circle-bg { fill: none; stroke: #e0e0e0; stroke-width: 3; }
+        .circle-fill { fill: none; stroke: #2c2c2c; stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.3s; }
+        .circle-fill.warning { stroke: #ff9800; }
+        .circle-fill.danger { stroke: #f44336; }
+        .circle-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; font-weight: 600; }
+        
+        .thinking { text-align: center; padding: 15px; color: #666; font-style: italic; font-size: 13px; }
+        .empty-state { text-align: center; padding: 80px 20px; color: #999; }
+        .empty-state h2 { font-size: 48px; margin-bottom: 15px; font-weight: 300; }
+        
+        .panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header { padding: 20px 30px; background: #fafafa; border-bottom: 1px solid #e0e0e0; }
+        .panel-header h3 { font-size: 16px; font-weight: 500; color: #2c2c2c; margin-bottom: 5px; }
+        .panel-header p { font-size: 12px; color: #666; }
+        .panel-content { flex: 1; overflow-y: auto; padding: 20px 30px; }
+        
+        .stat-box { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; margin-bottom: 15px; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
+        .stat-label { color: #666; }
+        .stat-value { font-weight: 500; color: #2c2c2c; }
+        
+        .message-list { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 15px; max-height: 500px; overflow-y: auto; }
+        .message-item { padding: 12px; margin-bottom: 12px; border-left: 3px solid #ddd; border-radius: 3px; }
+        .message-item.user { background: #2c2c2c; color: #fff; border-left-color: #666; }
+        .message-item.assistant { background: #fff; border: 1px solid #e0e0e0; }
+        .message-header { font-size: 11px; opacity: 0.7; margin-bottom: 8px; }
+        .message-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-family: Consolas, monospace; }
+        
+        .btn-action { padding: 8px 16px; background: #2c2c2c; color: #fff; border: none; border-radius: 3px; font-size: 12px; cursor: pointer; }
+        .btn-action:hover { background: #1a1a1a; }
+        .btn-secondary { background: #fff; color: #2c2c2c; border: 1px solid #ddd; }
+        .btn-secondary:hover { background: #f5f5f5; }
+        
+        .footer-controls { padding: 10px 30px; background: #f5f5f5; border-top: 1px solid #e0e0e0; display: flex; justify-content: center; gap: 15px; }
+        .btn-zoom { padding: 4px 12px; background: #fff; border: 1px solid #ddd; color: #333; border-radius: 2px; font-size: 11px; cursor: pointer; }
+        .btn-zoom:hover { background: #2c2c2c; color: #fff; }
+        
+        .editable-name { cursor: pointer; display: inline-block; padding: 2px 6px; border-radius: 2px; }
+        .editable-name:hover { background: rgba(255,255,255,0.1); }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Level 1: 工作空间头部 -->
-        <div class="workspace-header">
-            <div>
-                <div class="workspace-title">工作空间: <span id="workspaceName">MyAgent</span></div>
-                <div class="workspace-path" id="workspacePath">加载中...</div>
-            </div>
-            <button class="btn-workspace-change" onclick="changeWorkspace()">选择文件夹</button>
+        <!-- Level 1: 工作空间Tab -->
+        <div class="workspace-tabs" id="workspaceTabs">
+            <button class="workspace-tab active">
+                <div class="editable-name" ondblclick="editWorkspaceName(this)" data-id="">工作空间 1</div>
+                <div class="workspace-path">C:\Projects\MyAgent</div>
+            </button>
+            <button class="workspace-tab workspace-tab-new" onclick="addWorkspace()">+ 添加工作空间</button>
         </div>
 
         <!-- Level 2: 模块Tab -->
@@ -484,40 +116,35 @@
 
         <!-- 对话管理模块 -->
         <div id="conversationModule" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
-            <!-- Level 3: 对话切换Tab -->
-            <div class="conversation-tabs" id="conversationTabsBar">
-                <button class="conversation-tab active">对话 1</button>
-                <button class="conversation-tab new" onclick="createNewConversation()">+ 新建对话</button>
+            <!-- Level 3: 对话Tab -->
+            <div class="conversation-tabs" id="conversationTabs">
+                <button class="conversation-tab active">
+                    <span class="editable-name" ondblclick="editConversationName(this)" data-id="">对话 1</span>
+                </button>
+                <button class="conversation-tab new" onclick="createConversation()">+ 新建对话</button>
             </div>
 
             <!-- Level 4: 内容Tab -->
             <div class="content-tabs">
-                <button class="content-tab active" onclick="switchContentTab('chat')">对话详情</button>
-                <button class="content-tab" onclick="switchContentTab('context')">Context预览</button>
-                <button class="content-tab" onclick="switchContentTab('test')">测试</button>
+                <button class="content-tab active" onclick="switchContent('chat')">对话详情</button>
+                <button class="content-tab" onclick="switchContent('context')">Context预览</button>
+                <button class="content-tab" onclick="switchContent('test')">测试</button>
             </div>
 
             <!-- 对话详情 -->
-            <div id="chatContent" class="panel" style="display: flex;">
+            <div id="chatPanel" class="panel">
                 <div class="chat-area" id="chatArea">
-                    <div class="empty-state">
-                        <h2>📖</h2>
-                        <p>欢迎使用AI编程助手</p>
-                    </div>
+                    <div class="empty-state"><h2>📖</h2><p>开始对话</p></div>
                 </div>
-
                 <div class="input-area">
                     <div class="input-container">
-                        <input type="text" class="input-field" id="messageInput" 
-                               placeholder="描述你的需求..." onkeypress="handleKeyPress(event)">
+                        <input class="input-field" id="messageInput" placeholder="描述你的需求..." onkeypress="if(event.key==='Enter')sendMessage()">
                         <button class="btn-send" onclick="sendMessage()" id="sendBtn">发送</button>
-                        
                         <div class="context-usage">
                             <div class="circle-progress">
                                 <svg width="40" height="40">
                                     <circle class="circle-bg" cx="20" cy="20" r="16"></circle>
-                                    <circle class="circle-fill" id="contextCircle" cx="20" cy="20" r="16" 
-                                            stroke-dasharray="100.48" stroke-dashoffset="100.48"></circle>
+                                    <circle class="circle-fill" id="contextCircle" cx="20" cy="20" r="16" stroke-dasharray="100.48" stroke-dashoffset="100.48"></circle>
                                 </svg>
                                 <div class="circle-text" id="contextPercent">0%</div>
                             </div>
@@ -531,106 +158,58 @@
             </div>
 
             <!-- Context预览 -->
-            <div id="contextContent" class="panel" style="display: none;">
+            <div id="contextPanel" class="panel" style="display: none;">
                 <div class="panel-header">
                     <h3>Context 预览</h3>
-                    <p>当前对话的Context（会被压缩）</p>
+                    <p>当前对话的Context</p>
                 </div>
                 <div class="panel-content">
                     <div class="stat-box">
-                        <div class="stat-row">
-                            <span class="stat-label">提示Tokens</span>
-                            <span class="stat-value"><span id="promptTokens">0</span>K</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">完成Tokens</span>
-                            <span class="stat-value"><span id="completionTokens">0</span>K</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">总计Tokens</span>
-                            <span class="stat-value"><span id="totalTokens">0</span>K</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">消息数</span>
-                            <span class="stat-value"><span id="messageCount">0</span></span>
-                        </div>
+                        <div class="stat-row"><span class="stat-label">提示Tokens</span><span class="stat-value"><span id="promptTokens">0</span>K</span></div>
+                        <div class="stat-row"><span class="stat-label">完成Tokens</span><span class="stat-value"><span id="completionTokens">0</span>K</span></div>
+                        <div class="stat-row"><span class="stat-label">总计Tokens</span><span class="stat-value"><span id="totalTokens">0</span>K</span></div>
+                        <div class="stat-row"><span class="stat-label">消息数</span><span class="stat-value"><span id="messageCount">0</span></span></div>
                         <div style="margin-top: 15px; text-align: right;">
-                            <button class="btn-action btn-secondary" onclick="manualCompact()">🗜️ Compact</button>
+                            <button class="btn-action btn-secondary" onclick="compact()">🗜️ Compact</button>
                         </div>
                     </div>
-                    <div class="message-list" id="contextMessageList">
-                        <div style="text-align: center; padding: 20px; color: #999;">Context为空</div>
-                    </div>
+                    <div class="message-list" id="contextList"></div>
                 </div>
             </div>
 
             <!-- 测试 -->
-            <div id="testContent" class="panel" style="display: none;">
-                <div class="panel-header">
-                    <h3>自动化测试</h3>
-                    <p>运行测试用例</p>
-                </div>
+            <div id="testPanel" class="panel" style="display: none;">
+                <div class="panel-header"><h3>自动化测试</h3></div>
                 <div class="panel-content">
-                    <div style="margin-bottom: 15px;">
-                        <button class="btn-action" onclick="runAllTests()" id="runTestBtn">运行测试prompt</button>
-                        <button class="btn-action btn-secondary" onclick="stopTests()" id="stopTestBtn" disabled style="margin-left: 10px;">停止</button>
-                    </div>
-                    <div class="stat-box" id="testStatus">
-                        <div>就绪</div>
-                    </div>
-                    <div class="message-list" id="testList" style="max-height: 400px;"></div>
+                    <button class="btn-action" onclick="runTests()">运行测试</button>
+                    <div class="stat-box" id="testStatus" style="margin-top: 15px;">就绪</div>
                 </div>
             </div>
         </div>
 
         <!-- 聊天记录管理模块 -->
         <div id="historyModule" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
-            <!-- Level 3: 对话切换Tab -->
-            <div class="conversation-tabs" id="historyConversationTabs">
-                <button class="conversation-tab active">对话 1</button>
-            </div>
-
-            <!-- 消息历史内容 -->
+            <div class="conversation-tabs" id="historyConversationTabs"></div>
             <div class="panel">
-                <div class="panel-header">
-                    <h3>消息历史</h3>
-                    <p>完整的原始消息记录</p>
-                </div>
+                <div class="panel-header"><h3>消息历史</h3><p>完整记录</p></div>
                 <div class="panel-content">
                     <div class="stat-box">
-                        <div class="stat-row">
-                            <span class="stat-label">总字符</span>
-                            <span class="stat-value"><span id="historyTotalChars">0</span></span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">中文字符</span>
-                            <span class="stat-value"><span id="historyChineseChars">0</span></span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">英文字符</span>
-                            <span class="stat-value"><span id="historyEnglishChars">0</span></span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">消息数</span>
-                            <span class="stat-value"><span id="historyCount">0</span></span>
-                        </div>
+                        <div class="stat-row"><span class="stat-label">总字符</span><span class="stat-value"><span id="historyTotalChars">0</span></span></div>
+                        <div class="stat-row"><span class="stat-label">中文</span><span class="stat-value"><span id="historyChineseChars">0</span></span></div>
+                        <div class="stat-row"><span class="stat-label">英文</span><span class="stat-value"><span id="historyEnglishChars">0</span></span></div>
+                        <div class="stat-row"><span class="stat-label">消息数</span><span class="stat-value"><span id="historyCount">0</span></span></div>
                     </div>
-                    <div class="message-list" id="historyMessageList">
-                        <div style="text-align: center; padding: 20px; color: #999;">暂无消息历史</div>
-                    </div>
+                    <div class="message-list" id="historyList"></div>
                 </div>
             </div>
         </div>
 
-        <!-- 底部控制栏 -->
         <div class="footer-controls">
             <span style="font-size: 11px; color: #666;">缩放</span>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn-zoom" onclick="zoomOut()">-5%</button>
-                <span style="font-size: 11px; color: #999; min-width: 45px; text-align: center;" id="zoomDisplay">100%</span>
-                <button class="btn-zoom" onclick="zoomIn()">+5%</button>
-                <button class="btn-zoom" onclick="resetZoom()">重置</button>
-            </div>
+            <button class="btn-zoom" onclick="zoomOut()">-5%</button>
+            <span style="font-size: 11px; color: #999;" id="zoomDisplay">100%</span>
+            <button class="btn-zoom" onclick="zoomIn()">+5%</button>
+            <button class="btn-zoom" onclick="resetZoom()">重置</button>
         </div>
     </div>
 
@@ -638,106 +217,336 @@
         let bridge = null;
         let isProcessing = false;
         let currentZoom = 100;
-        let currentModule = 'conversation';
-        let currentContentTab = 'chat';
-        let currentConversationId = null;
+        let workspaces = [];
         let conversations = [];
+        let currentWorkspaceId = null;
+        let currentConversationId = null;
+        let isQtMode = false;  // Qt模式 or Web模式
 
-        // 初始化
-        new QWebChannel(qt.webChannelTransport, function(channel) {
-            bridge = channel.objects.bridge;
+        // 检测环境并初始化
+        if (typeof qt !== 'undefined' && qt.webChannelTransport) {
+            // Qt环境 - 使用WebChannel
+            isQtMode = true;
+            console.log('Qt环境 - 使用WebChannel');
             
-            bridge.messageReceived.connect(msg => handleMessage(JSON.parse(msg)));
-            bridge.workspaceChanged.connect(path => updateWorkspacePath(path));
-            bridge.contextUpdated.connect(data => updateContext(JSON.parse(data)));
-            bridge.messageHistoryUpdated.connect(data => updateHistory(JSON.parse(data)));
-            bridge.conversationsUpdated.connect(data => updateConversations(JSON.parse(data)));
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                bridge = channel.objects.bridge;
+                bridge.messageReceived.connect(msg => handleMessage(JSON.parse(msg)));
+                bridge.contextUpdated.connect(data => updateContext(JSON.parse(data)));
+                bridge.messageHistoryUpdated.connect(data => updateHistory(JSON.parse(data)));
+                bridge.conversationsUpdated.connect(data => updateConversations(JSON.parse(data)));
+                bridge.workspaceListUpdated.connect(data => updateWorkspaces(JSON.parse(data)));
+                bridge.workspaceChanged.connect(path => console.log('工作空间切换:', path));
+                
+                init();
+            });
+        } else {
+            // Web环境 - 使用RESTful API
+            isQtMode = false;
+            console.log('Web环境 - 使用RESTful API');
             
+            // 创建API适配器
+            bridge = createAPIAdapter();
             init();
-        });
-
+        }
+        
+        // 统一初始化
         function init() {
-            if (!bridge) return;
-            updateWorkspacePath(bridge.getWorkspace());
+            loadWorkspaces();
             loadConversations();
+        }
+        
+        // RESTful API适配器（模拟Qt bridge接口）
+        function createAPIAdapter() {
+            const API_BASE = '/api';
+            
+            return {
+                getWorkspaceList: async function() {
+                    const res = await fetch(`${API_BASE}/workspaces`);
+                    const json = await res.json();
+                    return JSON.stringify(json.data);
+                },
+                
+                switchWorkspace: async function(wsId) {
+                    await fetch(`${API_BASE}/workspaces/${wsId}/switch`, {method: 'POST'});
+                    setTimeout(() => {
+                        this.emit_workspace_list();
+                        this.emit_conversations();
+                    }, 50);
+                },
+                
+                getConversationList: async function() {
+                    const res = await fetch(`${API_BASE}/conversations`);
+                    const json = await res.json();
+                    return JSON.stringify(json.data);
+                },
+                
+                createConversation: async function() {
+                    const res = await fetch(`${API_BASE}/conversations`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({workspace_id: currentWorkspaceId})
+                    });
+                    const json = await res.json();
+                    setTimeout(() => this.emit_conversations(), 50);
+                    return json.conversation_id;
+                },
+                
+                switchConversation: async function(convId) {
+                    await fetch(`${API_BASE}/conversations/${convId}/switch`, {method: 'POST'});
+                    setTimeout(() => this.emit_context(), 50);
+                },
+                
+                sendMessage: async function(message) {
+                    const res = await fetch(`${API_BASE}/agent/chat`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({message, conversation_id: currentConversationId})
+                    });
+                    const json = await res.json();
+                    
+                    if (json.success && json.data.message) {
+                        handleMessage({
+                            type: 'response',
+                            success: true,
+                            message: json.data.message
+                        });
+                    }
+                    
+                    setTimeout(() => this.emit_context(), 50);
+                },
+                
+                manualCompact: async function() {
+                    await fetch(`${API_BASE}/context/${currentConversationId}/compact`, {method: 'POST'});
+                    setTimeout(() => this.emit_context(), 50);
+                },
+                
+                renameWorkspace: async function(wsId, newName) {
+                    await fetch(`${API_BASE}/workspaces/${wsId}/rename`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({new_name: newName})
+                    });
+                },
+                
+                renameConversation: async function(convId, newName) {
+                    await fetch(`${API_BASE}/conversations/${convId}/rename`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({new_name: newName})
+                    });
+                },
+                
+                selectWorkspace: function() {
+                    alert('Web版暂不支持文件夹选择，请使用Qt版');
+                },
+                
+                // 模拟emit方法
+                emit_workspace_list: function() {
+                    this.getWorkspaceList().then(data => updateWorkspaces(JSON.parse(data)));
+                },
+                
+                emit_conversations: function() {
+                    this.getConversationList().then(data => updateConversations(JSON.parse(data)));
+                },
+                
+                emit_context: async function() {
+                    if (!currentConversationId) return;
+                    const res = await fetch(`${API_BASE}/context/${currentConversationId}`);
+                    const json = await res.json();
+                    updateContext(json.data);
+                }
+            };
+        }
+
+        function loadWorkspaces() {
+            if (!bridge) return;
+            
+            // Qt的pyqtSlot返回值可能是Promise或同步值
+            const result = bridge.getWorkspaceList();
+            
+            // 处理Promise或直接字符串
+            if (result && typeof result.then === 'function') {
+                // 异步Promise
+                result.then(data => {
+                    workspaces = JSON.parse(data);
+                    renderWorkspaceTabs();
+                });
+            } else {
+                // 同步字符串
+                workspaces = JSON.parse(result);
+                renderWorkspaceTabs();
+            }
+        }
+
+        function updateWorkspaces(data) {
+            workspaces = data;
+            renderWorkspaceTabs();
+        }
+
+        function renderWorkspaceTabs() {
+            const bar = document.getElementById('workspaceTabs');
+            let html = '';
+            workspaces.forEach(ws => {
+                const active = ws.active ? 'active' : '';
+                html += `
+                    <button class="workspace-tab ${active}" onclick="selectWorkspace('${ws.id}')">
+                        <div class="editable-name" ondblclick="editWorkspaceName(this)" data-id="${ws.id}">${ws.name}</div>
+                        <div class="workspace-path">${ws.path}</div>
+                    </button>
+                `;
+            });
+            html += '<button class="workspace-tab workspace-tab-new" onclick="addWorkspace()">+ 添加工作空间</button>';
+            bar.innerHTML = html;
+        }
+
+        function selectWorkspace(wsId) {
+            if (!bridge) return;
+            
+            console.log('切换工作空间:', wsId);
+            
+            bridge.switchWorkspace(wsId);
+            currentWorkspaceId = wsId;
+            currentConversationId = null;  // 重置对话ID
+            
+            // 清空聊天区域
+            const chatArea = document.getElementById('chatArea');
+            chatArea.innerHTML = '<div class="empty-state"><h2>📖</h2><p>已切换工作空间，开始新对话</p></div>';
+            
+            // 重置Context显示
+            document.getElementById('totalTokens').textContent = '0';
+            document.getElementById('messageCount').textContent = '0';
+            document.getElementById('contextPercent').textContent = '0%';
+            document.getElementById('contextTokens').textContent = '0K/131K';
+            document.getElementById('contextList').innerHTML = '';
+            
+            // 刷新工作空间和对话列表
+            setTimeout(() => {
+                loadWorkspaces();
+                loadConversations();
+            }, 100);
+        }
+
+        function addWorkspace() {
+            if (!bridge) return;
+            bridge.selectWorkspace();
+        }
+
+        function editWorkspaceName(el) {
+            const wsId = el.dataset.id;
+            const oldName = el.textContent;
+            const newName = prompt('重命名工作空间:', oldName);
+            if (newName && newName !== oldName && bridge) {
+                bridge.renameWorkspace(wsId, newName);
+                el.textContent = newName;
+            }
         }
 
         function loadConversations() {
             if (!bridge) return;
-            const data = bridge.getConversationList();
-            conversations = JSON.parse(data);
-            renderConversationTabs();
+            
+            const result = bridge.getConversationList();
+            
+            if (result && typeof result.then === 'function') {
+                result.then(data => {
+                    conversations = JSON.parse(data);
+                    renderConversationTabs();
+                });
+            } else {
+                conversations = JSON.parse(result);
+                renderConversationTabs();
+            }
         }
 
         function renderConversationTabs() {
-            const bar = document.getElementById('conversationTabsBar');
-            const historyBar = document.getElementById('historyConversationTabs');
+            const convBar = document.getElementById('conversationTabs');
+            const histBar = document.getElementById('historyConversationTabs');
             
             let html = '';
             conversations.forEach(conv => {
                 const active = conv.active ? 'active' : '';
-                html += `<button class="conversation-tab ${active}" onclick="selectConversation('${conv.id}')">${conv.name}</button>`;
+                html += `
+                    <button class="conversation-tab ${active}" onclick="selectConversation('${conv.id}')">
+                        <span class="editable-name" ondblclick="editConversationName(this)" data-id="${conv.id}">${conv.name}</span>
+                    </button>
+                `;
             });
-            html += '<button class="conversation-tab new" onclick="createNewConversation()">+ 新建对话</button>';
             
-            bar.innerHTML = html;
-            historyBar.innerHTML = html.replace('新建对话', '').replace('new', '').trim();
+            convBar.innerHTML = html + '<button class="conversation-tab new" onclick="createConversation()">+ 新建对话</button>';
+            histBar.innerHTML = html;
         }
 
-        function createNewConversation() {
+        function createConversation() {
             if (!bridge) return;
-            const convId = bridge.createConversation();
-            loadConversations();
+            const result = bridge.createConversation();
+            
+            // 等待完成后刷新
+            if (result && typeof result.then === 'function') {
+                result.then(() => {
+                    setTimeout(loadConversations, 100);
+                });
+            } else {
+                setTimeout(loadConversations, 100);
+            }
         }
 
         function selectConversation(convId) {
             if (!bridge) return;
+            
+            console.log('切换对话:', convId);
+            
             bridge.switchConversation(convId);
             currentConversationId = convId;
-            loadConversations();
+            
+            // 清空聊天区域
+            const chatArea = document.getElementById('chatArea');
+            chatArea.innerHTML = '<div class="empty-state"><h2>💬</h2><p>已切换到新对话</p></div>';
+            
+            // 刷新对话列表和Context
+            setTimeout(() => {
+                loadConversations();
+            }, 100);
         }
 
-        function switchModule(module) {
-            currentModule = module;
-            
-            document.querySelectorAll('.module-tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            if (module === 'conversation') {
-                document.getElementById('conversationModule').style.display = 'flex';
-                document.getElementById('historyModule').style.display = 'none';
-            } else {
-                document.getElementById('conversationModule').style.display = 'none';
-                document.getElementById('historyModule').style.display = 'flex';
+        function editConversationName(el) {
+            const convId = el.dataset.id;
+            const oldName = el.textContent;
+            const newName = prompt('重命名对话:', oldName);
+            if (newName && newName !== oldName && bridge) {
+                bridge.renameConversation(convId, newName);
+                el.textContent = newName;
             }
         }
 
-        function switchContentTab(tab) {
-            currentContentTab = tab;
+        function switchModule(module) {
+            document.querySelectorAll('.module-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
             
+            document.getElementById('conversationModule').style.display = module === 'conversation' ? 'flex' : 'none';
+            document.getElementById('historyModule').style.display = module === 'history' ? 'flex' : 'none';
+        }
+
+        function switchContent(tab) {
             document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
             
-            document.getElementById('chatContent').style.display = tab === 'chat' ? 'flex' : 'none';
-            document.getElementById('contextContent').style.display = tab === 'context' ? 'flex' : 'none';
-            document.getElementById('testContent').style.display = tab === 'test' ? 'flex' : 'none';
+            document.getElementById('chatPanel').style.display = tab === 'chat' ? 'flex' : 'none';
+            document.getElementById('contextPanel').style.display = tab === 'context' ? 'flex' : 'none';
+            document.getElementById('testPanel').style.display = tab === 'test' ? 'flex' : 'none';
         }
 
         function handleMessage(data) {
-            if (data.type === 'thinking') {
-                showThinking();
-            } else if (data.type === 'compressing') {
-                showCompressing();
-            } else if (data.type === 'response') {
+            if (data.type === 'thinking') showThinking();
+            else if (data.type === 'compressing') showCompressing();
+            else if (data.type === 'response') {
                 hideThinking();
-                if (data.message && data.message.trim()) {
-                    addAssistantMessage(data);
-                }
+                if (data.message?.trim()) addAssistantMessage(data);
                 isProcessing = false;
                 updateSendButton();
-            } else if (data.type === 'error') {
+            }
+            else if (data.type === 'error') {
                 hideThinking();
-                showStatus(data.message);
+                alert(data.message);
                 isProcessing = false;
                 updateSendButton();
             }
@@ -745,176 +554,58 @@
 
         function sendMessage() {
             const input = document.getElementById('messageInput');
-            const message = input.value.trim();
+            const msg = input.value.trim();
+            if (!msg || !bridge || isProcessing) return;
             
-            if (!message || !bridge || isProcessing) return;
-            
-            addUserMessage(message);
+            addUserMessage(msg);
             input.value = '';
-            
             isProcessing = true;
             updateSendButton();
-            
-            bridge.sendMessage(message);
+            bridge.sendMessage(msg);
         }
 
         function addUserMessage(text) {
-            const chatArea = document.getElementById('chatArea');
-            chatArea.querySelector('.empty-state')?.remove();
-            
+            const area = document.getElementById('chatArea');
+            area.querySelector('.empty-state')?.remove();
             const div = document.createElement('div');
             div.className = 'message user';
             div.innerHTML = `<div class="message-content">${escapeHtml(text)}</div>`;
-            chatArea.appendChild(div);
-            chatArea.scrollTop = chatArea.scrollHeight;
+            area.appendChild(div);
+            area.scrollTop = area.scrollHeight;
         }
 
         function addAssistantMessage(data) {
-            const chatArea = document.getElementById('chatArea');
-            
+            const area = document.getElementById('chatArea');
             const div = document.createElement('div');
             div.className = 'message assistant';
             div.innerHTML = `<div class="message-content">${formatMarkdown(data.message)}</div>`;
-            chatArea.appendChild(div);
-            chatArea.scrollTop = chatArea.scrollHeight;
+            area.appendChild(div);
+            area.scrollTop = area.scrollHeight;
         }
 
         function showThinking() {
-            const chatArea = document.getElementById('chatArea');
+            const area = document.getElementById('chatArea');
             const div = document.createElement('div');
             div.className = 'thinking';
             div.id = 'thinking';
             div.textContent = '思考中...';
-            chatArea.appendChild(div);
-            chatArea.scrollTop = chatArea.scrollHeight;
+            area.appendChild(div);
+            area.scrollTop = area.scrollHeight;
         }
 
         function showCompressing() {
             hideThinking();
-            const chatArea = document.getElementById('chatArea');
+            const area = document.getElementById('chatArea');
             const div = document.createElement('div');
             div.className = 'thinking';
             div.id = 'thinking';
-            div.innerHTML = '🗜️ 正在整理对话...';
-            chatArea.appendChild(div);
-            chatArea.scrollTop = chatArea.scrollHeight;
+            div.textContent = '🗜️ 正在整理对话...';
+            area.appendChild(div);
+            area.scrollTop = area.scrollHeight;
         }
 
         function hideThinking() {
             document.getElementById('thinking')?.remove();
-        }
-
-        function showStatus(msg) {
-            const chatArea = document.getElementById('chatArea');
-            const div = document.createElement('div');
-            div.style = 'padding: 12px; background: #f5f5f5; border-left: 3px solid #666; margin-bottom: 15px; border-radius: 2px;';
-            div.textContent = msg;
-            chatArea.appendChild(div);
-            setTimeout(() => div.remove(), 3000);
-        }
-
-        function updateContext(data) {
-            document.getElementById('promptTokens').textContent = (data.token_usage.prompt_tokens / 1000).toFixed(1);
-            document.getElementById('completionTokens').textContent = (data.token_usage.completion_tokens / 1000).toFixed(1);
-            document.getElementById('totalTokens').textContent = (data.token_usage.total_tokens / 1000).toFixed(1);
-            document.getElementById('messageCount').textContent = data.message_count;
-            
-            updateContextCircle(data.token_usage.total_tokens);
-            renderContextMessages(data.messages);
-        }
-
-        function renderContextMessages(messages) {
-            const list = document.getElementById('contextMessageList');
-            if (messages.length === 0) {
-                list.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">Context为空</div>';
-                return;
-            }
-            
-            let html = '';
-            messages.forEach((msg, idx) => {
-                const role = msg.role === 'user' ? 'user' : 'assistant';
-                const name = msg.role === 'user' ? '用户' : '助手';
-                const truncated = msg.content.length > 300;
-                const display = truncated ? msg.content.substring(0, 300) + '...' : msg.content;
-                
-                html += `
-                    <div class="message-item ${role}">
-                        <div class="message-header">[${idx+1}] ${name}</div>
-                        <div class="message-text">${escapeHtml(display)}</div>
-                    </div>
-                `;
-            });
-            list.innerHTML = html;
-        }
-
-        function updateHistory(data) {
-            const messages = data.messages || [];
-            
-            let total = 0, chinese = 0, english = 0;
-            messages.forEach(msg => {
-                const content = msg.content || '';
-                total += content.length;
-                chinese += (content.match(/[\u4e00-\u9fa5]/g) || []).length;
-                english += (content.match(/[a-zA-Z]/g) || []).length;
-            });
-            
-            document.getElementById('historyTotalChars').textContent = total.toLocaleString();
-            document.getElementById('historyChineseChars').textContent = chinese.toLocaleString();
-            document.getElementById('historyEnglishChars').textContent = english.toLocaleString();
-            document.getElementById('historyCount').textContent = messages.length;
-            
-            renderHistoryMessages(messages);
-        }
-
-        function renderHistoryMessages(messages) {
-            const list = document.getElementById('historyMessageList');
-            if (messages.length === 0) {
-                list.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">暂无消息</div>';
-                return;
-            }
-            
-            let html = '';
-            messages.forEach((msg, idx) => {
-                const role = msg.role === 'user' ? 'user' : 'assistant';
-                const name = msg.role === 'user' ? '用户' : '助手';
-                const truncated = msg.content.length > 300;
-                const display = truncated ? msg.content.substring(0, 300) + '...' : msg.content;
-                
-                html += `
-                    <div class="message-item ${role}">
-                        <div class="message-header">[${idx+1}] ${name} - ${new Date(msg.timestamp * 1000).toLocaleTimeString()}</div>
-                        <div class="message-text">${escapeHtml(display)}</div>
-                    </div>
-                `;
-            });
-            list.innerHTML = html;
-        }
-
-        function updateConversations(data) {
-            conversations = data;
-            renderConversationTabs();
-        }
-
-        function updateWorkspacePath(path) {
-            document.getElementById('workspacePath').textContent = path;
-            const name = path.split('\\').pop() || path.split('/').pop() || 'Unknown';
-            document.getElementById('workspaceName').textContent = name;
-        }
-
-        function changeWorkspace() {
-            if (!bridge) return;
-            bridge.selectWorkspace();
-        }
-
-        function manualCompact() {
-            if (!bridge) return;
-            if (confirm('确定压缩Context？')) {
-                bridge.manualCompact();
-            }
-        }
-
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') sendMessage();
         }
 
         function updateSendButton() {
@@ -923,10 +614,67 @@
             btn.textContent = isProcessing ? '处理中...' : '发送';
         }
 
+        function updateContext(data) {
+            document.getElementById('promptTokens').textContent = (data.token_usage.prompt_tokens / 1000).toFixed(1);
+            document.getElementById('completionTokens').textContent = (data.token_usage.completion_tokens / 1000).toFixed(1);
+            document.getElementById('totalTokens').textContent = (data.token_usage.total_tokens / 1000).toFixed(1);
+            document.getElementById('messageCount').textContent = data.message_count;
+            updateContextCircle(data.token_usage.total_tokens);
+            
+            const list = document.getElementById('contextList');
+            if (data.messages.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">Context为空</div>';
+            } else {
+                let html = '';
+                data.messages.forEach((msg, idx) => {
+                    const role = msg.role === 'user' ? 'user' : 'assistant';
+                    const name = msg.role === 'user' ? '用户' : '助手';
+                    const display = msg.content.length > 300 ? msg.content.substring(0, 300) + '...' : msg.content;
+                    html += `<div class="message-item ${role}"><div class="message-header">[${idx+1}] ${name}</div><div class="message-text">${escapeHtml(display)}</div></div>`;
+                });
+                list.innerHTML = html;
+            }
+        }
+
+        function updateHistory(data) {
+            const msgs = data.messages || [];
+            let total = 0, chinese = 0, english = 0;
+            msgs.forEach(m => {
+                const c = m.content || '';
+                total += c.length;
+                chinese += (c.match(/[\u4e00-\u9fa5]/g) || []).length;
+                english += (c.match(/[a-zA-Z]/g) || []).length;
+            });
+            
+            document.getElementById('historyTotalChars').textContent = total.toLocaleString();
+            document.getElementById('historyChineseChars').textContent = chinese.toLocaleString();
+            document.getElementById('historyEnglishChars').textContent = english.toLocaleString();
+            document.getElementById('historyCount').textContent = msgs.length;
+            
+            const list = document.getElementById('historyList');
+            if (msgs.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">暂无消息</div>';
+            } else {
+                let html = '';
+                msgs.forEach((msg, idx) => {
+                    const role = msg.role === 'user' ? 'user' : 'assistant';
+                    const name = msg.role === 'user' ? '用户' : '助手';
+                    const display = msg.content.length > 300 ? msg.content.substring(0, 300) + '...' : msg.content;
+                    html += `<div class="message-item ${role}"><div class="message-header">[${idx+1}] ${name}</div><div class="message-text">${escapeHtml(display)}</div></div>`;
+                });
+                list.innerHTML = html;
+            }
+        }
+
+        function updateConversations(data) {
+            conversations = data;
+            renderConversationTabs();
+        }
+
         function updateContextCircle(totalTokens) {
             const maxTokens = 131072;
             const percentage = (totalTokens / maxTokens) * 100;
-            const circumference = 2 * Math.PI * 16;
+            const circumference = 100.48;
             const offset = circumference - (percentage / 100) * circumference;
             
             const circle = document.getElementById('contextCircle');
@@ -946,6 +694,11 @@
             document.getElementById('contextTokens').textContent = (totalTokens / 1000).toFixed(1) + 'K/131K';
         }
 
+        function compact() {
+            if (!bridge) return;
+            if (confirm('确定压缩Context？')) bridge.manualCompact();
+        }
+
         function formatMarkdown(text) {
             let html = escapeHtml(text);
             html = html.replace(/```[\s\S]*?```/g, m => '<pre>' + m + '</pre>');
@@ -961,34 +714,15 @@
             return div.innerHTML;
         }
 
-        function zoomIn() {
-            currentZoom = Math.min(currentZoom + 5, 200);
-            applyZoom();
-        }
-
-        function zoomOut() {
-            currentZoom = Math.max(currentZoom - 5, 50);
-            applyZoom();
-        }
-
-        function resetZoom() {
-            currentZoom = 100;
-            applyZoom();
-        }
-
+        function zoomIn() { currentZoom = Math.min(currentZoom + 5, 200); applyZoom(); }
+        function zoomOut() { currentZoom = Math.max(currentZoom - 5, 50); applyZoom(); }
+        function resetZoom() { currentZoom = 100; applyZoom(); }
         function applyZoom() {
             document.body.style.zoom = currentZoom + '%';
             document.getElementById('zoomDisplay').textContent = currentZoom + '%';
         }
 
-        // 测试相关
-        function runAllTests() {
-            alert('测试功能待实现');
-        }
-
-        function stopTests() {
-            alert('停止测试');
-        }
+        function runTests() { alert('测试功能'); }
     </script>
 </body>
 </html>
