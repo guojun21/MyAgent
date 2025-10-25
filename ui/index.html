@@ -660,8 +660,11 @@
                                 <div>总计: <span id="totalTokens" style="font-weight: 600; color: #2c2c2c; font-size: 14px;">0</span>K</div>
                             </div>
                         </div>
-                        <div style="text-align: right; font-size: 12px; color: #999;">
-                            <div>消息数: <span id="messageCount">0</span></div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 12px; color: #999; margin-bottom: 8px;">消息数: <span id="messageCount">0</span></div>
+                            <button class="btn-test btn-test-secondary" onclick="manualCompact()" style="font-size: 11px; padding: 4px 12px;">
+                                🗜️ Compact
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -787,9 +790,14 @@
             
             if (data.type === 'thinking') {
                 showThinking();
+            } else if (data.type === 'compressing') {
+                showCompressing();
             } else if (data.type === 'response') {
                 hideThinking();
-                addAssistantMessage(data);
+                // 只有有消息内容时才显示
+                if (data.message && data.message.trim()) {
+                    addAssistantMessage(data);
+                }
                 isProcessing = false;
                 updateSendButton();
                 
@@ -1080,6 +1088,21 @@
             scrollToBottom();
         }
 
+        function showCompressing() {
+            // 先隐藏思考中
+            hideThinking();
+            
+            const chatArea = document.getElementById('chatArea');
+            
+            const compressingDiv = document.createElement('div');
+            compressingDiv.className = 'thinking';
+            compressingDiv.id = 'thinking';
+            compressingDiv.innerHTML = '🗜️ 正在整理对话，请稍候...';
+            
+            chatArea.appendChild(compressingDiv);
+            scrollToBottom();
+        }
+
         function hideThinking() {
             const thinking = document.getElementById('thinking');
             if (thinking) {
@@ -1135,6 +1158,15 @@
         function changeWorkspace() {
             if (!bridge) return;
             bridge.selectWorkspace();
+        }
+        
+        // 手动压缩Context
+        function manualCompact() {
+            if (!bridge) return;
+            
+            if (confirm('确定要压缩Context吗？\n\n将保留最近1轮对话的完整内容，其余内容将被智能压缩成摘要。')) {
+                bridge.manualCompact();
+            }
         }
 
         // 缩放功能

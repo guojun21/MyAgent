@@ -33,10 +33,16 @@ class AgentWorker(QThread):
             )
             self.finished.emit(result)
         except Exception as e:
+            error_msg = str(e)
+            
+            # Context超长错误不应该到这里（Agent.run已处理）
+            # 如果到这里说明是其他严重错误
+            print(f"[AgentWorker] 未预期的异常: {error_msg}")
+            
             self.finished.emit({
                 "success": False,
-                "message": f"执行失败: {str(e)}",
-                "error": str(e)
+                "message": f"系统错误: {error_msg}",
+                "error": error_msg
             })
 
 
@@ -114,7 +120,14 @@ class AgentBridge(QObject):
         print(f"[AgentBridge._on_agent_finished] 工具调用数: {len(result.get('tool_calls', []))}")
         print(f"{'*'*80}\n")
         
-        # 添加到Context
+        # 检查是否需要压缩Context
+        if result.get("need_compression"):
+            print(f"[AgentBridge._on_agent_finished] 需要压缩Context，不显示错误")
+            # 不添加错误消息到Context，直接处理压缩
+            self._handle_context_compression(result)
+            return
+        
+        # 正常结果：添加到Context
         context_manager.add_to_context(
             self.context_id,
             "user",
@@ -141,24 +154,93 @@ class AgentBridge(QObject):
         # 通知前端Context已更新
         self._emit_context_update()
         
-        print(f"[AgentBridge._on_agent_finished] 发送结果到前端")
-        # 发送结果到前端
-        self._send_to_frontend({
-            "type": "response",
-            "success": result.get("success", False),
-            "message": result.get("message", ""),
-            "tool_calls": result.get("tool_calls", []),
-            "iterations": result.get("iterations", 0)
-        })
+        # 只有有实际消息时才发送
+        if result.get("message"):
+            print(f"[AgentBridge._on_agent_finished] 发送结果到前端")
+            self._send_to_frontend({
+                "type": "response",
+                "success": result.get("success", False),
+                "message": result.get("message", ""),
+                "tool_calls": result.get("tool_calls", []),
+                "iterations": result.get("iterations", 0)
+            })
+        else:
+            print(f"[AgentBridge._on_agent_finished] 消息为空，不发送")
     
     @pyqtSlot()
     def clearHistory(self):
-        """清空Context历史"""
+        """清空Context历史（对标/clear命令）"""
         context_manager.clear_context(self.context_id)
         self._send_to_frontend({
             "type": "info",
             "message": "Context已清空"
         })
+        self._emit_context_update()
+    
+    @pyqtSlot()
+    def manualCompact(self):
+        """手动压缩Context（对标/compact命令）"""
+        print(f"[AgentBridge.manualCompact] 用户触发手动压缩")
+        
+        # 显示压缩中
+        self._send_to_frontend({
+            "type": "compressing",
+            "message": "正在手动压缩Context..."
+        })
+        
+        # 获取当前Context
+        context_messages = context_manager.get_context_messages(self.context_id)
+        
+        if len(context_messages) <= 2:
+            self._send_to_frontend({
+                "type": "info",
+                "message": "Context内容较少，无需压缩"
+            })
+            return
+        
+        try:
+            from core.context_compressor import context_compressor
+            
+            # 压缩（保留最近1轮）
+            compressed = context_compressor.auto_compact(
+                context_messages,
+                keep_recent=1,
+                max_tokens=131072
+            )
+            
+            # 替换Context
+            context_manager.clear_context(self.context_id)
+            for msg in compressed:
+                context_manager.add_to_context(
+                    self.context_id,
+                    msg["role"],
+                    msg["content"]
+                )
+            
+            # 重置token统计
+            context_data = context_manager.get_context(self.context_id)
+            context_data["token_usage"] = {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0
+            }
+            
+            print(f"[AgentBridge.manualCompact] 手动压缩完成")
+            
+            # 通知前端
+            self._send_to_frontend({
+                "type": "info",
+                "message": f"Context已压缩：{len(context_messages)}条 → {len(compressed)}条"
+            })
+            
+            self._emit_context_update()
+            
+        except Exception as e:
+            print(f"[AgentBridge.manualCompact] 压缩失败: {e}")
+            self._send_to_frontend({
+                "type": "error",
+                "message": f"压缩失败: {str(e)}"
+            })
     
     @pyqtSlot(result=str)
     def getWorkspace(self):
@@ -224,6 +306,63 @@ class AgentBridge(QObject):
         except Exception as e:
             print(f"[AgentBridge._load_and_emit_test_prompts] 异常: {e}")
             self.testPromptsLoaded.emit(json.dumps({"error": str(e)}, ensure_ascii=False))
+    
+    def _handle_context_compression(self, result):
+        """处理Context压缩"""
+        from core.context_compressor import context_compressor
+        
+        print(f"[AgentBridge._handle_context_compression] 开始压缩Context")
+        
+        # 显示"正在整理对话"
+        self._send_to_frontend({
+            "type": "compressing",
+            "message": "正在整理对话..."
+        })
+        
+        try:
+            # 获取Context历史
+            context_history = result.get("context_history", [])
+            original_message = result.get("original_user_message", "")
+            
+            print(f"[AgentBridge._handle_context_compression] 压缩前消息数: {len(context_history)}")
+            
+            # 压缩（使用auto_compact，保留最近1轮）
+            compressed_history = context_compressor.auto_compact(
+                context_history,
+                keep_recent=1,
+                max_tokens=131072
+            )
+            
+            print(f"[AgentBridge._handle_context_compression] 压缩后消息数: {len(compressed_history)}")
+            
+            # 替换Context
+            context_manager.clear_context(self.context_id)
+            for msg in compressed_history:
+                context_manager.add_to_context(
+                    self.context_id,
+                    msg["role"],
+                    msg["content"]
+                )
+            
+            print(f"[AgentBridge._handle_context_compression] Context已更新")
+            
+            # 重新执行原始请求
+            print(f"[AgentBridge._handle_context_compression] 重新执行请求")
+            
+            self.current_worker = AgentWorker(
+                self.agent,
+                original_message,
+                compressed_history
+            )
+            self.current_worker.finished.connect(self._on_agent_finished)
+            self.current_worker.start()
+            
+        except Exception as e:
+            print(f"[AgentBridge._handle_context_compression] 压缩失败: {e}")
+            self._send_to_frontend({
+                "type": "error",
+                "message": f"Context整理失败: {str(e)}"
+            })
     
     def _emit_context_update(self):
         """发送Context更新到前端"""

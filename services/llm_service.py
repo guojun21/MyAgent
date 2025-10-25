@@ -283,10 +283,18 @@ class DeepSeekService(LLMService):
             return result
             
         except Exception as e:
+            error_msg = str(e)
+            
+            # 检测Context超长错误 - 不返回给用户，抛出异常让Agent处理
+            if "maximum context length" in error_msg or "131072 tokens" in error_msg:
+                print(f"    [DeepSeek.chat] 检测到Context超长错误")
+                raise  # 抛出异常，由Agent.run处理
+            
+            # 其他错误才返回错误消息
             return {
                 "role": "assistant",
-                "content": f"LLM调用失败: {str(e)}",
-                "error": str(e)
+                "content": f"LLM调用失败: {error_msg}",
+                "error": error_msg
             }
     
     def parse_query(self, query: str) -> Dict[str, str]:
