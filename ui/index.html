@@ -919,7 +919,7 @@
                         content += `<div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>`;
                         content += `</div>`;
                         
-                        // 出参
+                        // 出参（根据工具类型定制渲染）
                         if (call.result) {
                             content += `<div>`;
                             content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>`;
@@ -929,8 +929,11 @@
                             const statusText = success ? '✅ 成功' : '❌ 失败';
                             
                             content += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
-                            content += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 4px;">${statusText}</div>`;
-                            content += `<div style="color: #666; white-space: pre-wrap;">${JSON.stringify(call.result, null, 2)}</div>`;
+                            content += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 6px;">${statusText}</div>`;
+                            
+                            // 根据工具类型定制显示
+                            content += renderToolResult(call.tool, call.result);
+                            
                             content += `</div>`;
                             content += `</div>`;
                         }
@@ -1021,6 +1024,105 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        // 根据工具类型定制结果渲染
+        function renderToolResult(toolName, result) {
+            let html = '';
+            
+            // list_files - 文件列表
+            if (toolName === 'list_files') {
+                const files = result.files || [];
+                const dirs = result.directories || [];
+                
+                html += `<div style="color: #666;">`;
+                html += `<div>文件数: ${result.total_files || files.length}</div>`;
+                html += `<div>目录数: ${result.total_directories || dirs.length}</div>`;
+                
+                if (files.length > 0) {
+                    html += `<div style="margin-top: 6px; font-weight: 500;">📄 文件:</div>`;
+                    files.slice(0, 10).forEach(f => {
+                        html += `<div style="padding-left: 10px; font-size: 10px;">- ${f.name || f.path}</div>`;
+                    });
+                    if (files.length > 10) {
+                        html += `<div style="padding-left: 10px; font-size: 10px; color: #999;">... 还有 ${files.length - 10} 个文件</div>`;
+                    }
+                }
+                
+                if (dirs.length > 0) {
+                    html += `<div style="margin-top: 6px; font-weight: 500;">📁 目录:</div>`;
+                    dirs.slice(0, 5).forEach(d => {
+                        html += `<div style="padding-left: 10px; font-size: 10px;">- ${d.name || d.path}</div>`;
+                    });
+                    if (dirs.length > 5) {
+                        html += `<div style="padding-left: 10px; font-size: 10px; color: #999;">... 还有 ${dirs.length - 5} 个目录</div>`;
+                    }
+                }
+                
+                html += `</div>`;
+            }
+            // read_file - 文件内容
+            else if (toolName === 'read_file') {
+                html += `<div style="color: #666;">`;
+                html += `<div>路径: ${result.path || ''}</div>`;
+                html += `<div>行数: ${result.lines || 0}</div>`;
+                const content = result.content || '';
+                const preview = content.substring(0, 200);
+                html += `<div style="margin-top: 6px;">内容预览:</div>`;
+                html += `<div style="background: #f5f5f5; padding: 6px; border-radius: 2px; font-size: 10px; white-space: pre-wrap; max-height: 100px; overflow-y: auto;">${escapeHtml(preview)}${content.length > 200 ? '\n...' : ''}</div>`;
+                html += `</div>`;
+            }
+            // write_file - 写入结果
+            else if (toolName === 'write_file') {
+                html += `<div style="color: #666;">`;
+                html += `<div>路径: ${result.path || ''}</div>`;
+                html += `<div>写入: ${result.bytes_written || 0} 字节</div>`;
+                html += `</div>`;
+            }
+            // search_code - 搜索结果
+            else if (toolName === 'search_code') {
+                const results = result.results || [];
+                html += `<div style="color: #666;">`;
+                html += `<div>找到: ${result.total || results.length} 处</div>`;
+                
+                if (results.length > 0) {
+                    html += `<div style="margin-top: 6px;">匹配:</div>`;
+                    results.slice(0, 5).forEach(r => {
+                        html += `<div style="padding-left: 10px; font-size: 10px;">- ${r.file}:${r.line}</div>`;
+                    });
+                    if (results.length > 5) {
+                        html += `<div style="padding-left: 10px; font-size: 10px; color: #999;">... 还有 ${results.length - 5} 处</div>`;
+                    }
+                }
+                html += `</div>`;
+            }
+            // get_project_structure - 项目结构
+            else if (toolName === 'get_project_structure') {
+                html += `<div style="color: #666;">`;
+                html += `<div>路径: ${result.path || ''}</div>`;
+                if (result.tree) {
+                    html += `<div style="margin-top: 6px;">结构: (已生成)</div>`;
+                }
+                html += `</div>`;
+            }
+            // run_terminal - 终端输出
+            else if (toolName === 'run_terminal') {
+                const output = result.output || '';
+                html += `<div style="color: #666;">`;
+                html += `<div>返回码: ${result.return_code || 0}</div>`;
+                if (output) {
+                    const preview = output.substring(0, 150);
+                    html += `<div style="margin-top: 6px;">输出:</div>`;
+                    html += `<div style="background: #2c2c2c; color: #e0e0e0; padding: 6px; border-radius: 2px; font-size: 10px; white-space: pre-wrap; max-height: 80px; overflow-y: auto;">${escapeHtml(preview)}${output.length > 150 ? '\n...' : ''}</div>`;
+                }
+                html += `</div>`;
+            }
+            // 默认 - 完整JSON
+            else {
+                html += `<div style="color: #666; white-space: pre-wrap;">${JSON.stringify(result, null, 2)}</div>`;
+            }
+            
+            return html;
         }
 
         function zoomIn() { currentZoom = Math.min(currentZoom + 5, 200); applyZoom(); }
