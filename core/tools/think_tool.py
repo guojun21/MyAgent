@@ -1,63 +1,110 @@
 """
-Think工具 - AI的思考总结
-用于在关键节点对前面的工具执行结果做小总结
+Think工具 - AI主观分析（Phase-Task架构升级版）
 """
 from typing import Dict, Any
 
 
 class ThinkTool:
-    """AI思考总结工具"""
+    """Think工具：主观分析和决策（支持Phase-Task架构）"""
     
     @staticmethod
     def get_definition() -> Dict[str, Any]:
-        """返回工具定义（给LLM看）"""
+        """获取工具定义"""
         return {
             "type": "function",
             "function": {
                 "name": "think",
-                "description": """在关键节点做思考总结。
+                "description": """AI主观分析工具（Think - Phase-Task架构）
 
-使用场景：
-1. 完成一个阶段性任务后，总结执行情况
-2. 发现重要问题时，总结问题原因
-3. 准备开始下一步操作前，总结当前状态
-4. 给用户建议时，总结分析结果
+你的角色：主观分析师
 
-总结格式建议：
-- 明白了！[问题是什么]
-- 找到了！[发现了什么]
-- 分析完成！[总结结果]
-- 准备好了！[下一步计划]
+在Judge客观评判后，使用此工具进行主观分析和决策。
 
-注意：这是给用户看的思考过程，要简洁清晰！""",
+输入：Judge的评判结果（如果有）
+输出：
+1. internal_analysis: 内部分析（系统用，可详细）
+2. user_summary: 用户可见总结（简洁明了）
+3. phase_completed: 判断Phase是否完成
+4. continue_phase: 是否继续当前Phase
+5. next_round_strategy: 下一轮策略（如果continue_phase=true）
+
+判断Phase完成的标准：
+- 所有Task都成功完成
+- Phase目标已达成
+- 无需继续执行
+
+判断继续Phase的情况：
+- 有Task失败需要重试
+- Phase目标未完全达成
+- 需要补充执行更多Task
+
+示例：
+{
+    "internal_analysis": "本轮执行了3个Tasks，2个成功1个失败。失败原因是路径错误...",
+    "user_summary": "📊 进度：2/3完成\\n✅ Task 1: 读取成功\\n✅ Task 2: 搜索成功\\n❌ Task 3: 失败（将在下轮修正）",
+    "phase_completed": false,
+    "continue_phase": true,
+    "next_round_strategy": "重试Task 3，使用修正后的路径参数"
+}
+
+兼容模式：
+如果没有Judge（简单场景），可以只填写summary（50-200字）
+""",
                 "parameters": {
                     "type": "object",
                     "properties": {
+                        "internal_analysis": {
+                            "type": "string",
+                            "description": "内部分析（详细，系统使用）"
+                        },
+                        "user_summary": {
+                            "type": "string",
+                            "description": "用户可见总结（100-500字，清晰易懂）"
+                        },
+                        "phase_completed": {
+                            "type": "boolean",
+                            "description": "Phase是否完成"
+                        },
+                        "continue_phase": {
+                            "type": "boolean",
+                            "description": "是否继续当前Phase"
+                        },
+                        "next_round_strategy": {
+                            "type": "string",
+                            "description": "下一轮执行策略（如果continue_phase=true）"
+                        },
                         "summary": {
                             "type": "string",
-                            "description": "思考总结内容（50-200字，简洁明了）"
+                            "description": "简单总结（兼容旧版，50-200字）"
                         }
                     },
-                    "required": ["summary"]
+                    "required": []  # 灵活参数
                 }
             }
         }
     
     @staticmethod
-    def execute(summary: str) -> Dict[str, Any]:
-        """
-        执行思考总结
+    def execute(
+        internal_analysis: str = "",
+        user_summary: str = "",
+        phase_completed: bool = True,
+        continue_phase: bool = False,
+        next_round_strategy: str = "",
+        summary: str = "",
+        **kwargs
+    ) -> Dict[str, Any]:
+        """执行Think分析"""
+        # 兼容旧格式
+        if summary and not user_summary:
+            user_summary = summary
         
-        Args:
-            summary: 总结内容
-            
-        Returns:
-            执行结果
-        """
-        # think工具只是做总结，不执行实际操作
         return {
             "success": True,
-            "summary": summary,
-            "message": "思考总结完成"
+            "internal_analysis": internal_analysis,
+            "user_summary": user_summary or summary,
+            "phase_completed": phase_completed,
+            "continue_phase": continue_phase,
+            "next_round_strategy": next_round_strategy,
+            "summary": user_summary or summary,  # 兼容
+            "message": "Think分析完成"
         }
-

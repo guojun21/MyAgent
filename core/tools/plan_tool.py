@@ -1,85 +1,134 @@
 """
-Plan工具 - AI的规划工具（Planner-Executor模式）
-用于让AI先规划需要调用哪些工具，再由Agent执行
+Plan工具 - AI规划Task列表（Phase-Task架构升级版）
 """
 from typing import Dict, Any
 
 
 class PlanTool:
-    """AI规划工具 - 返回工具调用计划"""
+    """Plan工具：让AI规划Task列表（支持Phase-Task架构）"""
     
     @staticmethod
     def get_definition() -> Dict[str, Any]:
-        """返回工具定义（给LLM看）"""
+        """获取工具定义"""
         return {
             "type": "function",
             "function": {
                 "name": "plan_tool_call",
-                "description": """规划需要调用的工具（最多2个）。
+                "description": """规划Task列表（Phase-Task架构）
 
-这是一个规划工具，你需要分析任务，决定调用哪些工具来完成任务。
+你现在处于"规划阶段"（Plan Phase）。
 
-重要规则：
-1. 每次最多规划2个工具（如需更多，分多轮执行）
-2. 优先使用read_file/list_files等只读工具分析问题
-3. 确认问题后再使用edit_file/run_terminal等修改工具
-4. 如果只需要回答问题（不需要工具），返回空数组
+你的任务：
+1. 分析用户请求或Phase目标
+2. 规划1-8个具体的Tasks
+3. 每个Task包含：标题、描述、工具、参数、优先级、依赖关系
 
-常见场景：
-- 用户问"有啥建议" → 先read_file/list_files分析，再think总结
-- 用户说"执行修改" → 直接edit_file
-- 用户问"这是什么" → 只需文本回答，不需要工具
+Task设计原则：
+- 每个Task应该是原子化的（单一职责）
+- 标题简洁明了（10字以内）
+- 描述清晰说明Task目标
+- 优先级：1-10，数字越大越优先
+- 依赖：如果Task B依赖Task A，则在dependencies中填写Task A的id
 
-输出格式示例：
+示例：
 {
-  "tools": [
-    {"tool": "list_files", "arguments": {"directory": "."}},
-    {"tool": "think", "arguments": {"summary": "分析完成！发现3个可优化点"}}
-  ]
-}""",
+    "tasks": [
+        {
+            "id": 1,
+            "title": "读取配置文件",
+            "description": "读取config.py，理解现有配置结构",
+            "tool": "file_operations",
+            "arguments": {"operation": "read", "path": "config.py"},
+            "priority": 10,
+            "dependencies": [],
+            "estimated_tokens": 2000
+        },
+        {
+            "id": 2,
+            "title": "修改端口配置",
+            "description": "将端口号从8000改为8080",
+            "tool": "file_operations",
+            "arguments": {"operation": "edit", "path": "config.py", "edits": [...]},
+            "priority": 9,
+            "dependencies": [1],
+            "estimated_tokens": 1500
+        }
+    ],
+    "plan_reasoning": "先读取配置文件理解结构，再进行修改"
+}
+
+注意：
+- 现在只规划，不执行
+- 最多规划8个Tasks
+- 合理分配priority
+- 明确dependencies关系
+""",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "tools": {
+                        "tasks": {
                             "type": "array",
-                            "description": "要调用的工具列表（最多2个）",
+                            "description": "规划的Task列表",
                             "items": {
                                 "type": "object",
                                 "properties": {
+                                    "id": {
+                                        "type": "integer",
+                                        "description": "Task ID（从1开始）"
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "description": "Task标题（简洁，10字以内）"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Task详细描述"
+                                    },
                                     "tool": {
                                         "type": "string",
-                                        "description": "工具名称（如read_file、edit_file、think等）"
+                                        "description": "工具名称"
                                     },
                                     "arguments": {
                                         "type": "object",
-                                        "description": "工具参数（JSON对象）"
+                                        "description": "工具参数"
+                                    },
+                                    "priority": {
+                                        "type": "integer",
+                                        "description": "优先级（1-10）"
+                                    },
+                                    "dependencies": {
+                                        "type": "array",
+                                        "items": {"type": "integer"},
+                                        "description": "依赖的Task ID列表"
+                                    },
+                                    "estimated_tokens": {
+                                        "type": "integer",
+                                        "description": "预估Token消耗"
                                     }
                                 },
-                                "required": ["tool", "arguments"]
-                            },
-                            "maxItems": 2
+                                "required": ["id", "title", "description", "tool", "arguments", "priority"]
+                            }
+                        },
+                        "plan_reasoning": {
+                            "type": "string",
+                            "description": "规划思路说明"
                         }
                     },
-                    "required": ["tools"]
+                    "required": ["tasks", "plan_reasoning"]
                 }
             }
         }
     
     @staticmethod
-    def execute(tools: list) -> Dict[str, Any]:
-        """
-        执行规划（实际上只是返回计划，由Agent执行）
+    def execute(tasks: list = None, plan_reasoning: str = "", **kwargs) -> Dict[str, Any]:
+        """执行Plan（返回Task列表）"""
+        # 兼容旧格式
+        if tasks is None:
+            tasks = kwargs.get("tools", [])
         
-        Args:
-            tools: 工具列表
-            
-        Returns:
-            执行结果（包含计划）
-        """
-        # plan_tool只是返回计划，不执行实际操作
         return {
             "success": True,
-            "plan": tools,
-            "message": f"已规划 {len(tools)} 个工具"
+            "tasks": tasks,
+            "reasoning": plan_reasoning,
+            "message": f"已规划 {len(tasks)} 个Tasks"
         }
-
