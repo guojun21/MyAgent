@@ -249,14 +249,38 @@ class Agent:
         print(f"    [_execute_tool_call] 准备执行工具: {function_name}")
         
         try:
-            # 解析参数
-            arguments = json.loads(tool_call["function"]["arguments"])
-            print(f"    [_execute_tool_call] 解析参数成功: {arguments}")
-        except json.JSONDecodeError as e:
-            print(f"    [_execute_tool_call] 参数解析失败: {e}")
+            # 解析参数（尝试多种方式）
+            args_str = tool_call["function"]["arguments"]
+            print(f"    [_execute_tool_call] 参数字符串长度: {len(args_str)}")
+            
+            try:
+                # 方法1: 标准JSON解析
+                arguments = json.loads(args_str)
+            except json.JSONDecodeError as e1:
+                print(f"    [_execute_tool_call] 标准解析失败: {e1}")
+                
+                try:
+                    # 方法2: 使用ast.literal_eval（更宽松）
+                    import ast
+                    # 先尝试修复常见问题
+                    fixed_str = args_str.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+                    arguments = json.loads(fixed_str)
+                    print(f"    [_execute_tool_call] 修复后解析成功")
+                except Exception as e2:
+                    print(f"    [_execute_tool_call] 修复后解析仍失败: {e2}")
+                    
+                    # 方法3: 降级 - 返回错误让LLM重新生成
+                    return {
+                        "success": False,
+                        "error": f"参数格式错误，请简化参数内容。错误: {str(e1)}"
+                    }
+            
+            print(f"    [_execute_tool_call] ✅ 参数解析成功，keys: {list(arguments.keys())}")
+        except Exception as e:
+            print(f"    [_execute_tool_call] 严重错误: {e}")
             return {
                 "success": False,
-                "error": "工具参数解析失败"
+                "error": f"参数处理失败: {str(e)}"
             }
         
         # 执行工具

@@ -42,12 +42,18 @@ class EditFileTool:
                         },
                         "edits": {
                             "type": "array",
-                            "description": "编辑列表，每项包含old和new字段",
+                            "description": "编辑列表，每项包含old和new字段。注意：old和new中的换行符用\\n表示，不要用真实换行！",
                             "items": {
                                 "type": "object",
                                 "properties": {
-                                    "old": {"type": "string", "description": "要替换的旧内容"},
-                                    "new": {"type": "string", "description": "新内容"}
+                                    "old": {
+                                        "type": "string",
+                                        "description": "要替换的旧内容（换行用\\n，制表符用\\t，引号用\\\"）"
+                                    },
+                                    "new": {
+                                        "type": "string",
+                                        "description": "新内容（换行用\\n，制表符用\\t，引号用\\\"）"
+                                    }
                                 },
                                 "required": ["old", "new"]
                             }
