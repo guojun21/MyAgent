@@ -132,18 +132,27 @@ class Agent:
                 for idx, tool_call in enumerate(llm_response["tool_calls"], 1):
                     print(f"\n[Agent.run] 执行工具 {idx}/{len(llm_response['tool_calls'])}")
                     print(f"  - 工具名: {tool_call['function']['name']}")
-                    print(f"  - 参数: {tool_call['function']['arguments']}")
+                    print(f"  - 参数: {tool_call['function']['arguments'][:200]}...")
                     
                     tool_result = await self._execute_tool_call(tool_call)
                     
                     print(f"  - 执行结果: {tool_result.get('success', False)}")
                     if not tool_result.get('success'):
-                        print(f"  - 错误信息: {tool_result.get('error', 'Unknown')}")
+                        print(f"  - 错误信息: {tool_result.get('error', 'Unknown')[:200]}")
+                        
+                        # 如果是格式错误，LLM会在下一轮看到错误并修正
+                        print(f"  - 错误已记录到tool result，LLM将在下一轮修正")
                     
-                    # 记录工具执行历史
+                    # 记录工具执行历史（处理参数解析失败的情况）
+                    try:
+                        parsed_args = json.loads(tool_call["function"]["arguments"])
+                    except:
+                        # 如果参数解析失败，记录原始字符串
+                        parsed_args = {"raw": tool_call["function"]["arguments"][:500]}
+                    
                     tool_calls_history.append({
                         "tool": tool_call["function"]["name"],
-                        "arguments": json.loads(tool_call["function"]["arguments"]),
+                        "arguments": parsed_args,
                         "result": tool_result
                     })
                     
@@ -288,10 +297,26 @@ class Agent:
                     except Exception as e3:
                         print(f"    [_execute_tool_call] 所有方法都失败: {e3}")
                         
-                        # 返回错误让LLM重新生成
+                        # 返回详细错误给LLM，让它自己修正
+                        error_msg = f"""参数格式错误，请重新生成。
+
+错误详情：
+{str(e1)}
+
+你的参数（前200字符）：
+{args_str[:200]}
+
+请注意：
+1. 使用双引号 " 而不是单引号 '
+2. 键名必须用双引号包裹
+3. 字符串值也用双引号
+4. 确保JSON格式完整
+
+请立即重新调用工具，使用正确的JSON格式。"""
+                        
                         return {
                             "success": False,
-                            "error": f"参数格式错误。请使用标准JSON格式（双引号）。错误: {str(e1)}"
+                            "error": error_msg
                         }
             
             print(f"    [_execute_tool_call] ✅ 参数解析成功，keys: {list(arguments.keys())}")
