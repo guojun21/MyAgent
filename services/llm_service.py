@@ -33,9 +33,20 @@ class LLMService:
 4. 分析项目结构
 5. 理解和修改代码
 
+工作模式（重要）：
+1. 【建议模式】当用户问"建议"、"意见"、"看法"、"怎么改"、"有啥问题"时：
+   - 只使用read_file、grep、list_files等工具分析代码
+   - 给出文字建议和改进方案
+   - 绝不调用edit_file、run_command等修改性工具
+   - 等待用户明确说"执行"、"修改"、"实现"后才真正修改
+
+2. 【执行模式】当用户明确说"执行"、"修改"、"实现"、"帮我改"时：
+   - 直接调用edit_file等工具完成任务
+   - 不需要再次确认，立即执行
+
 工作原则：
 1. 理解用户的真实意图，不要过度解读
-2. 在执行操作前，先分析需要做什么
+2. 区分"咨询建议"和"执行修改"两种模式
 3. 合理使用工具，一步步完成任务
 4. 修改代码时，确保保持代码风格一致
 5. 遇到不确定的情况，向用户确认
@@ -47,7 +58,7 @@ class LLMService:
 
 关键规则：
 1. 必须使用工具，不要只描述！
-2. 用户请求 = 立即调用工具
+2. 用户请求 = 调用工具（但区分建议模式和执行模式）
 3. edit_file支持批量，一次可改多处！
 4. 不要返回长文本，直接调用工具！
 
@@ -209,7 +220,7 @@ class DeepSeekService(LLMService):
         print(f"    [DeepSeek.chat] 模型: {self.model}")
         print(f"    [DeepSeek.chat] 消息数: {len(messages)}")
         print(f"    [DeepSeek.chat] 工具数: {len(tools) if tools else 0}")
-        print(f"    [DeepSeek.chat] 温度: 0.7")
+        print(f"    [DeepSeek.chat] 温度: 0.0")
         
         try:
             # ======== 第一步：准备API请求参数 ========
@@ -223,8 +234,8 @@ class DeepSeekService(LLMService):
             # 如果有工具，强制要求使用工具
             if tools:
                 kwargs["tools"] = tools
-                kwargs["tool_choice"] = "required"  # 强制使用工具！
-                print(f"    [DeepSeek.chat] ⚠️ 强制工具调用模式：required")
+                kwargs["tool_choice"] = "auto"  # 强制使用工具！
+                print(f"    [DeepSeek.chat] ⚠️ 自动工具调用模式：auto")
             
             # ======== 第三步：发送请求到DeepSeek API ========
             print(f"    [DeepSeek.chat] 发送API请求...")

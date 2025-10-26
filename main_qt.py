@@ -81,6 +81,23 @@ class AgentBridge(QObject):
         self.compression_attempts = 0
         self.max_compression_attempts = 3
         
+        # 生成前端日志文件名（整个session共用一个）
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        frontend_dir = Path("llmlogs") / "frontend"
+        frontend_dir.mkdir(parents=True, exist_ok=True)
+        self.frontend_log_file = frontend_dir / f"frontend_log_{timestamp}.txt"
+        
+        # 写入日志头部
+        with open(self.frontend_log_file, 'w', encoding='utf-8') as f:
+            f.write("="*80 + "\n")
+            f.write("前端Console日志\n")
+            f.write(f"启动时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"日志文件: {self.frontend_log_file}\n")
+            f.write("="*80 + "\n\n")
+        
+        print(f"[AgentBridge] 前端日志文件: {self.frontend_log_file}")
+        
         # 初始化工作空间（智能判断）
         self._init_workspaces()
         
@@ -89,7 +106,7 @@ class AgentBridge(QObject):
         
         # 延迟发送初始数据（等前端准备好）
         from PyQt6.QtCore import QTimer
-        QTimer.singleShot(500, self._emit_initial_data)
+        QTimer.singleShot(1000, self._emit_initial_data)  # 改为1秒，确保前端准备好
     
     def _emit_initial_data(self):
         """延迟发送初始数据（确保前端已准备好）"""
@@ -482,10 +499,8 @@ class AgentBridge(QObject):
     
     @pyqtSlot(str)
     def saveFrontendLogs(self, logs_json):
-        """保存前端日志到文件"""
+        """保存前端日志到同一个文件（追加模式）"""
         try:
-            from datetime import datetime
-            from pathlib import Path
             import json
             
             logs = json.loads(logs_json)
@@ -493,23 +508,8 @@ class AgentBridge(QObject):
             if len(logs) == 0:
                 return
             
-            # 生成前端日志文件名
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            log_file = Path("llmlogs") / f"frontend_log_{timestamp}.txt"
-            
-            # 确保目录存在
-            log_file.parent.mkdir(exist_ok=True)
-            
-            # 写入日志
-            with open(log_file, 'a', encoding='utf-8') as f:
-                if log_file.stat().st_size == 0:
-                    # 新文件，写入头部
-                    f.write("="*80 + "\n")
-                    f.write("前端Console日志\n")
-                    f.write(f"启动时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                    f.write("="*80 + "\n\n")
-                
-                # 写入日志条目
+            # 追加到已有文件
+            with open(self.frontend_log_file, 'a', encoding='utf-8') as f:
                 for log in logs:
                     level = log.get('level', 'log').upper()
                     timestamp = log.get('timestamp', '')
@@ -517,7 +517,7 @@ class AgentBridge(QObject):
                     
                     f.write(f"[{timestamp}] [{level}] {message}\n")
             
-            print(f"[saveFrontendLogs] 已保存{len(logs)}条前端日志到: {log_file}")
+            print(f"[saveFrontendLogs] 追加{len(logs)}条日志到: {self.frontend_log_file}")
             
         except Exception as e:
             print(f"[saveFrontendLogs] 保存失败: {e}")
@@ -848,8 +848,15 @@ class AgentBridge(QObject):
             "conversation_id": conversation.id
         }
         
+        print(f"[_emit_context_update] 发送contextUpdated信号")
+        print(f"  - Context消息数: {len(context_messages)}")
+        print(f"  - MessageHistory消息数: {len(current_conversation_history)}")
+        
         self.contextUpdated.emit(json.dumps(context_update, ensure_ascii=False))
+        print(f"[_emit_context_update] contextUpdated信号已发送")
+        
         self.messageHistoryUpdated.emit(json.dumps(history_update, ensure_ascii=False))
+        print(f"[_emit_context_update] messageHistoryUpdated信号已发送")
     
     def _send_to_frontend(self, data):
         """发送数据到前端"""
@@ -909,14 +916,9 @@ class MainWindow(QMainWindow):
             print(f"[MainWindow] HTML文件不存在: {html_path}")
             self.browser.setHtml(self._get_fallback_html())
         
-        # 默认启动时自动打开开发者工具
-        from PyQt6.QtCore import QTimer
-        QTimer.singleShot(800, self.auto_open_dev_tools)
-    
-    def auto_open_dev_tools(self):
-        """自动打开开发者工具"""
-        print("[MainWindow] 自动打开开发者工具...")
-        self.toggle_dev_tools()
+        # 不再默认打开开发者工具（避免崩溃）
+        # 用户可按F12手动打开
+        print("[MainWindow] 💡 提示：按F12可打开开发者工具Console")
     
     def toggle_dev_tools(self):
         """切换开发者工具显示"""
@@ -983,7 +985,8 @@ def main():
     app.setApplicationName("AI编程助手")
     
     print(f"\n数据目录: {persistence_manager.data_dir.resolve()}")
-    print(f"前端日志目录: llmlogs/frontend_log_*.txt")
+    print(f"后端日志目录: llmlogs/backend/")
+    print(f"前端日志目录: llmlogs/frontend/")
     
     window = MainWindow()
     window.show()

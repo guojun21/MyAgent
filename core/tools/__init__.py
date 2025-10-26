@@ -10,6 +10,7 @@ from .get_project_structure_tool import GetProjectStructureTool
 from .run_terminal_tool import RunTerminalTool
 from .analyze_imports_tool import AnalyzeImportsTool
 from .query_history_tool import QueryHistoryTool
+from .think_tool import ThinkTool
 
 __all__ = [
     'ReadFileTool',
@@ -20,6 +21,7 @@ __all__ = [
     'GetProjectStructureTool',
     'RunTerminalTool',
     'AnalyzeImportsTool',
-    'QueryHistoryTool'
+    'QueryHistoryTool',
+    'ThinkTool'
 ]
 

@@ -16,13 +16,15 @@ class Logger:
     
     def _init_log_file(self):
         """初始化日志文件"""
-        # 创建日志目录
+        # 创建日志目录结构
         self.log_dir.mkdir(exist_ok=True)
+        backend_dir = self.log_dir / "backend"
+        backend_dir.mkdir(exist_ok=True)
         
         # 生成带时间戳的文件名
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_filename = f"agent_log_{timestamp}.txt"
-        log_path = self.log_dir / log_filename
+        log_path = backend_dir / log_filename  # 保存到backend文件夹
         
         # 打开日志文件
         self.log_file = open(log_path, 'w', encoding='utf-8')
