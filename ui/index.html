@@ -254,6 +254,64 @@
     </div>
 
     <script>
+        // ========== 前端日志系统 ==========
+        let frontendLogs = [];
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn,
+            info: console.info
+        };
+        
+        // 重写console方法，同时记录到数组
+        console.log = function(...args) {
+            originalConsole.log.apply(console, args);
+            frontendLogs.push({
+                level: 'log',
+                message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '),
+                timestamp: new Date().toISOString()
+            });
+        };
+        
+        console.error = function(...args) {
+            originalConsole.error.apply(console, args);
+            frontendLogs.push({
+                level: 'error',
+                message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '),
+                timestamp: new Date().toISOString()
+            });
+        };
+        
+        console.warn = function(...args) {
+            originalConsole.warn.apply(console, args);
+            frontendLogs.push({
+                level: 'warn',
+                message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '),
+                timestamp: new Date().toISOString()
+            });
+        };
+        
+        // 定期保存前端日志到后端
+        function saveFrontendLogsNow() {
+            if (frontendLogs.length > 0 && bridge && typeof bridge.saveFrontendLogs === 'function') {
+                try {
+                    bridge.saveFrontendLogs(JSON.stringify(frontendLogs));
+                    originalConsole.log(`已保存${frontendLogs.length}条前端日志`);
+                    frontendLogs = [];
+                } catch (e) {
+                    originalConsole.error('保存前端日志失败:', e);
+                }
+            }
+        }
+        
+        setInterval(saveFrontendLogsNow, 5000);  // 每5秒自动保存
+        
+        // 页面关闭前保存
+        window.addEventListener('beforeunload', () => {
+            saveFrontendLogsNow();
+        });
+        
+        // ========== 应用变量 ==========
         let bridge = null;
         let isProcessing = false;
         let currentZoom = 100;
@@ -261,9 +319,15 @@
         let conversations = [];
         let currentWorkspaceId = null;
         let currentConversationId = null;
-        let isQtMode = false;  // Qt模式 or Web模式
+        let isQtMode = false;
         let enableStreaming = true;  // 是否启用流式渲染（加载历史时禁用）
 
+        // 初始化时记录
+        console.log('================================================================================');
+        console.log('AI编程助手 - 前端初始化');
+        console.log(`启动时间: ${new Date().toLocaleString()}`);
+        console.log('================================================================================');
+        
         // 检测环境并初始化
         if (typeof qt !== 'undefined' && qt.webChannelTransport) {
             // Qt环境 - 使用WebChannel

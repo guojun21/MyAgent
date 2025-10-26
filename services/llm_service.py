@@ -317,19 +317,13 @@ class DeepSeekService(LLMService):
             print(f"    [DeepSeek.chat] 异常类型: {type(e).__name__}")
             print(f"    [DeepSeek.chat] 异常消息: {error_msg[:500]}")
             
-            # 严格检测Context超长错误（必须包含明确的错误标识）
-            is_context_error = (
-                "maximum context length" in error_msg and 
-                "131072" in error_msg and
-                "requested" in error_msg
-            )
-            
-            if is_context_error:
-                print(f"    [DeepSeek.chat] ✅ 确认是Context超长错误，触发压缩")
+            # 检测Context超长错误（只判断关键词）
+            if "maximum context length" in error_msg:
+                print(f"    [DeepSeek.chat] ✅ 检测到Context超长，触发压缩")
                 raise  # 抛出异常，由Agent.run处理
             else:
                 # 其他错误：网络、超时、限流等，正常返回
-                print(f"    [DeepSeek.chat] ⚠️ 其他类型错误，不触发压缩")
+                print(f"    [DeepSeek.chat] ⚠️ 其他错误（非Context超长），不触发压缩")
                 return {
                     "role": "assistant",
                     "content": f"API调用失败: {error_msg}",
