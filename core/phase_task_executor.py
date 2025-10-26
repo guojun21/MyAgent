@@ -316,12 +316,19 @@ class PhaseTaskExecutor:
             # 更新Task质量分
             if "task_evaluation" in judge_result:
                 for eval_item in judge_result.get("task_evaluation", []):
-                    task_id = eval_item["task_id"]
+                    # 兼容两种字段名：task_id 或 id
+                    task_id = eval_item.get("task_id") or eval_item.get("id")
+                    if not task_id:
+                        print(f"[PhaseTaskExecutor] ⚠️ eval_item缺少task_id字段: {eval_item.keys()}")
+                        continue
+                    
                     task = next((t for t in tasks if t.id == task_id), None)
                     if task:
-                        task.quality_score = eval_item["quality_score"]
-                        task.output_valid = eval_item["output_valid"]
+                        task.quality_score = eval_item.get("quality_score", 0)
+                        task.output_valid = eval_item.get("output_valid", False)
                         task.judge_notes = eval_item.get("notes", "")
+                    else:
+                        print(f"[PhaseTaskExecutor] ⚠️ 未找到Task {task_id}")
             
             # 🔥 只有LLM正确调用judge，才添加到messages
             messages.append({

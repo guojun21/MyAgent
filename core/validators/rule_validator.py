@@ -17,6 +17,7 @@ class RuleValidator:
         
         检查：
         1. Phase数量不超过MAX_PHASES
+        2. 🔥 复杂度和Phase数量是否匹配（严格规则）
         
         Returns:
             {
@@ -26,26 +27,55 @@ class RuleValidator:
             }
         """
         phases = phase_plan.get("phases", [])
+        complexity_analysis = phase_plan.get("complexity_analysis", {})
         
-        # 验证Phase数量
+        # 验证1: Phase数量不超过上限
         phase_count_result = PhaseRules.validate_phase_count(phases)
         
         if not phase_count_result["valid"]:
-            print(f"[RuleValidator] ❌ Phase规划验证失败")
+            print(f"[RuleValidator] ❌ Phase数量验证失败")
             print(f"  错误: {phase_count_result['error']}")
             return {
                 "valid": False,
                 "error": phase_count_result["error"],
-                "details": phase_count_result
+                "details": {
+                    "phase_count": phase_count_result
+                }
+            }
+        
+        # 验证2: 🔥 复杂度-Phase数量匹配（严格规则）
+        complexity_mapping_result = PhaseRules.validate_complexity_phase_mapping(
+            complexity_analysis, 
+            phases
+        )
+        
+        if not complexity_mapping_result["valid"]:
+            print(f"[RuleValidator] ❌ 复杂度-Phase匹配验证失败")
+            print(f"  复杂度: {complexity_mapping_result.get('category', 'unknown')} (分数: {complexity_mapping_result.get('score', 0)})")
+            print(f"  期望Phase数: {complexity_mapping_result.get('expected_phases', 0)}")
+            print(f"  实际Phase数: {complexity_mapping_result.get('actual_phases', 0)}")
+            print(f"  错误: {complexity_mapping_result['error']}")
+            return {
+                "valid": False,
+                "error": complexity_mapping_result["error"],
+                "details": {
+                    "phase_count": phase_count_result,
+                    "complexity_mapping": complexity_mapping_result
+                }
             }
         
         print(f"[RuleValidator] ✅ Phase规划验证通过")
         print(f"  Phase数量: {phase_count_result['phases_count']}/{phase_count_result['max_allowed']}")
+        print(f"  复杂度: {complexity_mapping_result['category']} (分数: {complexity_mapping_result['score']})")
+        print(f"  Phase数匹配: {complexity_mapping_result['actual_phases']} = {complexity_mapping_result['expected_phases']} ✅")
         
         return {
             "valid": True,
             "error": "",
-            "details": phase_count_result
+            "details": {
+                "phase_count": phase_count_result,
+                "complexity_mapping": complexity_mapping_result
+            }
         }
     
     @staticmethod
