@@ -7,18 +7,14 @@ from services.code_service import CodeService
 from services.terminal_service import TerminalService
 from utils.logger import safe_print as print
 
-# 导入所有工具
+# 导入所有工具（精简版）
 from core.tools import (
-    ReadFileTool,
-    WriteFileTool,
-    EditFileTool,
-    ListFilesTool,
+    FileOperationsTool,
     SearchCodeTool,
-    GetProjectStructureTool,
     RunTerminalTool,
-    AnalyzeImportsTool,
-    QueryHistoryTool,
-    ThinkTool
+    PlanTool,
+    ThinkTool,
+    SummarizerTool
 )
 
 
@@ -40,47 +36,40 @@ class ToolManager:
         self._register_tools()
     
     def _register_tools(self):
-        """注册所有工具"""
-        # 文件操作工具
-        self.tools['read_file'] = lambda **kwargs: ReadFileTool.execute(self.file_service, **kwargs)
-        self.tools['write_file'] = lambda **kwargs: WriteFileTool.execute(self.file_service, **kwargs)
-        self.tools['edit_file'] = lambda **kwargs: EditFileTool.execute(self.file_service, **kwargs)  # 批量版
-        self.tools['list_files'] = lambda **kwargs: ListFilesTool.execute(self.file_service, **kwargs)
+        """注册所有工具（精简版 - 6个核心工具）"""
+        # 1. 文件操作工具（合并版）
+        file_ops_tool = FileOperationsTool(self.file_service)
+        self.tools['file_operations'] = lambda **kwargs: file_ops_tool.execute(**kwargs)
         
-        # 代码搜索工具
+        # 2. 代码搜索工具
         self.tools['search_code'] = lambda **kwargs: SearchCodeTool.execute(self.code_service, **kwargs)
-        self.tools['get_project_structure'] = lambda **kwargs: GetProjectStructureTool.execute(self.code_service, **kwargs)
-        self.tools['analyze_file_imports'] = lambda **kwargs: AnalyzeImportsTool.execute(self.code_service, **kwargs)
         
-        # 终端工具
+        # 3. 终端工具
         self.tools['run_terminal'] = lambda **kwargs: RunTerminalTool.execute(self.terminal_service, **kwargs)
         
-        # 历史查询工具（需要workspace_manager）
-        if self.workspace_manager:
-            self.tools['query_history'] = lambda **kwargs: QueryHistoryTool.execute(self.workspace_manager, **kwargs)
+        # 4. Plan工具（AI规划工具 - Planner-Executor模式）
+        self.tools['plan_tool_call'] = lambda **kwargs: PlanTool.execute(**kwargs)
         
-        # Think工具（AI思考总结）
+        # 5. Think工具（AI思考总结）
         self.tools['think'] = lambda **kwargs: ThinkTool.execute(**kwargs)
+        
+        # 6. Task Done工具（任务完成声明）
+        summarizer_tool = SummarizerTool()
+        self.tools['task_done'] = lambda **kwargs: summarizer_tool.execute(**kwargs)
     
     def get_tool_definitions(self) -> List[Dict[str, Any]]:
-        """获取所有工具的Function Calling定义"""
+        """获取所有工具的Function Calling定义（精简版 - 6个核心工具）"""
+        file_ops_tool = FileOperationsTool(self.file_service)
+        summarizer_tool = SummarizerTool()
+        
         definitions = [
-            ReadFileTool.get_definition(),
-            WriteFileTool.get_definition(),
-            EditFileTool.get_definition(),
-            ListFilesTool.get_definition(),
-            SearchCodeTool.get_definition(),
-            GetProjectStructureTool.get_definition(),
-            RunTerminalTool.get_definition(),
-            AnalyzeImportsTool.get_definition()
+            file_ops_tool.get_definition(),      # 1. 文件操作（合并版）
+            SearchCodeTool.get_definition(),     # 2. 代码搜索
+            RunTerminalTool.get_definition(),    # 3. 终端执行
+            PlanTool.get_definition(),           # 4. 规划工具
+            ThinkTool.get_definition(),          # 5. 思考工具
+            summarizer_tool.get_definition()     # 6. 任务完成
         ]
-        
-        # 如果有workspace_manager，添加历史查询工具
-        if self.workspace_manager:
-            definitions.append(QueryHistoryTool.get_definition())
-        
-        # Think工具（AI思考总结）
-        definitions.append(ThinkTool.get_definition())
         
         return definitions
     
