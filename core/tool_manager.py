@@ -17,7 +17,8 @@ from core.tools import (
     GetProjectStructureTool,
     RunTerminalTool,
     AnalyzeImportsTool,
-    QueryHistoryTool
+    QueryHistoryTool,
+    ThinkTool
 )
 
 
@@ -57,6 +58,9 @@ class ToolManager:
         # 历史查询工具（需要workspace_manager）
         if self.workspace_manager:
             self.tools['query_history'] = lambda **kwargs: QueryHistoryTool.execute(self.workspace_manager, **kwargs)
+        
+        # Think工具（AI思考总结）
+        self.tools['think'] = lambda **kwargs: ThinkTool.execute(**kwargs)
     
     def get_tool_definitions(self) -> List[Dict[str, Any]]:
         """获取所有工具的Function Calling定义"""
@@ -74,6 +78,9 @@ class ToolManager:
         # 如果有workspace_manager，添加历史查询工具
         if self.workspace_manager:
             definitions.append(QueryHistoryTool.get_definition())
+        
+        # Think工具（AI思考总结）
+        definitions.append(ThinkTool.get_definition())
         
         return definitions
     

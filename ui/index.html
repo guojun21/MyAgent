@@ -135,6 +135,142 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
+        /* 查看参数按钮 */
+        .btn-view-params {
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: #2c2c2c;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .btn-view-params:hover {
+            background: #1a1a1a;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn-view-params:active {
+            transform: translateY(0);
+        }
+        
+        /* 参数弹窗专用样式 */
+        .params-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            animation: fadeIn 0.2s ease-in;
+        }
+        
+        .params-modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .params-modal-content {
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            width: 90%;
+            max-width: 1000px;
+            height: 85%;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        .params-modal-header {
+            padding: 20px 25px;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafafa;
+        }
+        
+        .params-modal-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #2c2c2c;
+        }
+        
+        .params-modal-body {
+            padding: 20px 25px;
+            overflow-y: auto;
+            flex: 1;
+            background: #f5f5f5;
+        }
+        
+        .params-section {
+            margin-bottom: 20px;
+            background: #fff;
+            border-radius: 4px;
+            padding: 15px;
+            border: 1px solid #ddd;
+        }
+        
+        .params-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .params-content {
+            font-size: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #fafafa;
+            padding: 12px;
+            border-radius: 3px;
+            border: 1px solid #e0e0e0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.5;
+            color: #2c2c2c;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .params-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .params-content::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+        
+        /* 入参区域滚动条样式（添加到通用样式中）*/
+        div[style*="max-height: 200px"]::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        div[style*="max-height: 200px"]::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+        
+        div[style*="max-height: 200px"]::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
     </style>
 </head>
 <body>
@@ -253,63 +389,48 @@
         </div>
     </div>
 
+    <!-- 参数查看弹窗 -->
+    <div class="params-modal" id="paramsModal" onclick="closeParamsModal(event)">
+        <div class="params-modal-content" onclick="event.stopPropagation()">
+            <div class="params-modal-header">
+                <div class="params-modal-title" id="paramsModalTitle">工具参数详情</div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="btn-copy" onclick="copyParams()">📋 复制全部</button>
+                    <button class="modal-close" onclick="closeParamsModal()">&times;</button>
+                </div>
+            </div>
+            <div class="params-modal-body">
+                <div class="params-section">
+                    <div class="params-section-title">📥 入参 (Arguments)</div>
+                    <div class="params-content" id="paramsInput"></div>
+                </div>
+                <div class="params-section">
+                    <div class="params-section-title">📤 出参 (Result)</div>
+                    <div class="params-content" id="paramsOutput"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // ========== 前端日志系统 ==========
+        // ========== 前端日志系统（简化版，避免崩溃）==========
         let frontendLogs = [];
-        const originalConsole = {
-            log: console.log,
-            error: console.error,
-            warn: console.warn,
-            info: console.info
-        };
+        let logSaveTimer = null;
         
-        // 重写console方法，同时记录到数组
-        console.log = function(...args) {
-            originalConsole.log.apply(console, args);
-            frontendLogs.push({
-                level: 'log',
-                message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '),
-                timestamp: new Date().toISOString()
-            });
-        };
-        
-        console.error = function(...args) {
-            originalConsole.error.apply(console, args);
-            frontendLogs.push({
-                level: 'error',
-                message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '),
-                timestamp: new Date().toISOString()
-            });
-        };
-        
-        console.warn = function(...args) {
-            originalConsole.warn.apply(console, args);
-            frontendLogs.push({
-                level: 'warn',
-                message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '),
-                timestamp: new Date().toISOString()
-            });
-        };
-        
-        // 定期保存前端日志到后端
-        function saveFrontendLogsNow() {
-            if (frontendLogs.length > 0 && bridge && typeof bridge.saveFrontendLogs === 'function') {
-                try {
-                    bridge.saveFrontendLogs(JSON.stringify(frontendLogs));
-                    originalConsole.log(`已保存${frontendLogs.length}条前端日志`);
-                    frontendLogs = [];
-                } catch (e) {
-                    originalConsole.error('保存前端日志失败:', e);
-                }
+        // 简单的日志收集（暂时禁用，避免崩溃）
+        function logToFile(level, ...args) {
+            // 只输出到console，不保存
+            try {
+                console[level](...args);
+            } catch (e) {
+                // 忽略
             }
         }
         
-        setInterval(saveFrontendLogsNow, 5000);  // 每5秒自动保存
-        
-        // 页面关闭前保存
-        window.addEventListener('beforeunload', () => {
-            saveFrontendLogsNow();
-        });
+        // 暂时禁用日志保存（避免崩溃）
+        function saveFrontendLogsNow() {
+            // 禁用
+        }
         
         // ========== 应用变量 ==========
         let bridge = null;
@@ -322,11 +443,12 @@
         let isQtMode = false;
         let enableStreaming = true;  // 是否启用流式渲染（加载历史时禁用）
 
-        // 初始化时记录
-        console.log('================================================================================');
-        console.log('AI编程助手 - 前端初始化');
-        console.log(`启动时间: ${new Date().toLocaleString()}`);
-        console.log('================================================================================');
+        // 初始化时记录（简化，避免崩溃）
+        try {
+            console.log('=== 前端启动 ===');
+        } catch (e) {
+            // 如果console出错，忽略
+        }
         
         // 检测环境并初始化
         if (typeof qt !== 'undefined' && qt.webChannelTransport) {
@@ -349,12 +471,20 @@
                 
                 bridge.contextUpdated.connect(data => {
                     console.log('🔔 收到contextUpdated信号');
-                    updateContext(JSON.parse(data));
+                    try {
+                        updateContext(JSON.parse(data));
+                    } catch (e) {
+                        console.error('❌ updateContext失败:', e);
+                    }
                 });
                 
                 bridge.messageHistoryUpdated.connect(data => {
                     console.log('🔔 收到messageHistoryUpdated信号');
-                    updateHistory(JSON.parse(data));
+                    try {
+                        updateHistory(JSON.parse(data));
+                    } catch (e) {
+                        console.error('❌ updateHistory失败:', e);
+                    }
                 });
                 
                 bridge.conversationsUpdated.connect(data => {
@@ -390,13 +520,21 @@
         function init() {
             console.log('🚀 初始化前端...');
             
-            isLoadingHistory = true;  // 初始化时也要加载历史
+            isLoadingHistory = true;  // 初始化时要加载历史
             
-            // 只加载一次，等信号触发
+            // 加载工作空间和对话
             loadWorkspaces();
             loadConversations();
             
-            // 不再延迟刷新（避免重复渲染）
+            // 1500ms后再标记历史已加载（后端1000ms + 500ms缓冲）
+            setTimeout(() => {
+                console.log('⏰ 1500ms延迟检查');
+                // 如果还没有渲染历史，手动触发一次
+                if (isLoadingHistory) {
+                    console.log('⚠️ 历史未渲染，强制设为false');
+                    isLoadingHistory = false;
+                }
+            }, 1500);
         }
         
         // RESTful API适配器（模拟Qt bridge接口）
@@ -997,34 +1135,47 @@
             
             // 创建工具卡片
             const toolCard = document.createElement('div');
-            toolCard.style.cssText = 'padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd; opacity: 0; transform: translateY(10px); transition: all 0.3s ease;';
             
-            // 工具名
-            toolCard.innerHTML = `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 13px; font-family: Consolas, monospace;">⚡ ${streamingToolCount}. ${toolData.tool}</div>`;
-            
-            // 入参
-            toolCard.innerHTML += `
-                <div style="margin-bottom: 6px;">
-                    <div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>
-                    <div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(toolData.arguments, null, 2)}</div>
-                </div>
-            `;
-            
-            // 出参
-            if (toolData.result) {
-                const success = toolData.result.success;
-                const statusColor = success ? '#4caf50' : '#f44336';
-                const statusText = success ? '✅ 成功' : '⚠️ 失败（AI将自动修正）';
+            // Think工具特殊渲染
+            if (toolData.tool === 'think') {
+                toolCard.style.cssText = 'padding: 12px 16px; margin: 8px 0; background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-radius: 8px; border-left: 4px solid #2196f3; opacity: 0; transform: translateY(10px); transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
                 
-                toolCard.innerHTML += `
-                    <div>
-                        <div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>
-                        <div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">
-                            <div style="color: ${statusColor}; font-weight: 600; margin-bottom: 4px;">${statusText}</div>
-                            <div style="color: #666; white-space: pre-wrap;">${JSON.stringify(toolData.result, null, 2)}</div>
+                const summary = toolData.result?.summary || toolData.arguments?.summary || '';
+                toolCard.innerHTML = `
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                        <div style="font-size: 20px; line-height: 1;">💭</div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 13px; color: #1976d2; font-weight: 600; margin-bottom: 6px;">AI 思考中...</div>
+                            <div style="font-size: 14px; color: #424242; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(summary)}</div>
                         </div>
                     </div>
                 `;
+            } else {
+                // 普通工具渲染
+                toolCard.style.cssText = 'padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd; opacity: 0; transform: translateY(10px); transition: all 0.3s ease;';
+                
+                // 工具名和状态
+                const success = toolData.result ? toolData.result.success : true;
+                const statusColor = success ? '#4caf50' : '#f44336';
+                const statusIcon = success ? '✅' : '⚠️';
+                
+                toolCard.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 600; color: #2c2c2c; font-size: 13px; font-family: Consolas, monospace;">⚡ ${streamingToolCount}. ${toolData.tool}</div>
+                        <div style="color: ${statusColor}; font-weight: 600; font-size: 12px;">${statusIcon} ${success ? '成功' : '失败'}</div>
+                    </div>
+                    <div style="margin-bottom: 6px;">
+                        <div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>
+                        <div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${JSON.stringify(toolData.arguments, null, 2)}</div>
+                    </div>
+                `;
+                
+                // 添加查看完整参数按钮（主要看出参）
+                const viewBtn = document.createElement('button');
+                viewBtn.className = 'btn-view-params';
+                viewBtn.innerHTML = '📤 查看完整出参';
+                viewBtn.onclick = () => showParamsModal(toolData.tool, toolData.arguments, toolData.result);
+                toolCard.appendChild(viewBtn);
             }
             
             streamingToolsContainer.appendChild(toolCard);
@@ -1073,6 +1224,73 @@
             streamingToolsContainer = null;
             streamingToolCount = 0;
         }
+        
+        // === 参数弹窗函数 ===
+        function showParamsModal(toolName, arguments_data, result_data) {
+            /* 显示工具参数弹窗 */
+            const modal = document.getElementById('paramsModal');
+            const title = document.getElementById('paramsModalTitle');
+            const inputEl = document.getElementById('paramsInput');
+            const outputEl = document.getElementById('paramsOutput');
+            
+            // 设置标题
+            title.textContent = `工具参数 - ${toolName}`;
+            
+            // 显示入参
+            inputEl.textContent = JSON.stringify(arguments_data, null, 2);
+            
+            // 显示出参
+            if (result_data) {
+                outputEl.textContent = JSON.stringify(result_data, null, 2);
+            } else {
+                outputEl.textContent = '(无返回结果)';
+            }
+            
+            // 显示弹窗
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeParamsModal(event) {
+            /* 关闭参数弹窗 */
+            const modal = document.getElementById('paramsModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+        
+        function copyParams() {
+            /* 复制全部参数 */
+            const inputText = document.getElementById('paramsInput').textContent;
+            const outputText = document.getElementById('paramsOutput').textContent;
+            const fullText = `入参:\n${inputText}\n\n出参:\n${outputText}`;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(fullText).then(() => {
+                    const btn = event.target;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '✓ 已复制';
+                    btn.style.background = '#4caf50';
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.style.background = '#2c2c2c';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    alert('复制失败');
+                });
+            }
+        }
+        
+        // ESC键关闭参数弹窗
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' || event.key === 'Esc') {
+                const paramsModal = document.getElementById('paramsModal');
+                if (paramsModal && paramsModal.classList.contains('active')) {
+                    closeParamsModal();
+                }
+            }
+        });
 
         function showThinking() {
             const area = document.getElementById('chatArea');
@@ -1128,40 +1346,46 @@
                     html += `<div class="message-header">[${idx+1}] ${name}</div>`;
                     html += `<div class="message-text">${escapeHtml(display)}</div>`;
                     
-                    // Context预览 - 工具调用（绿色主题，统一使用renderToolResult）
+                    // Context预览 - 工具调用（显示入参+按钮查看出参）
                     if (msg.tool_calls && msg.tool_calls.length > 0) {
                         html += `<div style="margin-top: 10px; padding: 10px; background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.3); border-radius: 3px;">`;
                         html += `<div style="font-size: 11px; color: #4caf50; font-weight: 600; margin-bottom: 8px;">🔧 执行了 ${msg.tool_calls.length} 个工具</div>`;
                         
                         msg.tool_calls.forEach((call, i) => {
-                            html += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #e0e0e0;">`;
-                            
-                            // 工具名
-                            html += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 12px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
-                            
-                            // 入参
-                            html += `<div style="margin-bottom: 6px;">`;
-                            html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
-                            html += `<div style="font-size: 10px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>`;
-                            html += `</div>`;
-                            
-                            // 出参（使用统一的renderToolResult函数）
-                            if (call.result) {
-                                html += `<div>`;
-                                html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>`;
-                                
-                                const success = call.result.success;
+                            // Think工具特殊渲染
+                            if (call.tool === 'think') {
+                                const summary = call.result?.summary || call.arguments?.summary || '';
+                                html += `<div style="padding: 12px 16px; margin: 8px 0; background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-radius: 8px; border-left: 4px solid #2196f3; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">`;
+                                html += `<div style="display: flex; align-items: flex-start; gap: 10px;">`;
+                                html += `<div style="font-size: 18px; line-height: 1;">💭</div>`;
+                                html += `<div style="flex: 1;">`;
+                                html += `<div style="font-size: 11px; color: #1976d2; font-weight: 600; margin-bottom: 4px;">AI 思考</div>`;
+                                html += `<div style="font-size: 12px; color: #424242; line-height: 1.5; white-space: pre-wrap;">${escapeHtml(summary)}</div>`;
+                                html += `</div></div></div>`;
+                            } else {
+                                // 普通工具渲染
+                                const success = call.result ? call.result.success : true;
                                 const statusColor = success ? '#4caf50' : '#f44336';
-                                const statusText = success ? '✅ 成功' : '❌ 失败';
+                                const statusIcon = success ? '✅' : '⚠️';
                                 
-                                html += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
-                                html += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 6px;">${statusText}</div>`;
-                                html += renderToolResult(call.tool, call.result);  // 统一调用！
+                                html += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #e0e0e0;">`;
+                                html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">`;
+                                html += `<div style="font-weight: 600; color: #2c2c2c; font-size: 12px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
+                                html += `<div style="color: ${statusColor}; font-weight: 600; font-size: 11px;">${statusIcon} ${success ? '成功' : '失败'}</div>`;
                                 html += `</div>`;
+                                
+                                // 显示入参
+                                html += `<div style="margin-bottom: 6px;">`;
+                                html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
+                                html += `<div style="font-size: 10px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                                html += `</div>`;
+                                
+                                // 按钮查看完整出参
+                                const argsJson = escapeHtml(JSON.stringify(call.arguments));
+                                const resultJson = call.result ? escapeHtml(JSON.stringify(call.result)) : '';
+                                html += `<button class="btn-view-params" data-tool="${escapeHtml(call.tool)}" data-args='${argsJson}' data-result='${resultJson}' onclick="showParamsModal(this.dataset.tool, JSON.parse(this.dataset.args), this.dataset.result ? JSON.parse(this.dataset.result) : null)">📤 查看完整出参</button>`;
                                 html += `</div>`;
                             }
-                            
-                            html += `</div>`;
                         });
                         
                         html += `</div>`;
@@ -1175,9 +1399,11 @@
 
         function updateHistory(data) {
             const msgs = data.messages || [];
-            console.log('📨 updateHistory被调用, 消息数:', msgs.length);
+            console.log('📨 updateHistory被调用');
+            console.log('  - 消息数:', msgs.length);
             console.log('  - conversation_id:', data.conversation_id);
             console.log('  - isLoadingHistory:', isLoadingHistory);
+            console.log('  - 将渲染到聊天界面:', isLoadingHistory && msgs.length > 0);
             
             // 统计字符（聊天记录管理模块用）
             let total = 0, chinese = 0, english = 0;
@@ -1208,40 +1434,46 @@
                     html += `<div class="message-header">[${idx+1}] ${name}</div>`;
                     html += `<div class="message-text">${escapeHtml(display)}</div>`;
                     
-                    // 详细显示工具调用（和Context预览一样）
+                    // 工具调用（显示入参+按钮查看出参）
                     if (msg.tool_calls && msg.tool_calls.length > 0) {
                         html += `<div style="margin-top: 10px; padding: 10px; background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.3); border-radius: 3px;">`;
                         html += `<div style="font-size: 11px; color: #4caf50; font-weight: 600; margin-bottom: 8px;">🔧 执行了 ${msg.tool_calls.length} 个工具</div>`;
                         
                         msg.tool_calls.forEach((call, i) => {
-                            html += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #e0e0e0;">`;
-                            
-                            // 工具名
-                            html += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 12px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
-                            
-                            // 入参
-                            html += `<div style="margin-bottom: 6px;">`;
-                            html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
-                            html += `<div style="font-size: 10px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>`;
-                            html += `</div>`;
-                            
-                            // 出参（使用renderToolResult）
-                            if (call.result) {
-                                html += `<div>`;
-                                html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>`;
-                                
-                                const success = call.result.success;
+                            // Think工具特殊渲染
+                            if (call.tool === 'think') {
+                                const summary = call.result?.summary || call.arguments?.summary || '';
+                                html += `<div style="padding: 12px 16px; margin: 8px 0; background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-radius: 8px; border-left: 4px solid #2196f3; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">`;
+                                html += `<div style="display: flex; align-items: flex-start; gap: 10px;">`;
+                                html += `<div style="font-size: 18px; line-height: 1;">💭</div>`;
+                                html += `<div style="flex: 1;">`;
+                                html += `<div style="font-size: 11px; color: #1976d2; font-weight: 600; margin-bottom: 4px;">AI 思考</div>`;
+                                html += `<div style="font-size: 12px; color: #424242; line-height: 1.5; white-space: pre-wrap;">${escapeHtml(summary)}</div>`;
+                                html += `</div></div></div>`;
+                            } else {
+                                // 普通工具渲染
+                                const success = call.result ? call.result.success : true;
                                 const statusColor = success ? '#4caf50' : '#f44336';
-                                const statusText = success ? '✅ 成功' : '❌ 失败';
+                                const statusIcon = success ? '✅' : '⚠️';
                                 
-                                html += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
-                                html += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 6px;">${statusText}</div>`;
-                                html += renderToolResult(call.tool, call.result);
+                                html += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #e0e0e0;">`;
+                                html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">`;
+                                html += `<div style="font-weight: 600; color: #2c2c2c; font-size: 12px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
+                                html += `<div style="color: ${statusColor}; font-weight: 600; font-size: 11px;">${statusIcon} ${success ? '成功' : '失败'}</div>`;
                                 html += `</div>`;
+                                
+                                // 显示入参
+                                html += `<div style="margin-bottom: 6px;">`;
+                                html += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
+                                html += `<div style="font-size: 10px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                                html += `</div>`;
+                                
+                                // 按钮查看完整出参
+                                const argsJson = escapeHtml(JSON.stringify(call.arguments));
+                                const resultJson = call.result ? escapeHtml(JSON.stringify(call.result)) : '';
+                                html += `<button class="btn-view-params" data-tool="${escapeHtml(call.tool)}" data-args='${argsJson}' data-result='${resultJson}' onclick="showParamsModal(this.dataset.tool, JSON.parse(this.dataset.args), this.dataset.result ? JSON.parse(this.dataset.result) : null)">📤 查看完整出参</button>`;
                                 html += `</div>`;
                             }
-                            
-                            html += `</div>`;
                         });
                         
                         html += `</div>`;
@@ -1300,53 +1532,46 @@
                 
                 let content = `<div class="message-content">${formatMarkdown(msg.content)}`;
                 
-                // 详细渲染工具调用（入参+出参）
+                // 工具调用（显示入参+按钮查看出参）
                 if (msg.tool_calls && msg.tool_calls.length > 0) {
                     content += `<div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; border-left: 3px solid #666;">`;
                     content += `<div style="font-weight: 600; margin-bottom: 10px; color: #666; font-size: 12px;">🔧 执行了 ${msg.tool_calls.length} 个工具</div>`;
                     
                     msg.tool_calls.forEach((call, i) => {
-                        content += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd;">`;
-                        
-                        // 工具名
-                        content += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 13px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
-                        
-                        // 入参
-                        content += `<div style="margin-bottom: 6px;">`;
-                        content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
-                        content += `<div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>`;
-                        content += `</div>`;
-                        
-                        // 出参（根据工具类型定制渲染）
-                        if (call.result) {
-                            content += `<div>`;
-                            content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>`;
-                            
-                            const success = call.result.success;
-                            const statusColor = success ? '#4caf50' : '#f44336';
-                            const statusText = success ? '✅ 成功' : '❌ 失败';
-                            
-                        content += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
-                        content += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 6px;">${statusText}</div>`;
-                        
-                        // 如果失败，显示错误提示
-                        if (!success && call.result.error) {
-                            const errorPreview = (call.result.error || '').substring(0, 150);
-                            content += `<div style="color: #f44336; margin-bottom: 6px; font-size: 10px; background: #ffebee; padding: 4px 6px; border-radius: 2px;">`;
-                            content += `<div style="font-weight: 600; margin-bottom: 2px;">错误详情:</div>`;
-                            content += `<div>${escapeHtml(errorPreview)}</div>`;
-                            content += `</div>`;
-                            content += `<div style="color: #999; font-size: 9px; font-style: italic; margin-top: 4px;">💡 AI已收到错误信息，将在下一轮自动修正</div>`;
+                        // Think工具特殊渲染
+                        if (call.tool === 'think') {
+                            const summary = call.result?.summary || call.arguments?.summary || '';
+                            content += `<div style="padding: 12px 16px; margin: 8px 0; background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-radius: 8px; border-left: 4px solid #2196f3; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">`;
+                            content += `<div style="display: flex; align-items: flex-start; gap: 10px;">`;
+                            content += `<div style="font-size: 20px; line-height: 1;">💭</div>`;
+                            content += `<div style="flex: 1;">`;
+                            content += `<div style="font-size: 13px; color: #1976d2; font-weight: 600; margin-bottom: 6px;">AI 思考</div>`;
+                            content += `<div style="font-size: 14px; color: #424242; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(summary)}</div>`;
+                            content += `</div></div></div>`;
                         } else {
-                            // 成功则显示详细结果
-                            content += renderToolResult(call.tool, call.result);
-                        }
+                            // 普通工具渲染
+                            const success = call.result ? call.result.success : true;
+                            const statusColor = success ? '#4caf50' : '#f44336';
+                            const statusIcon = success ? '✅' : '⚠️';
                             
+                            content += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd;">`;
+                            content += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">`;
+                            content += `<div style="font-weight: 600; color: #2c2c2c; font-size: 13px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
+                            content += `<div style="color: ${statusColor}; font-weight: 600; font-size: 12px;">${statusIcon} ${success ? '成功' : '失败'}</div>`;
                             content += `</div>`;
+                            
+                            // 显示入参
+                            content += `<div style="margin-bottom: 6px;">`;
+                            content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
+                            content += `<div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${JSON.stringify(call.arguments, null, 2)}</div>`;
+                            content += `</div>`;
+                            
+                            // 按钮查看完整出参
+                            const argsJson = escapeHtml(JSON.stringify(call.arguments));
+                            const resultJson = call.result ? escapeHtml(JSON.stringify(call.result)) : '';
+                            content += `<button class="btn-view-params" data-tool="${escapeHtml(call.tool)}" data-args='${argsJson}' data-result='${resultJson}' onclick="showParamsModal(this.dataset.tool, JSON.parse(this.dataset.args), this.dataset.result ? JSON.parse(this.dataset.result) : null)">📤 查看完整出参</button>`;
                             content += `</div>`;
                         }
-                        
-                        content += `</div>`;
                     });
                     
                     content += `</div>`;
