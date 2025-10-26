@@ -1,42 +1,42 @@
 """
-Task Planner工具 - AI规划Task列表（Phase-Task架构）
+Task Planner Tool - AI plans Task list (Phase-Task architecture)
 """
 from typing import Dict, Any
 
 
 class TaskPlannerTool:
-    """Task Planner工具：让AI规划Task列表（支持Phase-Task架构）"""
+    """Task Planner Tool: Let AI plan Task list (supports Phase-Task architecture)"""
     
     @staticmethod
     def get_definition() -> Dict[str, Any]:
-        """获取工具定义"""
+        """Get tool definition"""
         return {
             "type": "function",
             "function": {
                 "name": "plan_tool_call",
-                "description": """规划Task列表（Phase-Task架构）
+                "description": """Plan Task list (Phase-Task architecture)
 
-你现在处于"规划阶段"（Plan Phase）。
+You are in "Planning Phase" now.
 
-你的任务：
-1. 分析用户请求或Phase目标
-2. 规划1-8个具体的Tasks
-3. 每个Task包含：标题、描述、工具、参数、优先级、依赖关系
+Your tasks:
+1. Analyze user request or Phase goal
+2. Plan 1-8 specific Tasks
+3. Each Task includes: title, description, tool, arguments, priority, dependencies
 
-Task设计原则：
-- 每个Task应该是原子化的（单一职责）
-- 标题简洁明了（10字以内）
-- 描述清晰说明Task目标
-- 优先级：1-10，数字越大越优先
-- 依赖：如果Task B依赖Task A，则在dependencies中填写Task A的id
+Task design principles:
+- Each Task should be atomic (single responsibility)
+- Title should be concise (within 10 words)
+- Description clearly states Task goal
+- Priority: 1-10, higher number = higher priority
+- Dependencies: If Task B depends on Task A, fill in Task A's id in dependencies
 
-示例：
+Example:
 {
     "tasks": [
         {
             "id": 1,
-            "title": "读取配置文件",
-            "description": "读取config.py，理解现有配置结构",
+            "title": "Read config file",
+            "description": "Read config.py to understand existing config structure",
             "tool": "file_operations",
             "arguments": {"operation": "read", "path": "config.py"},
             "priority": 10,
@@ -45,8 +45,8 @@ Task设计原则：
         },
         {
             "id": 2,
-            "title": "修改端口配置",
-            "description": "将端口号从8000改为8080",
+            "title": "Modify port config",
+            "description": "Change port number from 8000 to 8080",
             "tool": "file_operations",
             "arguments": {"operation": "edit", "path": "config.py", "edits": [...]},
             "priority": 9,
@@ -54,56 +54,56 @@ Task设计原则：
             "estimated_tokens": 1500
         }
     ],
-    "plan_reasoning": "先读取配置文件理解结构，再进行修改"
+    "plan_reasoning": "First read config file to understand structure, then modify"
 }
 
-注意：
-- 现在只规划，不执行
-- 最多规划8个Tasks
-- 合理分配priority
-- 明确dependencies关系
+Notes:
+- Plan now, execute later
+- Maximum 8 Tasks
+- Reasonably assign priority
+- Clearly define dependencies
 """,
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "tasks": {
                             "type": "array",
-                            "description": "规划的Task列表",
+                            "description": "Planned Task list",
                             "items": {
                                 "type": "object",
                                 "properties": {
                                     "id": {
                                         "type": "integer",
-                                        "description": "Task ID（从1开始）"
+                                        "description": "Task ID (starts from 1)"
                                     },
                                     "title": {
                                         "type": "string",
-                                        "description": "Task标题（简洁，10字以内）"
+                                        "description": "Task title (concise, within 10 words)"
                                     },
                                     "description": {
                                         "type": "string",
-                                        "description": "Task详细描述"
+                                        "description": "Task detailed description"
                                     },
                                     "tool": {
                                         "type": "string",
-                                        "description": "工具名称"
+                                        "description": "Tool name"
                                     },
                                     "arguments": {
                                         "type": "object",
-                                        "description": "工具参数"
+                                        "description": "Tool arguments"
                                     },
                                     "priority": {
                                         "type": "integer",
-                                        "description": "优先级（1-10）"
+                                        "description": "Priority (1-10)"
                                     },
                                     "dependencies": {
                                         "type": "array",
                                         "items": {"type": "integer"},
-                                        "description": "依赖的Task ID列表"
+                                        "description": "Dependent Task ID list"
                                     },
                                     "estimated_tokens": {
                                         "type": "integer",
-                                        "description": "预估Token消耗"
+                                        "description": "Estimated token consumption"
                                     }
                                 },
                                 "required": ["id", "title", "description", "tool", "arguments", "priority"]
@@ -111,7 +111,7 @@ Task设计原则：
                         },
                         "plan_reasoning": {
                             "type": "string",
-                            "description": "规划思路说明"
+                            "description": "Planning reasoning explanation"
                         }
                     },
                     "required": ["tasks", "plan_reasoning"]
@@ -121,8 +121,8 @@ Task设计原则：
     
     @staticmethod
     def execute(tasks: list = None, plan_reasoning: str = "", **kwargs) -> Dict[str, Any]:
-        """执行Plan（返回Task列表）"""
-        # 兼容旧格式
+        """Execute Plan (return Task list)"""
+        # Compatible with old format
         if tasks is None:
             tasks = kwargs.get("tools", [])
         
@@ -130,5 +130,5 @@ Task设计原则：
             "success": True,
             "tasks": tasks,
             "reasoning": plan_reasoning,
-            "message": f"已规划 {len(tasks)} 个Tasks"
+            "message": f"Planned {len(tasks)} Tasks"
         }

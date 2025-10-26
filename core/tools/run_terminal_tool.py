@@ -1,11 +1,11 @@
 """
-运行终端命令工具
+Run Terminal Tool
 """
 from typing import Dict, Any
 
 
 class RunTerminalTool:
-    """运行终端命令工具"""
+    """Run Terminal Command Tool"""
     
     @staticmethod
     def get_definition() -> Dict[str, Any]:
@@ -13,11 +13,11 @@ class RunTerminalTool:
             "type": "function",
             "function": {
                 "name": "run_terminal",
-                "description": "执行终端命令。注意：只执行安全的命令。",
+                "description": "Execute terminal command. Note: only execute safe commands.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "command": {"type": "string", "description": "要执行的Shell命令"}
+                        "command": {"type": "string", "description": "Shell command to execute"}
                     },
                     "required": ["command"]
                 }

@@ -1,11 +1,11 @@
 """
-搜索代码工具
+Search Code Tool
 """
 from typing import Dict, Any
 
 
 class SearchCodeTool:
-    """搜索代码工具"""
+    """Search Code Tool"""
     
     @staticmethod
     def get_definition() -> Dict[str, Any]:
@@ -13,15 +13,15 @@ class SearchCodeTool:
             "type": "function",
             "function": {
                 "name": "search_code",
-                "description": "在代码中搜索文本。支持正则表达式和文件过滤。",
+                "description": "Search for text in code. Supports regex and file filtering.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string", "description": "搜索查询（文本或正则表达式）"},
-                        "path": {"type": "string", "description": "搜索路径，默认为当前目录"},
-                        "file_pattern": {"type": "string", "description": "文件名模式（如 *.py 只搜索Python文件）"},
-                        "case_sensitive": {"type": "boolean", "description": "是否区分大小写，默认为false"},
-                        "regex": {"type": "boolean", "description": "是否使用正则表达式，默认为false"}
+                        "query": {"type": "string", "description": "Search query (text or regex)"},
+                        "path": {"type": "string", "description": "Search path, default is current directory"},
+                        "file_pattern": {"type": "string", "description": "File name pattern (e.g., *.py for Python files only)"},
+                        "case_sensitive": {"type": "boolean", "description": "Case sensitive, default is false"},
+                        "regex": {"type": "boolean", "description": "Use regex, default is false"}
                     },
                     "required": ["query"]
                 }

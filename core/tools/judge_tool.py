@@ -1,74 +1,74 @@
 """
-Judge工具 - AI分析与评判
-客观评判 + 主观分析的统一工具
+Judge Tool - AI Analysis & Evaluation
+Unified tool for objective evaluation + subjective analysis
 """
 from typing import Dict, Any
 
 
 class JudgeTool:
-    """Judge工具：客观评判 + 主观分析"""
+    """Judge Tool: Objective Evaluation + Subjective Analysis"""
     
     @staticmethod
     def get_definition() -> Dict[str, Any]:
-        """获取工具定义"""
+        """Get tool definition"""
         return {
             "type": "function",
             "function": {
                 "name": "judge",
-                "description": """AI分析与评判工具（Judge）
+                "description": """AI Analysis & Evaluation Tool (Judge)
 
-你的角色：既是客观评审员，也是主观分析师
+Your role: Both objective reviewer and subjective analyst
 
-职责：
-1. 客观评判：检查每个Task执行结果，评分（0-10）
-2. 主观分析：基于评判结果，决策下一步行动
-3. 用户总结：生成清晰的执行摘要
+Responsibilities:
+1. Objective evaluation: Check each Task execution result, score (0-10)
+2. Subjective analysis: Based on evaluation, decide next action
+3. User summary: Generate clear execution summary
 
-输出格式：
+Output format:
 {
-    "task_evaluation": [  // 客观评判部分
+    "task_evaluation": [  // Objective evaluation part
         {
             "task_id": 1,
             "status": "done",
             "quality_score": 9.5,
             "output_valid": true,
-            "notes": "文件读取成功"
+            "notes": "File read successfully"
         }
     ],
-    "phase_metrics": {  // Phase整体指标
+    "phase_metrics": {  // Phase overall metrics
         "completion_rate": 1.0,
         "success_rate": 1.0,
         "quality_average": 9.2
     },
-    "decision": {  // 决策
+    "decision": {  // Decision
         "action": "end",  // end/continue/retry_with_adjustment/replan
-        "reason": "所有Task成功完成",
+        "reason": "All Tasks completed successfully",
         "failed_tasks_to_retry": []
     },
-    "user_summary": "✅ 已完成所有Tasks....",  // 用户可见总结
-    "phase_completed": true,  // Phase是否完成
-    "continue_phase": false   // 是否继续Round
+    "user_summary": "✅ Completed all Tasks....",  // User-visible summary
+    "phase_completed": true,  // Is Phase completed
+    "continue_phase": false   // Should continue Phase
 }
 
-兼容模式（简单场景）：
-可以只填写summary字段（50-200字）
+Compatible mode (simple scenario):
+Can fill only summary field (50-200 words)
 
-评分标准：
-- 工具成功 + 输出完整 → 8-10分
-- 工具成功但输出不完美 → 5-7分
-- 工具失败 → 0分
+Scoring criteria:
+- Tool success + complete output → 8-10 points
+- Tool success but imperfect output → 5-7 points
+- Tool failure → 0 points
 
-决策逻辑：
-- 所有Task成功 → action="end"
-- 有Task失败可重试 → action="retry_with_adjustment"
-- Plan本身有问题 → action="replan"
+Decision logic:
+- All Tasks successful → action="end"
+- Task failures can retry → action="retry_with_adjustment"
+- Plan itself has issues → action="replan"
 """,
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "task_evaluation": {
                             "type": "array",
-                            "description": "每个Task的评估（客观评判）",
+                            "description": "Evaluation of each Task (objective evaluation)",
                             "items": {
                                 "type": "object",
                                 "properties": {
@@ -82,7 +82,7 @@ class JudgeTool:
                         },
                         "phase_metrics": {
                             "type": "object",
-                            "description": "Phase整体指标",
+                            "description": "Phase overall metrics",
                             "properties": {
                                 "completion_rate": {"type": "number"},
                                 "success_rate": {"type": "number"},
@@ -91,7 +91,7 @@ class JudgeTool:
                         },
                         "decision": {
                             "type": "object",
-                            "description": "执行决策",
+                            "description": "Execution decision",
                             "properties": {
                                 "action": {
                                     "type": "string",
@@ -106,37 +106,36 @@ class JudgeTool:
                         },
                         "user_summary": {
                             "type": "string",
-                            "description": "用户可见总结"
+                            "description": "User-visible summary"
                         },
                         "phase_completed": {
                             "type": "boolean",
-                            "description": "Phase是否完成"
+                            "description": "Is Phase completed"
                         },
                         "continue_phase": {
                             "type": "boolean",
-                            "description": "是否继续Phase"
+                            "description": "Should continue Phase"
                         },
                         "next_round_strategy": {
                             "type": "string",
-                            "description": "下一轮策略"
+                            "description": "Next round strategy"
                         },
                         "summary": {
                             "type": "string",
-                            "description": "简单总结（兼容旧版）"
+                            "description": "Simple summary (compatible with old version)"
                         }
                     },
-                    "required": []  # 灵活参数
+                    "required": []  # Flexible parameters
                 }
             }
         }
     
     @staticmethod
     def execute(**kwargs) -> Dict[str, Any]:
-        """执行Think分析与评判"""
-        # 返回LLM提供的所有参数
+        """Execute Judge analysis & evaluation"""
+        # Return all parameters provided by LLM
         return {
             "success": True,
             **kwargs,
-            "message": "Think分析完成"
+            "message": "Judge analysis completed"
         }
-
