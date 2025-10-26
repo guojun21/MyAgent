@@ -7,9 +7,10 @@ LLM服务模块 - DeepSeek专用
 2. 接收LLM的响应（可能包含工具调用）
 3. 管理对话上下文和System Prompt
 """
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from config import settings
 import json
+import time
 from utils.logger import safe_print as print
 
 
@@ -205,24 +206,33 @@ class DeepSeekService(LLMService):
             base_url=settings.deepseek_base_url      # DeepSeek的API地址
         )
         self.model = settings.deepseek_model         # 使用的模型名称（如deepseek-chat）
+        
+        # 初始化API日志记录器
+        from services.api_logger import APILogger
+        self.api_logger = APILogger()
+        self.enable_api_logging = True  # 可配置开关
     
     def chat(
         self, 
         messages: List[Dict[str, str]], 
         tools: Optional[List[Dict[str, Any]]] = None,
-        tool_choice: str = "auto"
+        tool_choice: Union[str, Dict] = "auto",
+        context_info: Optional[Dict] = None  # 新增：上下文信息
     ) -> Dict[str, Any]:
         """
-        与DeepSeek对话（支持Function Calling）
+        与DeepSeek对话（支持Function Calling + API日志）
         
         这是整个系统的核心！每次Agent需要"思考"时都会调用这个方法。
         """
+        # 记录开始时间
+        start_time = time.time()
+        
         # ======== 日志：记录调用信息，方便调试 ========
         print(f"\n    [DeepSeek.chat] 准备调用DeepSeek API")
         print(f"    [DeepSeek.chat] 模型: {self.model}")
         print(f"    [DeepSeek.chat] 消息数: {len(messages)}")
         print(f"    [DeepSeek.chat] 工具数: {len(tools) if tools else 0}")
-        print(f"    [DeepSeek.chat] 温度: 0.0")
+        print(f"    [DeepSeek.chat] 温度: 0.3")
         
         try:
             # ======== 第一步：准备API请求参数 ========
@@ -239,10 +249,36 @@ class DeepSeekService(LLMService):
                 kwargs["tool_choice"] = tool_choice  # 使用传入的参数（auto/required）
                 print(f"    [DeepSeek.chat] ⚠️ 工具调用模式：{tool_choice}")
             
-            # ======== 第三步：发送请求到DeepSeek API ========
+            # ======== 第二步：发送请求到DeepSeek API ========
             print(f"    [DeepSeek.chat] 发送API请求...")
             response = self.client.chat.completions.create(**kwargs)
             print(f"    [DeepSeek.chat] ✅ API响应成功")
+            
+            # ======== 第三步：记录API日志 ==========
+            if self.enable_api_logging:
+                try:
+                    # 准备记录数据
+                    request_data = kwargs.copy()
+                    response_data = response.model_dump()  # 转为dict
+                    
+                    # 补充上下文信息
+                    full_context = {
+                        "start_time": start_time,
+                        "provider": "deepseek",
+                        "base_url": settings.deepseek_base_url,
+                        **(context_info or {})
+                    }
+                    
+                    # 记录日志
+                    self.api_logger.log_api_call(
+                        request_data,
+                        response_data,
+                        full_context
+                    )
+                
+                except Exception as log_error:
+                    print(f"[DeepSeek] ⚠️ API日志记录失败: {log_error}")
+                    # 日志失败不影响主流程
             
             # ======== 打印API完整响应 ========
             print(f"\n    [DeepSeek.chat] API响应完整字段:")
@@ -329,6 +365,51 @@ class DeepSeekService(LLMService):
             print(f"    [DeepSeek.chat] ❌ API调用异常")
             print(f"    [DeepSeek.chat] 异常类型: {type(e).__name__}")
             print(f"    [DeepSeek.chat] 异常消息: {error_msg[:500]}")
+            
+            # ======== 记录失败的API调用 ==========
+            if self.enable_api_logging:
+                try:
+                    # 准备记录数据
+                    request_data = kwargs.copy()
+                    
+                    # 构造失败的响应数据
+                    response_data = {
+                        "error": True,
+                        "error_type": type(e).__name__,
+                        "error_message": error_msg,
+                        "timestamp": time.time(),
+                        "id": "error_" + str(int(time.time())),
+                        "object": "error",
+                        "created": int(time.time()),
+                        "model": self.model,
+                        "choices": [],
+                        "usage": {
+                            "prompt_tokens": 0,
+                            "completion_tokens": 0,
+                            "total_tokens": 0
+                        }
+                    }
+                    
+                    # 补充上下文信息
+                    full_context = {
+                        "start_time": start_time,
+                        "provider": "deepseek",
+                        "base_url": settings.deepseek_base_url,
+                        "error": True,  # 标记这是失败的调用
+                        **(context_info or {})
+                    }
+                    
+                    # 记录失败日志
+                    self.api_logger.log_api_call(
+                        request_data,
+                        response_data,
+                        full_context
+                    )
+                    print(f"[DeepSeek] ✅ 失败调用已记录到日志")
+                
+                except Exception as log_error:
+                    print(f"[DeepSeek] ⚠️ API日志记录失败: {log_error}")
+                    # 日志失败不影响主流程
             
             # 检测Context超长错误（只判断关键词）
             if "maximum context length" in error_msg:

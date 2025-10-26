@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>AI编程助手</title>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <link rel="stylesheet" href="phase_task_ui.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #f5f5f5; height: 100vh; }
@@ -1136,78 +1137,102 @@
             // 创建工具卡片
             const toolCard = document.createElement('div');
             
-            // Phase Planner工具特殊渲染（复杂度评估+Phase划分）
-            if (toolData.tool === 'phase_planner') {
-                toolCard.style.cssText = 'padding: 16px 20px; margin: 8px 0; background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%); border-radius: 8px; border-left: 4px solid #5c6bc0; opacity: 0; transform: translateY(10px); transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(92,107,192,0.2);';
+            // Request Analyser工具特殊渲染（Level 0 - 最外层）
+            if (toolData.tool === 'request_analyser') {
+                toolCard.className = 'request-container';
+                toolCard.style.opacity = '0';
+                toolCard.style.transform = 'translateY(10px)';
+                toolCard.style.transition = 'all 0.4s ease';
+                
+                const coreGoal = toolData.arguments?.core_goal || '';
+                const requirements = toolData.arguments?.requirements || [];
+                const constraints = toolData.arguments?.constraints || [];
+                
+                let contentHtml = `
+                    <div class="request-header">
+                        <span class="request-icon">🔍</span>
+                        <span>Level 0: Request Analysis</span>
+                    </div>
+                    <div style="margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.8); border-radius: 6px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #c2185b; margin-bottom: 6px;">🎯 Core Goal</div>
+                        <div style="font-size: 15px; color: #880e4f; font-weight: 700; line-height: 1.4;">${escapeHtml(coreGoal)}</div>
+                    </div>
+                `;
+                
+                if (requirements.length > 0) {
+                    contentHtml += `<div style="margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.6); border-radius: 4px;">`;
+                    contentHtml += `<div style="font-size: 11px; font-weight: 600; color: #c2185b; margin-bottom: 6px;">📋 Requirements</div>`;
+                    requirements.forEach((req, i) => {
+                        contentHtml += `<div style="font-size: 12px; color: #424242; margin: 4px 0; padding-left: 12px; border-left: 2px solid #ec407a;">${i+1}. ${escapeHtml(req)}</div>`;
+                    });
+                    contentHtml += `</div>`;
+                }
+                
+                if (constraints.length > 0) {
+                    contentHtml += `<div style="margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.6); border-radius: 4px;">`;
+                    contentHtml += `<div style="font-size: 11px; font-weight: 600; color: #c2185b; margin-bottom: 6px;">⚠️ Constraints</div>`;
+                    constraints.forEach((con) => {
+                        contentHtml += `<div style="font-size: 12px; color: #666; margin: 4px 0; padding-left: 12px;">• ${escapeHtml(con)}</div>`;
+                    });
+                    contentHtml += `</div>`;
+                }
+                
+                contentHtml += `
+                    <div style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px; text-align: center; font-size: 11px; color: #999;">
+                        Request结构化完成，节省Context空间
+                    </div>
+                `;
+                
+                toolCard.innerHTML = contentHtml;
+            } else if (toolData.tool === 'phase_planner') {
+                // Phase Planner工具渲染（Level 1 - Phase层）
+                toolCard.className = 'phase-container';
+                toolCard.style.opacity = '0';
+                toolCard.style.transform = 'translateY(10px)';
+                toolCard.style.transition = 'all 0.4s ease';
                 
                 const complexity = toolData.arguments?.complexity_analysis || {};
                 const needsPhases = toolData.arguments?.needs_phases || false;
                 const phases = toolData.arguments?.phases || [];
                 const totalTime = toolData.arguments?.total_estimated_time || 0;
-                const totalCost = toolData.arguments?.total_estimated_cost || 0;
                 
-                // 复杂度评分颜色
                 const complexityScore = complexity.score || 0;
                 const scoreColor = complexityScore >= 7 ? '#f44336' : (complexityScore >= 4 ? '#ff9800' : '#4caf50');
                 
                 let contentHtml = `
-                    <div style="margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.6); border-radius: 4px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="font-size: 11px; color: #666; margin-bottom: 4px;">任务复杂度</div>
-                                <div style="font-size: 24px; font-weight: 700; color: ${scoreColor};">${complexityScore.toFixed(1)}/10</div>
-                                <div style="font-size: 11px; color: #666; margin-top: 2px;">${complexity.category || ''}</div>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 11px; color: #666;">需要Phase划分</div>
-                                <div style="font-size: 18px; margin-top: 4px;">${needsPhases ? '✅ 是' : '❌ 否'}</div>
-                            </div>
-                        </div>
-                        ${complexity.reasoning ? `<div style="font-size: 11px; color: #666; margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">💡 ${escapeHtml(complexity.reasoning)}</div>` : ''}
+                    <div class="phase-header">
+                        <span>🏗️ Level 1: Phase Planning</span>
+                        <span class="status-badge ${needsPhases ? 'status-running' : 'status-done'}">${needsPhases ? `${phases.length} Phases` : 'Direct Exec'}</span>
                     </div>
                 `;
                 
                 if (needsPhases && phases.length > 0) {
-                    contentHtml += `<div style="font-size: 13px; color: #5c6bc0; font-weight: 700; margin-bottom: 8px;">📊 执行计划 (${phases.length}个Phases):</div>`;
                     phases.forEach((phase, i) => {
                         const priorityColor = phase.priority === 'high' ? '#f44336' : (phase.priority === 'medium' ? '#ff9800' : '#4caf50');
                         contentHtml += `
-                            <div style="padding: 12px; margin: 8px 0; background: rgba(255,255,255,0.7); border-radius: 4px; border-left: 4px solid ${priorityColor};">
-                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
-                                    <div style="flex: 1;">
-                                        <div style="font-size: 14px; font-weight: 700; color: #5c6bc0;">Phase ${phase.id}: ${escapeHtml(phase.name)}</div>
-                                        <div style="font-size: 12px; color: #666; margin-top: 3px;">${escapeHtml(phase.goal)}</div>
-                                    </div>
-                                    <div style="font-size: 10px; color: ${priorityColor}; font-weight: 600; margin-left: 10px;">⭐ ${phase.priority}</div>
-                                </div>
-                                <div style="display: flex; gap: 12px; font-size: 10px; color: #999; margin-top: 6px;">
-                                    <span>📋 ~${phase.estimated_tasks || 0} Tasks</span>
-                                    <span>⏱️ ~${phase.estimated_time || 0}s</span>
-                                    <span>💰 ~${((phase.estimated_tokens || 0) / 1000).toFixed(1)}K tokens</span>
-                                    ${phase.dependencies && phase.dependencies.length > 0 ? `<span style="color: #2196f3;">🔗 依赖: Phase ${phase.dependencies.join(',')}</span>` : ''}
+                            <div style="margin: 8px 0 8px 20px; padding: 12px; background: rgba(255,255,255,0.8); border-radius: 6px; border-left: 4px solid ${priorityColor};">
+                                <div style="font-size: 14px; font-weight: 700; color: #3f51b5; margin-bottom: 4px;">Phase ${phase.id}: ${escapeHtml(phase.name)}</div>
+                                <div style="font-size: 12px; color: #666; line-height: 1.4;">${escapeHtml(phase.goal)}</div>
+                                <div style="display: flex; gap: 10px; font-size: 10px; color: #999; margin-top: 6px;">
+                                    <span>📋 ${phase.estimated_tasks || 0} Tasks</span>
+                                    <span>⏱️ ${phase.estimated_time || 0}s</span>
+                                    ${phase.dependencies && phase.dependencies.length > 0 ? `<span style="color: #2196f3;">🔗 Dep: ${phase.dependencies.join(',')}</span>` : ''}
                                 </div>
                             </div>
                         `;
                     });
+                    
                     contentHtml += `
-                        <div style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 4px; text-align: center;">
-                            <div style="font-size: 11px; color: #666;">总预估</div>
-                            <div style="font-size: 13px; font-weight: 600; color: #5c6bc0;">⏱️ ${totalTime}秒 | 💰 $${totalCost.toFixed(3)}</div>
+                        <div style="margin: 10px 0 0 20px; padding: 8px; background: rgba(255,255,255,0.6); border-radius: 4px; text-align: center;">
+                            <div style="font-size: 10px; color: #666;">Total Estimate</div>
+                            <div style="font-size: 12px; font-weight: 600; color: #5c6bc0;">⏱️ ${totalTime}s</div>
                         </div>
                     `;
                 } else {
-                    contentHtml += `<div style="font-size: 13px; color: #4caf50; font-weight: 600; margin: 10px 0;">✅ 简单任务，直接执行，无需划分Phase</div>`;
+                    contentHtml += `<div style="margin-left: 20px; font-size: 13px; color: #4caf50; font-weight: 600;">✅ Simple task, direct execution</div>`;
                 }
                 
-                toolCard.innerHTML = `
-                    <div style="display: flex; align-items: flex-start; gap: 10px;">
-                        <div style="font-size: 24px; line-height: 1;">🏗️</div>
-                        <div style="flex: 1;">
-                            <div style="font-size: 14px; color: #5c6bc0; font-weight: 700; margin-bottom: 8px;">📐 Phase规划与复杂度评估</div>
-                            ${contentHtml}
-                        </div>
-                    </div>
-                `;
+                toolCard.innerHTML = contentHtml;
             } else if (toolData.tool === 'plan_tool_call') {
                 toolCard.style.cssText = 'padding: 12px 16px; margin: 8px 0; background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-radius: 8px; border-left: 4px solid #ff9800; opacity: 0; transform: translateY(10px); transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
                 
@@ -1346,12 +1371,16 @@
                     </div>
                 `;
             } else if (toolData.tool === 'judge' || toolData.tool === 'think' || toolData.tool === 'judge_tasks') {
-                // Judge工具特殊渲染（评判+分析）
+                // Judge工具渲染（Level 3 - Evaluation层）
                 const hasEvaluation = toolData.arguments?.task_evaluation || toolData.arguments?.phase_metrics;
                 
                 if (hasEvaluation) {
                     // 包含评判数据：完整渲染
-                    toolCard.style.cssText = 'padding: 16px 20px; margin: 8px 0; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-radius: 8px; border-left: 4px solid #66bb6a; opacity: 0; transform: translateY(10px); transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(102,187,106,0.2);';
+                    toolCard.className = 'stage-container stage-judge';
+                    toolCard.style.marginLeft = '40px';  // Level 3缩进
+                    toolCard.style.opacity = '0';
+                    toolCard.style.transform = 'translateY(10px)';
+                    toolCard.style.transition = 'all 0.3s ease';
                     
                     const phaseMetrics = toolData.arguments?.phase_metrics || {};
                     const taskEval = toolData.arguments?.task_evaluation || [];
@@ -1438,19 +1467,25 @@
                     `;
                 }
             } else if (toolData.tool === 'summarizer' || toolData.tool === 'task_done') {
-                // Summarizer工具特殊渲染（任务总结）
-                toolCard.style.cssText = 'padding: 16px 20px; margin: 8px 0; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 8px; border-left: 4px solid #28a745; opacity: 0; transform: translateY(10px); transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(40,167,69,0.2);';
+                // Summarizer工具渲染（Level 4 - 最终总结层，最外层强调）
+                toolCard.style.cssText = 'padding: 20px 24px; margin: 16px 0; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 12px; border: 3px solid #28a745; opacity: 0; transform: scale(0.98); transition: all 0.5s ease; box-shadow: 0 6px 20px rgba(40,167,69,0.25);';
                 
                 const summary = toolData.result?.summary || toolData.arguments?.summary || '任务已完成';
-                toolCard.innerHTML = `
-                    <div style="display: flex; align-items: flex-start; gap: 10px;">
-                        <div style="font-size: 24px; line-height: 1;">✅</div>
+                const phasesCompleted = toolData.arguments?.phases_completed || 0;
+                const totalTasks = toolData.arguments?.total_tasks_executed || 0;
+                
+                let contentHtml = `
+                    <div style="display: flex; align-items: flex-start; gap: 12px;">
+                        <div style="font-size: 32px; line-height: 1;">✅</div>
                         <div style="flex: 1;">
-                            <div style="font-size: 14px; color: #28a745; font-weight: 700; margin-bottom: 8px;">✨ 任务完成</div>
-                            <div style="font-size: 14px; color: #155724; line-height: 1.6; white-space: pre-wrap; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 4px;">${escapeHtml(summary)}</div>
+                            <div style="font-size: 16px; color: #1b5e20; font-weight: 700; margin-bottom: 4px;">🎉 Level 4: Final Summary</div>
+                            <div style="font-size: 10px; color: #4caf50; margin-bottom: 12px;">Task Completed | Phases: ${phasesCompleted} | Tasks: ${totalTasks}</div>
+                            <div style="font-size: 14px; color: #2e7d32; line-height: 1.5; white-space: pre-wrap; background: rgba(255,255,255,0.7); padding: 12px; border-radius: 6px; border-left: 3px solid #66bb6a;">${escapeHtml(summary)}</div>
                         </div>
                     </div>
                 `;
+                
+                toolCard.innerHTML = contentHtml;
             } else {
                 // 普通工具渲染
                 toolCard.style.cssText = 'padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd; opacity: 0; transform: translateY(10px); transition: all 0.3s ease;';

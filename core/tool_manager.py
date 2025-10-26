@@ -7,11 +7,12 @@ from services.code_service import CodeService
 from services.terminal_service import TerminalService
 from utils.logger import safe_print as print
 
-# 导入所有工具（完整Phase-Task架构）
+# 导入所有工具（完整Request-Phase-Plan-Execute-Judge架构）
 from core.tools import (
     FileOperationsTool,
     SearchCodeTool,
     RunTerminalTool,
+    RequestAnalyserTool,
     PhasePlannerTool,
     TaskPlannerTool,
     JudgeTool,
@@ -37,7 +38,7 @@ class ToolManager:
         self._register_tools()
     
     def _register_tools(self):
-        """注册所有工具（完整Phase-Task架构 - 7个核心工具）"""
+        """注册所有工具（完整Request-Phase-Plan-Execute-Judge架构 - 8个核心工具）"""
         # 1. 文件操作工具（合并版）
         file_ops_tool = FileOperationsTool(self.file_service)
         self.tools['file_operations'] = lambda **kwargs: file_ops_tool.execute(**kwargs)
@@ -48,26 +49,29 @@ class ToolManager:
         # 3. 终端工具
         self.tools['run_terminal'] = lambda **kwargs: RunTerminalTool.execute(self.terminal_service, **kwargs)
         
-        # 4. Phase Planner工具（复杂度评估 + Phase划分）
+        # 4. Request Analyser工具（需求分析）
+        self.tools['request_analyser'] = lambda **kwargs: RequestAnalyserTool.execute(**kwargs)
+        
+        # 5. Phase Planner工具（Phase规划）
         self.tools['phase_planner'] = lambda **kwargs: PhasePlannerTool.execute(**kwargs)
         
-        # 5. Task Planner工具（AI规划Task列表）
+        # 6. Task Planner工具（Task规划）
         self.tools['plan_tool_call'] = lambda **kwargs: TaskPlannerTool.execute(**kwargs)
         
-        # 6. Judge工具（客观评判 + 主观分析）
+        # 7. Judge工具（评判+分析）
         self.tools['judge'] = lambda **kwargs: JudgeTool.execute(**kwargs)
         # 旧工具名映射（向后兼容）
         self.tools['think'] = lambda **kwargs: JudgeTool.execute(**kwargs)
         self.tools['judge_tasks'] = lambda **kwargs: JudgeTool.execute(**kwargs)
         
-        # 7. Summarizer工具（任务总结）
+        # 8. Summarizer工具（最终总结）
         summarizer_tool = SummarizerTool()
         self.tools['summarizer'] = lambda **kwargs: summarizer_tool.execute(**kwargs)
         # 旧工具名映射（向后兼容）
         self.tools['task_done'] = lambda **kwargs: summarizer_tool.execute(**kwargs)
     
     def get_tool_definitions(self) -> List[Dict[str, Any]]:
-        """获取所有工具的Function Calling定义（完整Phase-Task架构 - 7个核心工具）"""
+        """获取所有工具的Function Calling定义（完整Request-Phase-Plan-Execute-Judge架构 - 8个核心工具）"""
         file_ops_tool = FileOperationsTool(self.file_service)
         summarizer_tool = SummarizerTool()
         
@@ -75,10 +79,11 @@ class ToolManager:
             file_ops_tool.get_definition(),      # 1. 文件操作（合并版）
             SearchCodeTool.get_definition(),     # 2. 代码搜索
             RunTerminalTool.get_definition(),    # 3. 终端执行
-            PhasePlannerTool.get_definition(),   # 4. Phase规划（复杂度评估）
-            TaskPlannerTool.get_definition(),    # 5. Task规划
-            JudgeTool.get_definition(),          # 6. Judge（评判+分析）
-            summarizer_tool.get_definition()     # 7. Summarizer（任务总结）
+            RequestAnalyserTool.get_definition(),  # 4. Request分析（结构化需求）
+            PhasePlannerTool.get_definition(),   # 5. Phase规划
+            TaskPlannerTool.get_definition(),    # 6. Task规划
+            JudgeTool.get_definition(),          # 7. Judge（评判+分析）
+            summarizer_tool.get_definition()     # 8. Summarizer（最终总结）
         ]
         
         return definitions

@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 import json
 import asyncio
 from core.models.task import Task, Phase
+from core.tool_enforcer import ToolEnforcer
 from utils.logger import safe_print as print
 
 
@@ -22,6 +23,7 @@ class PhaseTaskExecutor:
         self.agent = agent
         self.llm_service = agent.llm_service
         self.tool_manager = agent.tool_manager
+        self.tool_enforcer = ToolEnforcer(agent.llm_service)  # 工具强制验证器
     
     async def execute_with_phase_task(
         self,
@@ -71,25 +73,24 @@ class PhaseTaskExecutor:
             print(f"[PhaseTaskExecutor] Phase {phase.id} - Round {phase.rounds}")
             print(f"{'='*70}")
             
-            # ========== 1️⃣ Plan阶段：规划Task列表 ==========
-            print(f"\n[PhaseTaskExecutor] 🎯 Phase 1/4: Plan - 规划Task列表")
+            # ========== 1️⃣ Plan阶段：规划Task列表（强制调用plan_tool_call）==========
+            print(f"\n[PhaseTaskExecutor] 🎯 Phase 1/3: Plan - 规划Task列表")
             
             plan_tools = [t for t in tools if t['function']['name'] == 'plan_tool_call']
             
             try:
-                plan_response = self.llm_service.chat(
+                # 🔥 使用ToolEnforcer强制调用plan_tool_call
+                plan_response = await self.tool_enforcer.enforce_tool_call(
+                    expected_tool_name="plan_tool_call",
                     messages=messages,
                     tools=plan_tools,
-                    tool_choice={
-                        "type": "function",
-                        "function": {"name": "plan_tool_call"}
-                    }
+                    on_retry=lambda attempt, error: print(f"[Plan] 🔄 第{attempt}次重试: {error}")
                 )
             except Exception as e:
-                print(f"[PhaseTaskExecutor] ❌ Plan阶段失败: {e}")
+                print(f"[PhaseTaskExecutor] ❌ Plan阶段失败（重试{self.tool_enforcer.max_retries}次后仍失败）: {e}")
                 return {
                     "success": False,
-                    "message": f"规划失败: {str(e)}",
+                    "message": f"Plan failed after {self.tool_enforcer.max_retries} retries: {str(e)}",
                     "tool_calls": tool_calls_history,
                     "phase": phase.to_dict()
                 }
@@ -225,38 +226,41 @@ class PhaseTaskExecutor:
                     task.status = "failed"
                     task.error_message = str(e)
             
-            # ========== 3️⃣ Judge阶段：评判+分析 ==========
+            # ========== 3️⃣ Judge阶段：评判+分析（强制调用judge）==========
             print(f"\n[PhaseTaskExecutor] ⚖️ Phase 3/3: Judge - 评判与分析")
             
             judge_tools = [t for t in tools if t['function']['name'] == 'judge']
+            print(f"[PhaseTaskExecutor] DEBUG - Judge工具数: {len(judge_tools)}")
+            
+            if len(judge_tools) == 0:
+                print(f"[PhaseTaskExecutor] ❌ Judge工具不存在，强制结束")
+                phase.status = "partial"
+                break
             
             try:
-                judge_response = self.llm_service.chat(
+                # 🔥 使用ToolEnforcer强制调用judge
+                judge_response = await self.tool_enforcer.enforce_tool_call(
+                    expected_tool_name="judge",
                     messages=messages,
                     tools=judge_tools,
-                    tool_choice={
-                        "type": "function",
-                        "function": {"name": "judge"}
-                    }
+                    on_retry=lambda attempt, error: print(f"[Judge] 🔄 第{attempt}次重试: {error}")
                 )
             except Exception as e:
-                print(f"[PhaseTaskExecutor] ❌ Judge阶段失败: {e}")
-                return {
-                    "success": False,
-                    "message": f"评判失败: {str(e)}",
-                    "tool_calls": tool_calls_history,
-                    "phase": phase.to_dict()
-                }
+                print(f"[PhaseTaskExecutor] ❌ Judge阶段失败（重试{self.tool_enforcer.max_retries}次后仍失败）: {e}")
+                # 强制结束Phase
+                phase.status = "partial"
+                phase.summary = f"Judge evaluation failed after {self.tool_enforcer.max_retries} retries"
+                break
             
+            # ✅ LLM正确调用了judge
             judge_tool_call = judge_response["tool_calls"][0]
             judge_result = json.loads(judge_tool_call["function"]["arguments"])
             
-            print(f"[PhaseTaskExecutor] ✅ Judge评判完成")
+            print(f"[PhaseTaskExecutor] ✅ Judge评判完成（LLM正确调用了judge）")
             print(f"[PhaseTaskExecutor] 完成率: {judge_result.get('phase_metrics', {}).get('completion_rate', 0):.1%}")
             print(f"[PhaseTaskExecutor] 平均质量: {judge_result.get('phase_metrics', {}).get('quality_average', 0):.1f}/10")
             print(f"[PhaseTaskExecutor] 决策: {judge_result.get('decision', {}).get('action', 'unknown')}")
             print(f"[PhaseTaskExecutor] Phase完成: {judge_result.get('phase_completed', False)}")
-            print(f"[PhaseTaskExecutor] 继续Phase: {judge_result.get('continue_phase', False)}")
             
             # 更新Task质量分
             if "task_evaluation" in judge_result:
@@ -268,7 +272,7 @@ class PhaseTaskExecutor:
                         task.output_valid = eval_item["output_valid"]
                         task.judge_notes = eval_item.get("notes", "")
             
-            # 记录Judge到messages
+            # 🔥 只有LLM正确调用judge，才添加到messages
             messages.append({
                 "role": "assistant",
                 "content": "",
@@ -299,16 +303,46 @@ class PhaseTaskExecutor:
             
             # ========== 4️⃣ 决策：是否结束Phase ==========
             phase_completed = judge_result.get("phase_completed", False)
-            continue_phase = judge_result.get("continue_phase", False)
+            decision_action = judge_result.get("decision", {}).get("action", "continue")
+            decision_reason = judge_result.get("decision", {}).get("reason", "")
             
-            if phase_completed or not continue_phase:
-                print(f"\n[PhaseTaskExecutor] ✅ Phase完成！")
+            print(f"\n[PhaseTaskExecutor] 🎯 Judge决策:")
+            print(f"  phase_completed: {phase_completed}")
+            print(f"  decision.action: {decision_action}")
+            print(f"  decision.reason: {decision_reason}")
+            
+            if phase_completed:
+                # Phase已完成，结束循环
+                print(f"\n[PhaseTaskExecutor] ✅ Phase完成！Judge评判通过")
                 phase.status = "done"
                 break
             else:
-                print(f"\n[PhaseTaskExecutor] 🔄 继续下一Round")
-                print(f"[PhaseTaskExecutor] 策略: {think_result.get('next_round_strategy', '')}")
-                continue
+                # Phase未完成，根据决策行动
+                print(f"\n[PhaseTaskExecutor] 🔄 Phase未完成，继续执行")
+                
+                if decision_action == "end_phase":
+                    # 强制结束（虽然未完成）
+                    print(f"[PhaseTaskExecutor] ⚠️ Judge决定强制结束Phase（未完全完成）")
+                    phase.status = "partial"
+                    break
+                elif decision_action == "replan":
+                    # 需要完全重新规划
+                    print(f"[PhaseTaskExecutor] 📝 Judge要求重新规划")
+                    print(f"  理由: {decision_reason}")
+                    # 清空Tasks，下一Round会重新Plan
+                    phase.tasks = []
+                    continue
+                elif decision_action == "retry_with_adjustment":
+                    # 重试失败的Tasks（调整参数）
+                    failed_tasks = judge_result.get("decision", {}).get("failed_tasks_to_retry", [])
+                    print(f"[PhaseTaskExecutor] 🔁 Judge要求重试失败Tasks: {failed_tasks}")
+                    print(f"  理由: {decision_reason}")
+                    # 下一Round的Plan会处理
+                    continue
+                else:
+                    # 默认：继续下一Round
+                    print(f"[PhaseTaskExecutor] ➡️ 继续下一Round（默认行为）")
+                    continue
         
         # Phase结束
         if phase.status != "done":

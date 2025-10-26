@@ -9,7 +9,7 @@ from services.llm_service import get_llm_service, LLMService
 from core.tool_manager import ToolManager
 from core.context_compressor import context_compressor
 from core.phase_task_executor import PhaseTaskExecutor
-from core.multi_phase_executor import MultiPhaseExecutor
+from core.request_phase_executor import RequestPhaseExecutor
 from utils.logger import safe_print as print
 
 
@@ -23,20 +23,21 @@ class Agent:
         Args:
             workspace_root: 工作空间根目录
             workspace_manager: 工作空间管理器（用于query_history工具）
-            use_phase_task: 是否使用Phase-Task架构（完整版）
+            use_phase_task: 是否使用Request-Phase-Plan-Execute-Judge架构（完整版）
         """
         self.llm_service: LLMService = get_llm_service()
         self.tool_manager = ToolManager(workspace_root, workspace_manager)
         self.max_iterations = 30  # 提高到30次，支持多次edit_file
-        self.use_phase_task = use_phase_task  # Phase-Task架构开关
+        self.use_phase_task = use_phase_task  # 四阶段架构开关
         self.phase_task_executor = PhaseTaskExecutor(self)  # 单Phase执行器
-        self.multi_phase_executor = MultiPhaseExecutor(self)  # 多Phase执行器
+        self.request_phase_executor = RequestPhaseExecutor(self)  # 完整四阶段执行器
     
     async def run(
         self, 
         user_message: str,
         context_history: Optional[List[Dict[str, Any]]] = None,
-        on_tool_executed: Optional[callable] = None
+        on_tool_executed: Optional[callable] = None,
+        session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         运行Agent处理用户请求
@@ -44,6 +45,7 @@ class Agent:
         Args:
             user_message: 用户消息
             context_history: Context历史（对标Cursor的Context）
+            session_id: 会话ID（用于API日志记录）
             
         Returns:
             Agent响应结果
@@ -53,6 +55,10 @@ class Agent:
         print(f"[Agent.run] 用户消息: {user_message}")
         print(f"[Agent.run] Context消息数: {len(context_history) if context_history else 0}")
         print("="*80 + "\n")
+        
+        # 设置session用于API日志
+        if session_id:
+            self.llm_service.api_logger.set_session(session_id)
         
         # 初始化Context历史
         if context_history is None:
@@ -69,12 +75,11 @@ class Agent:
         print(f"[Agent.run] 可用工具数: {len(tools)}")
         print(f"[Agent.run] 工具列表: {[t['function']['name'] for t in tools]}")
         
-        # 检查是否使用Phase-Task架构
+        # 检查是否使用四阶段架构
         if self.use_phase_task:
-            print(f"\n[Agent.run] 🎯 使用Phase-Task架构（完整版）")
-            return await self.multi_phase_executor.execute_with_multi_phase(
+            print(f"\n[Agent.run] 🚀 使用完整四阶段架构：Request-Phase-Plan-Execute-Judge-Summarizer")
+            return await self.request_phase_executor.execute_full_pipeline(
                 user_message=user_message,
-                messages=messages,
                 tools=tools,
                 on_tool_executed=on_tool_executed
             )
@@ -119,11 +124,21 @@ class Agent:
             if len(current_tools) > 0:
                 print(f"[Agent.run] DEBUG - 工具名列表: {[t['function']['name'] for t in current_tools]}")
             
+            # 准备上下文信息用于API日志
+            context_info = {
+                "user_message": user_message,
+                "iteration": iterations,
+                "phase": "Planner" if is_first_iteration else "Executor",
+                "round": None,
+                "task_id": None
+            }
+            
             try:
                 llm_response = self.llm_service.chat(
                     messages=messages,
                     tools=current_tools,
-                    tool_choice=tool_choice
+                    tool_choice=tool_choice,
+                    context_info=context_info
                 )
             except Exception as e:
                 error_msg = str(e)
@@ -564,7 +579,8 @@ class Agent:
         self,
         user_message: str,
         context_history: Optional[List[Dict[str, Any]]] = None,
-        on_tool_executed: Optional[callable] = None
+        on_tool_executed: Optional[callable] = None,
+        session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         同步版本的run方法
@@ -573,6 +589,7 @@ class Agent:
             user_message: 用户消息
             context_history: Context历史
             on_tool_executed: 工具执行回调（流式推送）
+            session_id: 会话ID（用于API日志记录）
             
         Returns:
             Agent响应结果
@@ -583,7 +600,7 @@ class Agent:
         
         try:
             result = loop.run_until_complete(
-                self.run(user_message, context_history, on_tool_executed)
+                self.run(user_message, context_history, on_tool_executed, session_id)
             )
             return result
         finally:
