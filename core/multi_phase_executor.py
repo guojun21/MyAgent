@@ -59,6 +59,15 @@ class MultiPhaseExecutor:
         
         phase_planner_tools = [t for t in tools if t['function']['name'] == 'phase_planner']
         
+        # 准备上下文信息用于API日志
+        context_info = {
+            "user_message": user_message,
+            "iteration": 0,
+            "phase": "Phase Planner",
+            "round": None,
+            "task_id": None
+        }
+        
         try:
             phase_plan_response = self.llm_service.chat(
                 messages=messages,
@@ -66,7 +75,8 @@ class MultiPhaseExecutor:
                 tool_choice={
                     "type": "function",
                     "function": {"name": "phase_planner"}
-                }
+                },
+                context_info=context_info
             )
         except Exception as e:
             print(f"[MultiPhaseExecutor] ❌ Phase规划失败: {e}")
