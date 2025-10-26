@@ -1202,11 +1202,12 @@
                 let contentHtml = `
                     <div class="phase-header">
                         <span>🏗️ Level 1: Phase Planning</span>
-                        <span class="status-badge ${needsPhases ? 'status-running' : 'status-done'}">${needsPhases ? `${phases.length} Phases` : 'Direct Exec'}</span>
+                        <span class="status-badge ${needsPhases ? 'status-running' : 'status-done'}">${needsPhases ? `${phases.length} Phases` : '1 Phase (Simple)'}</span>
                     </div>
                 `;
                 
                 if (needsPhases && phases.length > 0) {
+                    // 多Phase场景
                     phases.forEach((phase, i) => {
                         const priorityColor = phase.priority === 'high' ? '#f44336' : (phase.priority === 'medium' ? '#ff9800' : '#4caf50');
                         contentHtml += `
@@ -1229,7 +1230,13 @@
                         </div>
                     `;
                 } else {
-                    contentHtml += `<div style="margin-left: 20px; font-size: 13px; color: #4caf50; font-weight: 600;">✅ Simple task, direct execution</div>`;
+                    // 🔥 简单任务：创建默认Phase 1容器
+                    contentHtml += `
+                        <div style="margin: 8px 0 8px 20px; padding: 12px; background: rgba(255,255,255,0.8); border-radius: 6px; border-left: 4px solid #4caf50;">
+                            <div style="font-size: 14px; font-weight: 700; color: #3f51b5; margin-bottom: 4px;">Phase 1: Main Task</div>
+                            <div style="font-size: 12px; color: #666; line-height: 1.4;">✅ Simple task, direct execution (single phase)</div>
+                        </div>
+                    `;
                 }
                 
                 toolCard.innerHTML = contentHtml;

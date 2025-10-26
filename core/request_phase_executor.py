@@ -147,62 +147,52 @@ class RequestPhaseExecutor:
         total_tasks = 0
         total_rounds = 0
         
-        if needs_phases and phases_data:
-            for phase_data in phases_data:
-                phase_id = phase_data["id"]
-                phase_name = phase_data["name"]
-                phase_goal = phase_data["goal"]
-                
-                print(f"\n{'='*80}")
-                print(f"🎯 Phase {phase_id}: {phase_name}")
-                print(f"  目标: {phase_goal}")
-                print(f"{'='*80}")
-                
-                # 执行单个Phase
-                phase_result = await self.phase_task_executor.execute_with_phase_task(
-                    user_message=phase_goal,
-                    messages=execution_messages,
-                    tools=tools,
-                    on_tool_executed=on_tool_executed
-                )
-                
-                # 收集结果
-                all_phase_summaries.append({
-                    "phase_id": phase_id,
-                    "phase_name": phase_name,
-                    "summary": phase_result.get("message", ""),
-                    "rounds": phase_result.get("phase", {}).get("rounds", 0),
-                    "tasks": len(phase_result.get("phase", {}).get("tasks", []))
-                })
-                
-                total_tasks += len(phase_result.get("phase", {}).get("tasks", []))
-                total_rounds += phase_result.get("phase", {}).get("rounds", 0)
-                
-                # 合并tool_calls
-                if "tool_calls" in phase_result:
-                    all_tool_calls_history.extend(phase_result["tool_calls"])
-        else:
-            # 简单任务：直接单Phase执行
-            print(f"\n[Phase执行] 💡 简单任务，单Phase执行")
+        # 🔥 无论简单还是复杂，都要有Phase结构
+        if not needs_phases or not phases_data:
+            # 简单任务：创建一个默认Phase
+            print(f"\n[Phase执行] 💡 简单任务，创建默认Phase")
+            phases_data = [{
+                "id": 1,
+                "name": "Main Task",
+                "goal": structured_text,
+                "priority": "high",
+                "estimated_tasks": 3,
+                "estimated_time": 30,
+                "dependencies": []
+            }]
+        
+        # 执行所有Phase（简单任务只有1个Phase）
+        for phase_data in phases_data:
+            phase_id = phase_data["id"]
+            phase_name = phase_data["name"]
+            phase_goal = phase_data["goal"]
             
+            print(f"\n{'='*80}")
+            print(f"🎯 Phase {phase_id}: {phase_name}")
+            print(f"  目标: {phase_goal}")
+            print(f"{'='*80}")
+            
+            # 执行单个Phase
             phase_result = await self.phase_task_executor.execute_with_phase_task(
-                user_message=structured_text,
+                user_message=phase_goal,
                 messages=execution_messages,
                 tools=tools,
                 on_tool_executed=on_tool_executed
             )
             
+            # 收集结果
             all_phase_summaries.append({
-                "phase_id": 1,
-                "phase_name": "Main Task",
+                "phase_id": phase_id,
+                "phase_name": phase_name,
                 "summary": phase_result.get("message", ""),
                 "rounds": phase_result.get("phase", {}).get("rounds", 0),
                 "tasks": len(phase_result.get("phase", {}).get("tasks", []))
             })
             
-            total_tasks = len(phase_result.get("phase", {}).get("tasks", []))
-            total_rounds = phase_result.get("phase", {}).get("rounds", 0)
+            total_tasks += len(phase_result.get("phase", {}).get("tasks", []))
+            total_rounds += phase_result.get("phase", {}).get("rounds", 0)
             
+            # 合并tool_calls
             if "tool_calls" in phase_result:
                 all_tool_calls_history.extend(phase_result["tool_calls"])
         
