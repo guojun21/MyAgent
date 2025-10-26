@@ -7,15 +7,15 @@ from services.code_service import CodeService
 from services.terminal_service import TerminalService
 from utils.logger import safe_print as print
 
-# 导入所有工具（精简版 + Phase-Task架构）
+# 导入所有工具（完整Phase-Task架构）
 from core.tools import (
     FileOperationsTool,
     SearchCodeTool,
     RunTerminalTool,
-    PlanTool,
-    ThinkTool,
-    SummarizerTool,
-    JudgeTool
+    PhasePlannerTool,
+    TaskPlannerTool,
+    JudgeTool,
+    SummarizerTool
 )
 
 
@@ -37,7 +37,7 @@ class ToolManager:
         self._register_tools()
     
     def _register_tools(self):
-        """注册所有工具（精简版 - 7个核心工具，支持Phase-Task架构）"""
+        """注册所有工具（完整Phase-Task架构 - 7个核心工具）"""
         # 1. 文件操作工具（合并版）
         file_ops_tool = FileOperationsTool(self.file_service)
         self.tools['file_operations'] = lambda **kwargs: file_ops_tool.execute(**kwargs)
@@ -48,21 +48,26 @@ class ToolManager:
         # 3. 终端工具
         self.tools['run_terminal'] = lambda **kwargs: RunTerminalTool.execute(self.terminal_service, **kwargs)
         
-        # 4. Plan工具（AI规划Task列表 - Phase-Task架构）
-        self.tools['plan_tool_call'] = lambda **kwargs: PlanTool.execute(**kwargs)
+        # 4. Phase Planner工具（复杂度评估 + Phase划分）
+        self.tools['phase_planner'] = lambda **kwargs: PhasePlannerTool.execute(**kwargs)
         
-        # 5. Think工具（AI主观分析 - Phase-Task架构）
-        self.tools['think'] = lambda **kwargs: ThinkTool.execute(**kwargs)
+        # 5. Task Planner工具（AI规划Task列表）
+        self.tools['plan_tool_call'] = lambda **kwargs: TaskPlannerTool.execute(**kwargs)
         
-        # 6. Judge工具（客观评判 - Phase-Task架构）
+        # 6. Judge工具（客观评判 + 主观分析）
+        self.tools['judge'] = lambda **kwargs: JudgeTool.execute(**kwargs)
+        # 旧工具名映射（向后兼容）
+        self.tools['think'] = lambda **kwargs: JudgeTool.execute(**kwargs)
         self.tools['judge_tasks'] = lambda **kwargs: JudgeTool.execute(**kwargs)
         
-        # 7. Task Done工具（任务完成声明）
+        # 7. Summarizer工具（任务总结）
         summarizer_tool = SummarizerTool()
+        self.tools['summarizer'] = lambda **kwargs: summarizer_tool.execute(**kwargs)
+        # 旧工具名映射（向后兼容）
         self.tools['task_done'] = lambda **kwargs: summarizer_tool.execute(**kwargs)
     
     def get_tool_definitions(self) -> List[Dict[str, Any]]:
-        """获取所有工具的Function Calling定义（精简版 - 7个核心工具，支持Phase-Task架构）"""
+        """获取所有工具的Function Calling定义（完整Phase-Task架构 - 7个核心工具）"""
         file_ops_tool = FileOperationsTool(self.file_service)
         summarizer_tool = SummarizerTool()
         
@@ -70,22 +75,50 @@ class ToolManager:
             file_ops_tool.get_definition(),      # 1. 文件操作（合并版）
             SearchCodeTool.get_definition(),     # 2. 代码搜索
             RunTerminalTool.get_definition(),    # 3. 终端执行
-            PlanTool.get_definition(),           # 4. 规划工具（Task列表）
-            ThinkTool.get_definition(),          # 5. 思考工具（主观分析）
-            JudgeTool.get_definition(),          # 6. Judge工具（客观评判）
-            summarizer_tool.get_definition()     # 7. 任务完成
+            PhasePlannerTool.get_definition(),   # 4. Phase规划（复杂度评估）
+            TaskPlannerTool.get_definition(),    # 5. Task规划
+            JudgeTool.get_definition(),          # 6. Judge（评判+分析）
+            summarizer_tool.get_definition()     # 7. Summarizer（任务总结）
         ]
         
         return definitions
     
     def execute_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
-        """执行工具"""
+        """执行工具（支持旧工具名自动映射）"""
         print(f"\n      [ToolManager.execute_tool] 开始执行工具")
         print(f"      [ToolManager.execute_tool] 工具名: {tool_name}")
         print(f"      [ToolManager.execute_tool] 参数: {parameters}")
         
+        # 🔥 旧工具名自动映射到file_operations（向后兼容）
+        old_to_new_mapping = {
+            "read_file": "file_operations",
+            "write_file": "file_operations",
+            "edit_file": "file_operations",
+            "list_files": "file_operations",
+        }
+        
+        if tool_name in old_to_new_mapping:
+            new_tool_name = old_to_new_mapping[tool_name]
+            print(f"      [ToolManager.execute_tool] 🔄 旧工具名映射: {tool_name} → {new_tool_name}")
+            
+            # 自动添加operation参数
+            if "operation" not in parameters:
+                if tool_name == "read_file":
+                    parameters["operation"] = "read"
+                elif tool_name == "write_file":
+                    parameters["operation"] = "write"
+                elif tool_name == "edit_file":
+                    parameters["operation"] = "edit"
+                elif tool_name == "list_files":
+                    parameters["operation"] = "list"
+                
+                print(f"      [ToolManager.execute_tool] 🔄 自动添加operation={parameters.get('operation')}")
+            
+            tool_name = new_tool_name
+        
         if tool_name not in self.tools:
-            print(f"      [ToolManager.execute_tool] ❌ 工具不存在")
+            print(f"      [ToolManager.execute_tool] ❌ 工具不存在: {tool_name}")
+            print(f"      [ToolManager.execute_tool] 可用工具: {list(self.tools.keys())}")
             return {"success": False, "error": f"未知的工具: {tool_name}"}
         
         try:

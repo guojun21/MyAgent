@@ -225,10 +225,10 @@ class PhaseTaskExecutor:
                     task.status = "failed"
                     task.error_message = str(e)
             
-            # ========== 3️⃣ Judge阶段：客观评判 ==========
-            print(f"\n[PhaseTaskExecutor] ⚖️ Phase 3/4: Judge - 客观评判")
+            # ========== 3️⃣ Judge阶段：评判+分析 ==========
+            print(f"\n[PhaseTaskExecutor] ⚖️ Phase 3/3: Judge - 评判与分析")
             
-            judge_tools = [t for t in tools if t['function']['name'] == 'judge_tasks']
+            judge_tools = [t for t in tools if t['function']['name'] == 'judge']
             
             try:
                 judge_response = self.llm_service.chat(
@@ -236,34 +236,30 @@ class PhaseTaskExecutor:
                     tools=judge_tools,
                     tool_choice={
                         "type": "function",
-                        "function": {"name": "judge_tasks"}
+                        "function": {"name": "judge"}
                     }
                 )
             except Exception as e:
-                print(f"[PhaseTaskExecutor] ⚠️ Judge阶段失败: {e}，跳过Judge")
-                judge_result = None
-            else:
-                judge_tool_call = judge_response["tool_calls"][0]
-                judge_result = json.loads(judge_tool_call["function"]["arguments"])
-                
-                print(f"[PhaseTaskExecutor] ✅ Judge评判完成")
-                print(f"[PhaseTaskExecutor] 完成率: {judge_result['phase_metrics']['completion_rate']:.1%}")
-                print(f"[PhaseTaskExecutor] 平均质量: {judge_result['phase_metrics']['quality_average']:.1f}/10")
-                print(f"[PhaseTaskExecutor] 决策: {judge_result['decision']['action']}")
-                
-                # 记录Judge到messages
-                messages.append({
-                    "role": "assistant",
-                    "content": "",
-                    "tool_calls": judge_response["tool_calls"]
-                })
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": judge_tool_call["id"],
-                    "content": json.dumps(judge_result, ensure_ascii=False)
-                })
-                
-                # 更新Task质量分
+                print(f"[PhaseTaskExecutor] ❌ Judge阶段失败: {e}")
+                return {
+                    "success": False,
+                    "message": f"评判失败: {str(e)}",
+                    "tool_calls": tool_calls_history,
+                    "phase": phase.to_dict()
+                }
+            
+            judge_tool_call = judge_response["tool_calls"][0]
+            judge_result = json.loads(judge_tool_call["function"]["arguments"])
+            
+            print(f"[PhaseTaskExecutor] ✅ Judge评判完成")
+            print(f"[PhaseTaskExecutor] 完成率: {judge_result.get('phase_metrics', {}).get('completion_rate', 0):.1%}")
+            print(f"[PhaseTaskExecutor] 平均质量: {judge_result.get('phase_metrics', {}).get('quality_average', 0):.1f}/10")
+            print(f"[PhaseTaskExecutor] 决策: {judge_result.get('decision', {}).get('action', 'unknown')}")
+            print(f"[PhaseTaskExecutor] Phase完成: {judge_result.get('phase_completed', False)}")
+            print(f"[PhaseTaskExecutor] 继续Phase: {judge_result.get('continue_phase', False)}")
+            
+            # 更新Task质量分
+            if "task_evaluation" in judge_result:
                 for eval_item in judge_result.get("task_evaluation", []):
                     task_id = eval_item["task_id"]
                     task = next((t for t in tasks if t.id == task_id), None)
@@ -272,68 +268,38 @@ class PhaseTaskExecutor:
                         task.output_valid = eval_item["output_valid"]
                         task.judge_notes = eval_item.get("notes", "")
             
-            # ========== 4️⃣ Think阶段：主观分析 ==========
-            print(f"\n[PhaseTaskExecutor] 💭 Phase 4/4: Think - 主观分析")
-            
-            think_tools = [t for t in tools if t['function']['name'] == 'think']
-            
-            try:
-                think_response = self.llm_service.chat(
-                    messages=messages,
-                    tools=think_tools,
-                    tool_choice={
-                        "type": "function",
-                        "function": {"name": "think"}
-                    }
-                )
-            except Exception as e:
-                print(f"[PhaseTaskExecutor] ❌ Think阶段失败: {e}")
-                return {
-                    "success": False,
-                    "message": f"分析失败: {str(e)}",
-                    "tool_calls": tool_calls_history,
-                    "phase": phase.to_dict()
-                }
-            
-            think_tool_call = think_response["tool_calls"][0]
-            think_result = json.loads(think_tool_call["function"]["arguments"])
-            
-            print(f"[PhaseTaskExecutor] ✅ Think分析完成")
-            print(f"[PhaseTaskExecutor] Phase完成: {think_result.get('phase_completed', False)}")
-            print(f"[PhaseTaskExecutor] 继续Phase: {think_result.get('continue_phase', False)}")
-            
-            # 记录Think到messages
+            # 记录Judge到messages
             messages.append({
                 "role": "assistant",
                 "content": "",
-                "tool_calls": think_response["tool_calls"]
+                "tool_calls": judge_response["tool_calls"]
             })
             messages.append({
                 "role": "tool",
-                "tool_call_id": think_tool_call["id"],
-                "content": json.dumps(think_result, ensure_ascii=False)
+                "tool_call_id": judge_tool_call["id"],
+                "content": json.dumps(judge_result, ensure_ascii=False)
             })
             
-            # 触发think回调
+            # 触发judge回调
             if on_tool_executed:
-                think_tool_data = {
-                    "tool": "think",
-                    "arguments": think_result,
+                judge_tool_data = {
+                    "tool": "judge",
+                    "arguments": judge_result,
                     "result": {
                         "success": True,
-                        "summary": think_result.get("user_summary") or think_result.get("summary", "")
+                        "summary": judge_result.get("user_summary") or judge_result.get("summary", "")
                     }
                 }
-                tool_calls_history.append(think_tool_data)
-                on_tool_executed(think_tool_data)
+                tool_calls_history.append(judge_tool_data)
+                on_tool_executed(judge_tool_data)
             
             # 更新Phase统计
             phase.update_metrics()
-            phase.summary = think_result.get("user_summary") or think_result.get("summary", "")
+            phase.summary = judge_result.get("user_summary") or judge_result.get("summary", "")
             
-            # ========== 5️⃣ 决策：是否结束Phase ==========
-            phase_completed = think_result.get("phase_completed", False)
-            continue_phase = think_result.get("continue_phase", False)
+            # ========== 4️⃣ 决策：是否结束Phase ==========
+            phase_completed = judge_result.get("phase_completed", False)
+            continue_phase = judge_result.get("continue_phase", False)
             
             if phase_completed or not continue_phase:
                 print(f"\n[PhaseTaskExecutor] ✅ Phase完成！")

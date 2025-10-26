@@ -9,6 +9,7 @@ from services.llm_service import get_llm_service, LLMService
 from core.tool_manager import ToolManager
 from core.context_compressor import context_compressor
 from core.phase_task_executor import PhaseTaskExecutor
+from core.multi_phase_executor import MultiPhaseExecutor
 from utils.logger import safe_print as print
 
 
@@ -22,13 +23,14 @@ class Agent:
         Args:
             workspace_root: 工作空间根目录
             workspace_manager: 工作空间管理器（用于query_history工具）
-            use_phase_task: 是否使用Phase-Task架构（MVP版本）
+            use_phase_task: 是否使用Phase-Task架构（完整版）
         """
         self.llm_service: LLMService = get_llm_service()
         self.tool_manager = ToolManager(workspace_root, workspace_manager)
         self.max_iterations = 30  # 提高到30次，支持多次edit_file
         self.use_phase_task = use_phase_task  # Phase-Task架构开关
-        self.phase_task_executor = PhaseTaskExecutor(self)  # Phase-Task执行器
+        self.phase_task_executor = PhaseTaskExecutor(self)  # 单Phase执行器
+        self.multi_phase_executor = MultiPhaseExecutor(self)  # 多Phase执行器
     
     async def run(
         self, 
@@ -69,8 +71,8 @@ class Agent:
         
         # 检查是否使用Phase-Task架构
         if self.use_phase_task:
-            print(f"\n[Agent.run] 🎯 使用Phase-Task架构（MVP版本）")
-            return await self.phase_task_executor.execute_with_phase_task(
+            print(f"\n[Agent.run] 🎯 使用Phase-Task架构（完整版）")
+            return await self.multi_phase_executor.execute_with_multi_phase(
                 user_message=user_message,
                 messages=messages,
                 tools=tools,
@@ -299,9 +301,9 @@ class Agent:
                                     "content": json.dumps(tool_result, ensure_ascii=False)
                                 })
                                 
-                                # 🎯 检测task_done：如果任务完成，立即终止循环
-                                if tool_name == "task_done" and tool_result.get("task_completed"):
-                                    print(f"\n[Agent.run] ✅ 检测到task_done，任务已完成，终止循环")
+                                # 🎯 检测summarizer：如果任务完成，立即终止循环
+                                if tool_name in ["summarizer", "task_done"] and tool_result.get("task_completed"):
+                                    print(f"\n[Agent.run] ✅ 检测到summarizer，任务已完成，终止循环")
                                     final_message = tool_result.get("summary", "任务已完成")
                                     return {
                                         "success": True,
@@ -376,9 +378,9 @@ class Agent:
                         "content": json.dumps(tool_result, ensure_ascii=False)
                     })
                     
-                    # 🎯 检测task_done：如果任务完成，立即终止循环
-                    if tool_call["function"]["name"] == "task_done" and tool_result.get("task_completed"):
-                        print(f"\n[Agent.run] ✅ 检测到task_done，任务已完成，终止循环")
+                    # 🎯 检测summarizer：如果任务完成，立即终止循环
+                    if tool_call["function"]["name"] in ["summarizer", "task_done"] and tool_result.get("task_completed"):
+                        print(f"\n[Agent.run] ✅ 检测到summarizer，任务已完成，终止循环")
                         final_message = tool_result.get("summary", "任务已完成")
                         return {
                             "success": True,

@@ -1,11 +1,11 @@
 """
-Plan工具 - AI规划Task列表（Phase-Task架构升级版）
+Task Planner工具 - AI规划Task列表（Phase-Task架构）
 """
 from typing import Dict, Any
 
 
-class PlanTool:
-    """Plan工具：让AI规划Task列表（支持Phase-Task架构）"""
+class TaskPlannerTool:
+    """Task Planner工具：让AI规划Task列表（支持Phase-Task架构）"""
     
     @staticmethod
     def get_definition() -> Dict[str, Any]:

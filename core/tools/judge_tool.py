@@ -1,12 +1,12 @@
 """
-Judge工具 - 客观评判Task执行质量
-Phase-Task架构的关键工具
+Judge工具 - AI分析与评判
+客观评判 + 主观分析的统一工具
 """
 from typing import Dict, Any
 
 
 class JudgeTool:
-    """Judge工具：客观评判Tasks执行结果"""
+    """Judge工具：客观评判 + 主观分析"""
     
     @staticmethod
     def get_definition() -> Dict[str, Any]:
@@ -14,91 +14,80 @@ class JudgeTool:
         return {
             "type": "function",
             "function": {
-                "name": "judge_tasks",
-                "description": """客观评判工具（Judge）
+                "name": "judge",
+                "description": """AI分析与评判工具（Judge）
 
-你的角色：严格的质量评审员
+你的角色：既是客观评审员，也是主观分析师
 
 职责：
-1. 检查每个Task的执行结果
-2. 评估输出质量（quality_score: 0-10分）
-3. 判断输出是否有效（output_valid: true/false）
-4. 决定Phase是否应该结束
+1. 客观评判：检查每个Task执行结果，评分（0-10）
+2. 主观分析：基于评判结果，决策下一步行动
+3. 用户总结：生成清晰的执行摘要
 
-评判标准：
-- 工具调用成功 → quality_score ≥ 8
-- 输出内容完整、相关 → quality_score ≥ 7
-- 输出有轻微瑕疵 → quality_score 5-7
-- 输出不符合预期 → quality_score < 5
-- 工具调用失败 → quality_score = 0, output_valid = false
+输出格式：
+{
+    "task_evaluation": [  // 客观评判部分
+        {
+            "task_id": 1,
+            "status": "done",
+            "quality_score": 9.5,
+            "output_valid": true,
+            "notes": "文件读取成功"
+        }
+    ],
+    "phase_metrics": {  // Phase整体指标
+        "completion_rate": 1.0,
+        "success_rate": 1.0,
+        "quality_average": 9.2
+    },
+    "decision": {  // 决策
+        "action": "end",  // end/continue/retry_with_adjustment/replan
+        "reason": "所有Task成功完成",
+        "failed_tasks_to_retry": []
+    },
+    "user_summary": "✅ 已完成所有Tasks....",  // 用户可见总结
+    "phase_completed": true,  // Phase是否完成
+    "continue_phase": false   // 是否继续Round
+}
+
+兼容模式（简单场景）：
+可以只填写summary字段（50-200字）
+
+评分标准：
+- 工具成功 + 输出完整 → 8-10分
+- 工具成功但输出不完美 → 5-7分
+- 工具失败 → 0分
 
 决策逻辑：
-- 所有Task都成功 → phase_should_end = true, action = "end"
-- 有Task失败但可重试 → phase_should_end = false, action = "retry_with_adjustment"
-- 有Task失败且无法恢复 → phase_should_end = false, action = "replan"
-- Plan本身有问题 → phase_plan_quality.needs_revision = true
-
-注意：
-- Judge只客观评判，不主观分析
-- 给出明确的quality_score（数字）
-- 说明failed_tasks如何修正
+- 所有Task成功 → action="end"
+- 有Task失败可重试 → action="retry_with_adjustment"
+- Plan本身有问题 → action="replan"
 """,
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "task_evaluation": {
                             "type": "array",
-                            "description": "每个Task的评估结果",
+                            "description": "每个Task的评估（客观评判）",
                             "items": {
                                 "type": "object",
                                 "properties": {
-                                    "task_id": {
-                                        "type": "integer",
-                                        "description": "Task ID"
-                                    },
-                                    "status": {
-                                        "type": "string",
-                                        "enum": ["done", "failed", "partial"],
-                                        "description": "Task状态"
-                                    },
-                                    "quality_score": {
-                                        "type": "number",
-                                        "description": "执行质量评分（0-10）"
-                                    },
-                                    "output_valid": {
-                                        "type": "boolean",
-                                        "description": "输出是否有效"
-                                    },
-                                    "notes": {
-                                        "type": "string",
-                                        "description": "评审备注"
-                                    }
-                                },
-                                "required": ["task_id", "status", "quality_score", "output_valid"]
+                                    "task_id": {"type": "integer"},
+                                    "status": {"type": "string", "enum": ["done", "failed", "partial"]},
+                                    "quality_score": {"type": "number"},
+                                    "output_valid": {"type": "boolean"},
+                                    "notes": {"type": "string"}
+                                }
                             }
                         },
                         "phase_metrics": {
                             "type": "object",
                             "description": "Phase整体指标",
                             "properties": {
-                                "completion_rate": {
-                                    "type": "number",
-                                    "description": "完成率（0-1）"
-                                },
-                                "success_rate": {
-                                    "type": "number",
-                                    "description": "成功率（0-1）"
-                                },
-                                "quality_average": {
-                                    "type": "number",
-                                    "description": "平均质量分（0-10）"
-                                }
-                            },
-                            "required": ["completion_rate", "success_rate", "quality_average"]
-                        },
-                        "phase_should_end": {
-                            "type": "boolean",
-                            "description": "Phase是否应该结束"
+                                "completion_rate": {"type": "number"},
+                                "success_rate": {"type": "number"},
+                                "quality_average": {"type": "number"}
+                            }
                         },
                         "decision": {
                             "type": "object",
@@ -106,59 +95,48 @@ class JudgeTool:
                             "properties": {
                                 "action": {
                                     "type": "string",
-                                    "enum": ["end", "continue", "retry_with_adjustment", "replan"],
-                                    "description": "下一步行动"
+                                    "enum": ["end", "continue", "retry_with_adjustment", "replan"]
                                 },
-                                "reason": {
-                                    "type": "string",
-                                    "description": "决策理由"
-                                },
+                                "reason": {"type": "string"},
                                 "failed_tasks_to_retry": {
                                     "type": "array",
-                                    "items": {"type": "integer"},
-                                    "description": "需要重试的Task ID列表"
-                                },
-                                "suggested_adjustments": {
-                                    "type": "object",
-                                    "description": "建议的参数调整"
+                                    "items": {"type": "integer"}
                                 }
-                            },
-                            "required": ["action", "reason"]
+                            }
                         },
-                        "phase_plan_quality": {
-                            "type": "object",
-                            "description": "Phase规划质量评估",
-                            "properties": {
-                                "score": {
-                                    "type": "number",
-                                    "description": "规划质量分（0-10）"
-                                },
-                                "needs_revision": {
-                                    "type": "boolean",
-                                    "description": "是否需要重新规划"
-                                },
-                                "revision_reason": {
-                                    "type": "string",
-                                    "description": "需要修订的原因"
-                                }
-                            },
-                            "required": ["score", "needs_revision"]
+                        "user_summary": {
+                            "type": "string",
+                            "description": "用户可见总结"
+                        },
+                        "phase_completed": {
+                            "type": "boolean",
+                            "description": "Phase是否完成"
+                        },
+                        "continue_phase": {
+                            "type": "boolean",
+                            "description": "是否继续Phase"
+                        },
+                        "next_round_strategy": {
+                            "type": "string",
+                            "description": "下一轮策略"
+                        },
+                        "summary": {
+                            "type": "string",
+                            "description": "简单总结（兼容旧版）"
                         }
                     },
-                    "required": ["task_evaluation", "phase_metrics", "phase_should_end", "decision", "phase_plan_quality"]
+                    "required": []  # 灵活参数
                 }
             }
         }
     
     @staticmethod
     def execute(**kwargs) -> Dict[str, Any]:
-        """执行Judge评判"""
-        # Judge工具只是返回LLM的评判结果
-        # 实际的评判逻辑由LLM完成
+        """执行Think分析与评判"""
+        # 返回LLM提供的所有参数
         return {
             "success": True,
-            "message": "Judge评判完成",
-            "evaluation": kwargs
+            **kwargs,
+            "message": "Think分析完成"
         }
-
 
