@@ -295,18 +295,32 @@ class AgentBridge(QObject):
         # 通知前端Context已更新
         self._emit_context_update()
         
-        # 只有有实际消息时才发送
-        if result.get("message"):
+        # 发送结果到前端（即使消息为空，只要有工具调用也要发送）
+        message = result.get("message", "")
+        tool_calls = result.get("tool_calls", [])
+        
+        # 只要有消息或工具调用，就发送
+        if message or len(tool_calls) > 0:
             print(f"[AgentBridge._on_agent_finished] 发送结果到前端")
+            print(f"  - 消息长度: {len(message)}")
+            print(f"  - 工具调用: {len(tool_calls)}个")
+            
+            # 如果消息为空但有工具调用，给个默认消息
+            display_message = message if message else f"已执行 {len(tool_calls)} 个工具"
+            
             self._send_to_frontend({
                 "type": "response",
                 "success": result.get("success", False),
-                "message": result.get("message", ""),
-                "tool_calls": result.get("tool_calls", []),
+                "message": display_message,
+                "tool_calls": tool_calls,
                 "iterations": result.get("iterations", 0)
             })
         else:
-            print(f"[AgentBridge._on_agent_finished] 消息为空，不发送")
+            print(f"[AgentBridge._on_agent_finished] ⚠️ 消息和工具都为空，发送错误")
+            self._send_to_frontend({
+                "type": "error",
+                "message": "任务完成但无返回内容"
+            })
     
     @pyqtSlot(result=str)
     def createConversation(self):
