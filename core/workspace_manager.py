@@ -88,6 +88,9 @@ class Workspace:
             message["tool_calls"] = message_data["tool_calls"]
         if "iterations" in message_data:
             message["iterations"] = message_data["iterations"]
+        # 🔥 添加structured_metadata用于新架构的持久化
+        if "structured_metadata" in message_data:
+            message["structured_metadata"] = message_data["structured_metadata"]
         
         # 直接追加到JSON
         persistence_manager.append_message_history(message)
@@ -100,8 +103,13 @@ class Workspace:
     def get_message_history(self) -> List[Dict]:
         """获取MessageHistory（从JSON读取）"""
         from core.persistence import persistence_manager
+        from core.message_converter import MessageConverter
         
         messages = persistence_manager.get_message_history_by_workspace(self.id)
+        
+        # 🔥 转换旧格式为结构化格式
+        messages = MessageConverter.convert_message_history(messages)
+        
         self.message_history = messages
         
         return messages
@@ -164,6 +172,16 @@ class Conversation:
         if "iterations" in message_data:
             message["iterations"] = message_data["iterations"]
         
+        # 🔥 添加structured_metadata用于新架构的持久化
+        if "structured_metadata" in message_data:
+            message["structured_metadata"] = message_data["structured_metadata"]
+            print(f"    [add_to_context_with_metadata] ✅ 添加structured_metadata")
+        
+        # 🔥 添加structured_context（完整结构化Context）
+        if "structured_context" in message_data:
+            message["structured_context"] = message_data["structured_context"]
+            print(f"    [add_to_context_with_metadata] ✅ 添加structured_context")
+        
         print(f"    [add_to_context_with_metadata] message keys: {list(message.keys())}")
         
         messages.append(message)
@@ -180,6 +198,7 @@ class Conversation:
     def get_context_messages(self) -> List[Dict]:
         """获取Context消息（从JSON读取）"""
         from core.persistence import persistence_manager
+        from core.message_converter import MessageConverter
         
         print(f"    [Conversation.get_context_messages] 对话ID: {self.id}")
         print(f"    [Conversation.get_context_messages] 对话名: {self.name}")
@@ -190,9 +209,13 @@ class Conversation:
         
         if ctx_data:
             messages = ctx_data.get("context_messages", [])
-            self.context_messages = messages
             self.token_usage = ctx_data.get("token_usage", self.token_usage)
             print(f"    [Conversation.get_context_messages] ✅ 读取到{len(messages)}条消息")
+            
+            # 🔥 转换旧格式为结构化格式
+            messages = MessageConverter.convert_message_history(messages)
+            
+            self.context_messages = messages
         else:
             print(f"    [Conversation.get_context_messages] ⚠️ contexts.json中没有该对话的数据")
             self.context_messages = []

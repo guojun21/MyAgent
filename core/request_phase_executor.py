@@ -8,6 +8,7 @@ from core.models.task import Phase
 from core.phase_task_executor import PhaseTaskExecutor
 from core.tool_enforcer import ToolEnforcer
 from core.validators import RuleValidator
+from core.structured_context import StructuredContext
 from utils.logger import safe_print as print
 
 
@@ -21,6 +22,7 @@ class RequestPhaseExecutor:
         self.phase_task_executor = PhaseTaskExecutor(agent)
         self.tool_enforcer = ToolEnforcer(agent.llm_service, max_retries=10)  # 工具强制验证器（10次重试）
         self.rule_validator = RuleValidator()  # 规则验证器
+        self.structured_context = StructuredContext()  # 🔥 结构化Context
     
     async def execute_full_pipeline(
         self,
@@ -82,9 +84,14 @@ class RequestPhaseExecutor:
             print(f"  原始: {len(user_message)} 字符")
             print(f"  结构化: {len(structured_text)} 字符")
             print(f"  压缩: {(1-len(structured_text)/len(user_message))*100:.1f}%")
+            
+            # 🔥 设置结构化Context的Request信息
+            self.structured_context.set_request(user_message, analyzed_request)
         except Exception as e:
             print(f"[Request分析] ⚠️ 失败，使用原始输入: {e}")
             structured_text = user_message
+            # 即使失败，也要设置原始输入
+            self.structured_context.set_request(user_message, None)
         
         # ========== 阶段1：Phase规划 ==========
         print(f"\n{'='*80}")
@@ -207,6 +214,9 @@ class RequestPhaseExecutor:
             print(f"  目标: {phase_goal}")
             print(f"{'='*80}")
             
+            # 🔥 添加Phase到结构化Context
+            phase_obj = self.structured_context.add_phase(phase_id, phase_name, phase_goal)
+            
             # 执行单个Phase
             phase_result = await self.phase_task_executor.execute_with_phase_task(
                 user_message=phase_goal,
@@ -215,11 +225,21 @@ class RequestPhaseExecutor:
                 on_tool_executed=on_tool_executed
             )
             
+            # 🔥 将Rounds数据添加到结构化Context
+            rounds_data = phase_result.get("rounds_data", [])
+            for round_data in rounds_data:
+                self.structured_context.add_round_to_phase(phase_id, round_data)
+            
+            # 设置Phase总结
+            phase_summary = phase_result.get("message", "")
+            phase_status = phase_result.get("phase", {}).get("status", "done")
+            self.structured_context.set_phase_summary(phase_id, phase_summary, phase_status)
+            
             # 收集结果
             all_phase_summaries.append({
                 "phase_id": phase_id,
                 "phase_name": phase_name,
-                "summary": phase_result.get("message", ""),
+                "summary": phase_summary,
                 "rounds": phase_result.get("phase", {}).get("rounds", 0),
                 "tasks": len(phase_result.get("phase", {}).get("tasks", []))
             })
@@ -284,14 +304,74 @@ Phase Summaries:
             print(f"[Summarizer] ✅ 最终总结生成完成")
             print(f"  总结长度: {len(final_summary)} 字符")
             
+            # 🔥 设置结构化Context的最终总结
+            self.structured_context.set_final_summary(final_summary)
+            
         except Exception as e:
             print(f"[Summarizer] ❌ 失败（重试{self.tool_enforcer.max_retries}次后仍失败）: {e}")
             print(f"[Summarizer] 使用默认总结（兜底机制）")
             final_summary = self._generate_default_summary(all_phase_summaries, total_tasks, total_rounds)
+            # 设置默认总结到结构化Context
+            self.structured_context.set_final_summary(final_summary)
         
         print(f"\n{'='*100}")
         print("✅ 四阶段执行完成")
         print(f"{'='*100}")
+        
+        # 🔥 构建结构化metadata，用于持久化和重新渲染
+        structured_metadata = {
+            "architecture": "request-phase-task",  # 标识使用新架构
+            "request_analysis": {
+                "tool": "request_analyser",
+                "core_goal": structured_text,
+                "timestamp": None  # 前端会设置
+            },
+            "phase_planning": {
+                "tool": "phase_planner",
+                "needs_phases": needs_phases,
+                "phases_count": len(all_phase_summaries),
+                "timestamp": None
+            },
+            "phases": []
+        }
+        
+        # 按Phase组织tool_calls
+        for phase_summary in all_phase_summaries:
+            phase_metadata = {
+                "phase_id": phase_summary["phase_id"],
+                "phase_name": phase_summary["phase_name"],
+                "summary": phase_summary["summary"],
+                "rounds": phase_summary["rounds"],
+                "tasks_count": phase_summary["tasks"],
+                "tool_calls": []
+            }
+            structured_metadata["phases"].append(phase_metadata)
+        
+        # 将tool_calls按类型分配到对应Phase
+        for tool_call in all_tool_calls_history:
+            tool_name = tool_call.get("tool", "")
+            
+            if tool_name == "request_analyser":
+                structured_metadata["request_analysis"]["data"] = tool_call
+            elif tool_name == "phase_planner":
+                structured_metadata["phase_planning"]["data"] = tool_call
+            elif tool_name == "summarizer":
+                structured_metadata["summarizer"] = tool_call
+            else:
+                # 其他工具归入最后一个Phase（简化处理）
+                if structured_metadata["phases"]:
+                    structured_metadata["phases"][-1]["tool_calls"].append(tool_call)
+        
+        # 🔥 获取完整结构化Context
+        structured_context_dict = self.structured_context.to_dict()
+        structured_context_json = self.structured_context.to_compact_json()
+        
+        print(f"\n[结构化Context] ✅ 生成完成")
+        print(f"  Request: {self.structured_context.data['request']['core_goal'][:50]}...")
+        print(f"  Phases: {len(self.structured_context.data['phases'])}")
+        print(f"  Total Rounds: {sum(len(p['rounds']) for p in self.structured_context.data['phases'])}")
+        print(f"  JSON大小: {len(structured_context_json)} 字符")
+        print(f"  估算Token: {self.structured_context.get_token_count_estimate()}")
         
         return {
             "success": True,
@@ -299,7 +379,9 @@ Phase Summaries:
             "tool_calls": all_tool_calls_history,
             "phases_completed": len(all_phase_summaries),
             "total_tasks": total_tasks,
-            "total_rounds": total_rounds
+            "total_rounds": total_rounds,
+            "structured_metadata": structured_metadata,  # 兼容旧的（用于前端实时渲染）
+            "structured_context": structured_context_dict  # 🔥 新增完整结构化Context
         }
     
     def _generate_default_summary(self, phase_summaries: List[Dict], total_tasks: int, total_rounds: int) -> str:
