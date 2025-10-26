@@ -19,6 +19,11 @@ class PhasePlannerTool:
 
 Your role: Architect
 
+⚠️ STRICT RULES (MUST FOLLOW):
+1. Maximum 3 Phases allowed
+2. If task requires more than 3 Phases, merge similar Phases
+3. Violation will be REJECTED and you must REPLAN
+
 Tasks:
 1. Assess user request complexity (1-10 score)
 2. Determine if Phase division is needed

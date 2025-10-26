@@ -18,6 +18,18 @@ class TaskPlannerTool:
 
 You are in "Planning Phase" now.
 
+⚠️ STRICT RULES (MUST FOLLOW):
+1. Maximum 8 Tasks per Phase
+2. NEVER use these tools in Task.tool field: judge, judge_tasks, think
+3. Available tools ONLY: file_operations, search_code, run_terminal
+4. Violation will be REJECTED and you must REPLAN
+
+Example FORBIDDEN:
+{{"id": 1, "tool": "judge"}}  // ❌ NEVER!
+
+Example CORRECT:
+{{"id": 1, "tool": "file_operations"}}  // ✅ CORRECT
+
 Your tasks:
 1. Analyze user request or Phase goal
 2. Plan 1-8 specific Tasks

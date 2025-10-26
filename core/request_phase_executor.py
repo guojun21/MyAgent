@@ -7,6 +7,7 @@ import json
 from core.models.task import Phase
 from core.phase_task_executor import PhaseTaskExecutor
 from core.tool_enforcer import ToolEnforcer
+from core.validators import RuleValidator
 from utils.logger import safe_print as print
 
 
@@ -18,7 +19,8 @@ class RequestPhaseExecutor:
         self.llm_service = agent.llm_service
         self.tool_manager = agent.tool_manager
         self.phase_task_executor = PhaseTaskExecutor(agent)
-        self.tool_enforcer = ToolEnforcer(agent.llm_service)  # 工具强制验证器
+        self.tool_enforcer = ToolEnforcer(agent.llm_service, max_retries=10)  # 工具强制验证器（10次重试）
+        self.rule_validator = RuleValidator()  # 规则验证器
     
     async def execute_full_pipeline(
         self,
@@ -98,16 +100,49 @@ class RequestPhaseExecutor:
         phase_planner_tools = [t for t in tools if t['function']['name'] == 'phase_planner']
         
         try:
-            # 🔥 使用ToolEnforcer强制调用phase_planner
-            phase_response = await self.tool_enforcer.enforce_tool_call(
-                expected_tool_name="phase_planner",
-                messages=execution_messages,
-                tools=phase_planner_tools,
-                on_retry=lambda attempt, error: print(f"[PhaseP planner] 🔄 第{attempt}次重试: {error}")
-            )
-            
-            phase_call = phase_response["tool_calls"][0]
-            phase_plan = json.loads(phase_call["function"]["arguments"])
+            # 🔥 使用ToolEnforcer强制调用phase_planner，带规则验证
+            for attempt in range(10):  # 最多10次尝试
+                print(f"\n[Phase规划] 尝试 {attempt + 1}/10")
+                
+                phase_response = await self.tool_enforcer.enforce_tool_call(
+                    expected_tool_name="phase_planner",
+                    messages=execution_messages,
+                    tools=phase_planner_tools,
+                    on_retry=lambda attempt, error: print(f"[PhasePlanner] 🔄 第{attempt}次重试: {error}")
+                )
+                
+                phase_call = phase_response["tool_calls"][0]
+                phase_plan = json.loads(phase_call["function"]["arguments"])
+                
+                # 🔥 规则验证：Phase数量不超过3
+                validation_result = self.rule_validator.validate_phase_plan(phase_plan)
+                
+                if validation_result["valid"]:
+                    print(f"[Phase规划] ✅ 规则验证通过")
+                    break
+                else:
+                    print(f"[Phase规划] ❌ 规则验证失败: {validation_result['error']}")
+                    
+                    if attempt < 9:  # 还有重试机会
+                        # 添加错误反馈，要求重新规划
+                        execution_messages.append({
+                            "role": "assistant",
+                            "content": f"I planned {len(phase_plan.get('phases', []))} Phases."
+                        })
+                        execution_messages.append({
+                            "role": "user",
+                            "content": f"❌ RULE VIOLATION: {validation_result['error']}\n\nYou MUST follow the rules:\n- Maximum 3 Phases\n\nPlease REPLAN with fewer Phases."
+                        })
+                        print(f"[Phase规划] 🔄 要求LLM重新规划（第{attempt + 2}次尝试）")
+                        continue
+                    else:
+                        # 10次都失败，强制使用默认单Phase
+                        print(f"[Phase规划] ⚠️ 10次重试后仍不符合规则，使用默认单Phase")
+                        phase_plan = {
+                            "needs_phases": False,
+                            "phases": []
+                        }
+                        break
             
             # 触发回调
             if on_tool_executed:
