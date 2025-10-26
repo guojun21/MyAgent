@@ -788,7 +788,7 @@
                     if (call.result) {
                         const success = call.result.success;
                         const statusColor = success ? '#4caf50' : '#f44336';
-                        const statusText = success ? '✅ 成功' : '❌ 失败';
+                        const statusText = success ? '✅ 成功' : '⚠️ 失败（AI将自动修正）';
                         
                         toolCard.innerHTML += `
                             <div>
@@ -1110,11 +1110,21 @@
                             const statusColor = success ? '#4caf50' : '#f44336';
                             const statusText = success ? '✅ 成功' : '❌ 失败';
                             
-                            content += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
-                            content += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 6px;">${statusText}</div>`;
-                            
-                            // 根据工具类型定制显示
+                        content += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
+                        content += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 6px;">${statusText}</div>`;
+                        
+                        // 如果失败，显示错误提示
+                        if (!success && call.result.error) {
+                            const errorPreview = (call.result.error || '').substring(0, 150);
+                            content += `<div style="color: #f44336; margin-bottom: 6px; font-size: 10px; background: #ffebee; padding: 4px 6px; border-radius: 2px;">`;
+                            content += `<div style="font-weight: 600; margin-bottom: 2px;">错误详情:</div>`;
+                            content += `<div>${escapeHtml(errorPreview)}</div>`;
+                            content += `</div>`;
+                            content += `<div style="color: #999; font-size: 9px; font-style: italic; margin-top: 4px;">💡 AI已收到错误信息，将在下一轮自动修正</div>`;
+                        } else {
+                            // 成功则显示详细结果
                             content += renderToolResult(call.tool, call.result);
+                        }
                             
                             content += `</div>`;
                             content += `</div>`;
