@@ -1,27 +1,20 @@
 """
-工具模块 - 每个工具一个文件
+工具模块（精简版）
+6个核心工具
 """
-from .read_file_tool import ReadFileTool
-from .write_file_tool import WriteFileTool
-from .edit_file_tool import EditFileTool
-from .list_files_tool import ListFilesTool
+from .file_operations_tool import FileOperationsTool
 from .search_code_tool import SearchCodeTool
-from .get_project_structure_tool import GetProjectStructureTool
 from .run_terminal_tool import RunTerminalTool
-from .analyze_imports_tool import AnalyzeImportsTool
-from .query_history_tool import QueryHistoryTool
+from .plan_tool import PlanTool
 from .think_tool import ThinkTool
+from .summarizer_tool import SummarizerTool
 
 __all__ = [
-    'ReadFileTool',
-    'WriteFileTool',
-    'EditFileTool',
-    'ListFilesTool',
+    'FileOperationsTool',
     'SearchCodeTool',
-    'GetProjectStructureTool',
     'RunTerminalTool',
-    'AnalyzeImportsTool',
-    'QueryHistoryTool',
-    'ThinkTool'
+    'PlanTool',
+    'ThinkTool',
+    'SummarizerTool',
 ]
 

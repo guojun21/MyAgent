@@ -65,6 +65,7 @@ class Agent:
         # Agent执行循环
         iterations = 0
         tool_calls_history = []
+        is_first_iteration = True  # 标记是否第一次迭代（Planner阶段）
         
         print(f"\n[Agent.run] 开始执行循环（最大迭代次数: {self.max_iterations}）\n")
         
@@ -74,15 +75,35 @@ class Agent:
             print(f"[Agent.run] 第 {iterations} 次迭代")
             print(f"{'='*60}")
             
+            # 第一次迭代：Planner阶段（强制调用plan_tool_call）
+            if is_first_iteration:
+                print(f"[Agent.run] 🎯 Planner阶段：强制调用plan_tool_call")
+                tool_choice = "required"
+                # 只提供plan_tool_call工具
+                planner_tools = [t for t in tools if t['function']['name'] == 'plan_tool_call']
+                print(f"[Agent.run] DEBUG - 过滤后工具数: {len(planner_tools)}")
+                if len(planner_tools) > 0:
+                    print(f"[Agent.run] DEBUG - plan_tool_call定义: {planner_tools[0]['function']['name']}")
+                current_tools = planner_tools
+            else:
+                # 后续迭代：正常调用所有工具
+                print(f"[Agent.run] 🔧 Executor阶段：执行计划的工具")
+                tool_choice = "auto"
+                current_tools = tools
+            
             # 调用LLM
             print(f"[Agent.run] 调用LLM服务...")
             print(f"[Agent.run] 当前消息数: {len(messages)}")
+            print(f"[Agent.run] tool_choice: {tool_choice}")
+            print(f"[Agent.run] 可用工具数: {len(current_tools)}")
+            if len(current_tools) > 0:
+                print(f"[Agent.run] DEBUG - 工具名列表: {[t['function']['name'] for t in current_tools]}")
             
             try:
                 llm_response = self.llm_service.chat(
                     messages=messages,
-                    tools=tools,
-                    tool_choice="auto"
+                    tools=current_tools,
+                    tool_choice=tool_choice
                 )
             except Exception as e:
                 error_msg = str(e)
@@ -121,38 +142,201 @@ class Agent:
             if llm_response.get('content'):
                 print(f"  - Content长度: {len(llm_response.get('content', ''))} 字符")
             
-            # 添加助手消息到历史
-            messages.append({
+            # 保存assistant消息（包含工具调用）
+            assistant_msg = {
                 "role": llm_response["role"],
                 "content": llm_response.get("content", "")
-            })
+            }
+            if "tool_calls" in llm_response and llm_response["tool_calls"]:
+                assistant_msg["tool_calls"] = llm_response["tool_calls"]
+            messages.append(assistant_msg)
             
             # 如果有工具调用
             if "tool_calls" in llm_response and llm_response["tool_calls"]:
-                print(f"\n[Agent.run] 检测到 {len(llm_response['tool_calls'])} 个工具调用")
-                # 记录工具调用
-                messages[-1]["tool_calls"] = llm_response["tool_calls"]
+                num_tools = len(llm_response['tool_calls'])
+                print(f"\n[Agent.run] 检测到 {num_tools} 个工具调用")
                 
-                # 执行所有工具调用
-                for idx, tool_call in enumerate(llm_response["tool_calls"], 1):
-                    print(f"\n[Agent.run] 执行工具 {idx}/{len(llm_response['tool_calls'])}")
-                    print(f"  - 工具名: {tool_call['function']['name']}")
-                    print(f"  - 参数: {tool_call['function']['arguments'][:200]}...")
+                # Planner阶段：解析plan_tool_call的结果
+                if is_first_iteration:
+                    print(f"\n[Agent.run] 🎯 解析Planner的计划...")
                     
+                    # 获取plan_tool_call的结果
+                    plan_tool_call = llm_response["tool_calls"][0]
+                    print(f"[Agent.run] DEBUG - LLM返回的工具: {plan_tool_call['function']['name']}")
+                    
+                    if plan_tool_call["function"]["name"] != "plan_tool_call":
+                        print(f"[Agent.run] ⚠️⚠️ 严重错误：第一次迭代应该调用plan_tool_call，但调用了{plan_tool_call['function']['name']}")
+                        print(f"[Agent.run] ⚠️⚠️ 强制进入普通执行模式")
+                        is_first_iteration = False
+                        # 继续执行下面的普通工具流程
+                    else:
+                        # 🔥 先记录plan_tool_call到messages（修复API错误）
+                        messages[-1]["tool_calls"] = llm_response["tool_calls"]
+                        
+                        # 解析计划
+                        try:
+                            plan_args = json.loads(plan_tool_call["function"]["arguments"])
+                            planned_tools = plan_args.get("tools", [])
+                            print(f"[Agent.run] 计划执行 {len(planned_tools)} 个工具")
+                            
+                            # 🔥 触发plan_tool_call的回调（让前端渲染）
+                            plan_tool_data = {
+                                "tool": "plan_tool_call",
+                                "arguments": plan_args,
+                                "result": {
+                                    "success": True,
+                                    "plan": planned_tools,
+                                    "message": f"已规划 {len(planned_tools)} 个工具"
+                                }
+                            }
+                            
+                            # 记录plan_tool_call到历史
+                            tool_calls_history.append(plan_tool_data)
+                            
+                            if on_tool_executed:
+                                print(f"[Agent.run] 🔥 触发plan_tool_call回调")
+                                on_tool_executed(plan_tool_data)
+                            
+                            # 添加plan_tool_call的结果到messages
+                            messages.append({
+                                "role": "tool",
+                                "tool_call_id": plan_tool_call["id"],
+                                "content": json.dumps(plan_tool_data["result"], ensure_ascii=False)
+                            })
+                            
+                            # 疯调保护：检查工具数量
+                            if len(planned_tools) > 3:
+                                print(f"[Agent.run] ❌ 疯调保护触发！计划调用{len(planned_tools)}个工具，超过限制(3个)")
+                                print(f"[Agent.run] 拒绝执行，返回错误")
+                                return {
+                                    "success": False,
+                                    "message": f"工具调用过多（{len(planned_tools)}个），最多允许3个。请分批执行。",
+                                    "tool_calls": tool_calls_history,
+                                    "iterations": iterations
+                                }
+                            
+                            if len(planned_tools) == 0:
+                                print(f"[Agent.run] 💬 Planner认为不需要调用工具，直接返回文本回答")
+                                is_first_iteration = False
+                                # 不继续循环，直接返回文本答案
+                                break
+                            
+                            # 执行计划中的工具
+                            print(f"[Agent.run] 开始执行计划中的{len(planned_tools)}个工具...")
+                            
+                            # 🔥 先构造一个assistant消息包含所有计划工具的tool_calls（修复API错误）
+                            planned_tool_calls = []
+                            for idx, planned_tool in enumerate(planned_tools, 1):
+                                planned_tool_calls.append({
+                                    "id": f"call_plan_{idx}",
+                                    "type": "function",
+                                    "function": {
+                                        "name": planned_tool.get("tool"),
+                                        "arguments": json.dumps(planned_tool.get("arguments", {}), ensure_ascii=False)
+                                    }
+                                })
+                            
+                            # 添加一个assistant消息包含所有计划工具的tool_calls
+                            messages.append({
+                                "role": "assistant",
+                                "content": "",
+                                "tool_calls": planned_tool_calls
+                            })
+                            
+                            # 然后执行每个工具并添加tool结果
+                            for idx, planned_tool in enumerate(planned_tools, 1):
+                                tool_name = planned_tool.get("tool")
+                                tool_args = planned_tool.get("arguments", {})
+                                
+                                print(f"\n[Agent.run] 执行计划工具 {idx}/{len(planned_tools)}")
+                                print(f"  - 工具名: {tool_name}")
+                                print(f"  - 参数: {json.dumps(tool_args, ensure_ascii=False)[:200]}...")
+                                
+                                # 使用对应的fake_tool_call
+                                fake_tool_call = planned_tool_calls[idx - 1]
+                                
+                    tool_result = await self._execute_tool_call(fake_tool_call)
+                    
+                    print(f"  - 执行结果: {tool_result.get('success', False)}")
+                    if not tool_result.get('success'):
+                        print(f"  - 错误信息: {tool_result.get('error', 'Unknown')[:200]}")
+                    
+                    # 记录工具执行历史
+                    tool_data = {
+                        "tool": tool_name,
+                        "arguments": tool_args,
+                        "result": tool_result
+                    }
+                    tool_calls_history.append(tool_data)
+                    
+                    # 🔥 流式回调：立即通知前端
+                    if on_tool_executed:
+                        print(f"[Agent.run] 🔥 触发工具执行回调: {tool_name}")
+                        on_tool_executed(tool_data)
+                    
+                    # 添加工具结果消息
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": fake_tool_call["id"],
+                        "content": json.dumps(tool_result, ensure_ascii=False)
+                    })
+                    
+                    # 🎯 检测task_done：如果任务完成，立即终止循环
+                    if tool_name == "task_done" and tool_result.get("task_completed"):
+                        print(f"\n[Agent.run] ✅ 检测到task_done，任务已完成，终止循环")
+                        final_message = tool_result.get("summary", "任务已完成")
+                        return {
+                            "success": True,
+                            "message": final_message,
+                            "tool_calls": tool_calls_history,
+                            "iterations": iterations
+                        }
+                            
+                            # Planner阶段完成，下一轮进入Executor阶段
+                            is_first_iteration = False
+                            print(f"\n[Agent.run] Planner阶段完成，已执行{len(planned_tools)}个工具")
+                            print(f"[Agent.run] 进入下一轮迭代...")
+                            continue
+                            
+                        except Exception as e:
+                            print(f"[Agent.run] ❌ 解析Planner结果失败: {e}")
+                            return {
+                                "success": False,
+                                "message": f"规划工具解析失败: {str(e)}",
+                                "tool_calls": [],
+                                "iterations": iterations
+                            }
+                
+                # 普通执行模式（非Planner阶段）
+                if not is_first_iteration:
+                    print(f"[Agent.run] 🔧 普通执行模式：执行工具")
+                    
+                    # 疯调保护：检查工具数量
+                    if num_tools > 3:
+                        print(f"[Agent.run] ❌ 疯调保护触发！一次调用{num_tools}个工具，超过限制(3个)")
+                        return {
+                            "success": False,
+                            "message": f"工具调用过多（{num_tools}个），最多允许3个。请分批执行。",
+                            "tool_calls": [],
+                            "iterations": iterations
+                        }
+                    
+                    # 执行所有工具调用
+                    for idx, tool_call in enumerate(llm_response["tool_calls"], 1):
+                        print(f"\n[Agent.run] 执行工具 {idx}/{len(llm_response['tool_calls'])}")
+                        print(f"  - 工具名: {tool_call['function']['name']}")
+                        print(f"  - 参数: {tool_call['function']['arguments'][:200]}...")
+                        
                     tool_result = await self._execute_tool_call(tool_call)
                     
                     print(f"  - 执行结果: {tool_result.get('success', False)}")
                     if not tool_result.get('success'):
                         print(f"  - 错误信息: {tool_result.get('error', 'Unknown')[:200]}")
-                        
-                        # 如果是格式错误，LLM会在下一轮看到错误并修正
-                        print(f"  - 错误已记录到tool result，LLM将在下一轮修正")
                     
-                    # 记录工具执行历史（处理参数解析失败的情况）
+                    # 记录工具执行历史
                     try:
                         parsed_args = json.loads(tool_call["function"]["arguments"])
                     except:
-                        # 如果参数解析失败，记录原始字符串
                         parsed_args = {"raw": tool_call["function"]["arguments"][:500]}
                     
                     tool_data = {
@@ -173,10 +357,21 @@ class Agent:
                         "tool_call_id": tool_call["id"],
                         "content": json.dumps(tool_result, ensure_ascii=False)
                     })
-                
-                print(f"\n[Agent.run] 所有工具执行完毕，进入下一轮迭代")
-                # 继续下一轮循环，让LLM看到工具结果
-                continue
+                    
+                    # 🎯 检测task_done：如果任务完成，立即终止循环
+                    if tool_call["function"]["name"] == "task_done" and tool_result.get("task_completed"):
+                        print(f"\n[Agent.run] ✅ 检测到task_done，任务已完成，终止循环")
+                        final_message = tool_result.get("summary", "任务已完成")
+                        return {
+                            "success": True,
+                            "message": final_message,
+                            "tool_calls": tool_calls_history,
+                            "iterations": iterations
+                        }
+                    
+                    print(f"\n[Agent.run] 所有工具执行完毕，进入下一轮迭代")
+                    # 继续下一轮循环，让LLM看到工具结果
+                    continue
             
             # 没有工具调用，任务完成
             print(f"\n[Agent.run] 无工具调用，任务完成")
