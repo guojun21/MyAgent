@@ -7,6 +7,7 @@ import json
 import asyncio
 from core.models.task import Task, Phase
 from core.tool_enforcer import ToolEnforcer
+from core.validators import RuleValidator
 from utils.logger import safe_print as print
 
 
@@ -23,7 +24,8 @@ class PhaseTaskExecutor:
         self.agent = agent
         self.llm_service = agent.llm_service
         self.tool_manager = agent.tool_manager
-        self.tool_enforcer = ToolEnforcer(agent.llm_service)  # 工具强制验证器
+        self.tool_enforcer = ToolEnforcer(agent.llm_service, max_retries=10)  # 工具强制验证器（10次重试）
+        self.rule_validator = RuleValidator()  # 规则验证器
     
     async def execute_with_phase_task(
         self,
@@ -79,29 +81,67 @@ class PhaseTaskExecutor:
             plan_tools = [t for t in tools if t['function']['name'] == 'plan_tool_call']
             
             try:
-                # 🔥 使用ToolEnforcer强制调用plan_tool_call
-                plan_response = await self.tool_enforcer.enforce_tool_call(
-                    expected_tool_name="plan_tool_call",
-                    messages=messages,
-                    tools=plan_tools,
-                    on_retry=lambda attempt, error: print(f"[Plan] 🔄 第{attempt}次重试: {error}")
-                )
+                # 🔥 使用ToolEnforcer强制调用plan_tool_call，带规则验证
+                plan_response = None
+                plan_args = None
+                
+                for attempt in range(10):  # 最多10次尝试
+                    print(f"\n[Plan阶段] 尝试 {attempt + 1}/10")
+                    
+                    plan_response = await self.tool_enforcer.enforce_tool_call(
+                        expected_tool_name="plan_tool_call",
+                        messages=messages,
+                        tools=plan_tools,
+                        on_retry=lambda attempt, error: print(f"[Plan] 🔄 第{attempt}次重试: {error}")
+                    )
+                    
+                    plan_tool_call = plan_response["tool_calls"][0]
+                    plan_args = json.loads(plan_tool_call["function"]["arguments"])
+                    
+                    # 🔥 规则验证：Task数量不超过8，不使用禁用工具
+                    validation_result = self.rule_validator.validate_task_plan(phase.id, plan_args)
+                    
+                    if validation_result["valid"]:
+                        print(f"[Plan阶段] ✅ 规则验证通过")
+                        break
+                    else:
+                        print(f"[Plan阶段] ❌ 规则验证失败: {validation_result['error']}")
+                        
+                        if attempt < 9:  # 还有重试机会
+                            # 添加错误反馈，要求重新规划
+                            messages.append({
+                                "role": "assistant",
+                                "content": f"I planned {len(plan_args.get('tasks', []))} Tasks."
+                            })
+                            messages.append({
+                                "role": "user",
+                                "content": f"❌ RULE VIOLATION: {validation_result['error']}\n\nYou MUST follow the rules:\n- Maximum 8 Tasks per Phase\n- NEVER use: judge, judge_tasks, think\n- Use ONLY: file_operations, search_code, run_terminal\n\nPlease REPLAN correctly."
+                            })
+                            print(f"[Plan阶段] 🔄 要求LLM重新规划（第{attempt + 2}次尝试）")
+                            continue
+                        else:
+                            # 10次都失败，强制结束
+                            print(f"[Plan阶段] ⚠️ 10次重试后仍不符合规则，Phase强制结束")
+                            phase.status = "partial"
+                            return {
+                                "success": False,
+                                "message": f"Plan validation failed after 10 retries: {validation_result['error']}",
+                                "tool_calls": tool_calls_history,
+                                "phase": phase.to_dict()
+                            }
             except Exception as e:
-                print(f"[PhaseTaskExecutor] ❌ Plan阶段失败（重试{self.tool_enforcer.max_retries}次后仍失败）: {e}")
+                print(f"[PhaseTaskExecutor] ❌ Plan阶段失败: {e}")
                 return {
                     "success": False,
-                    "message": f"Plan failed after {self.tool_enforcer.max_retries} retries: {str(e)}",
+                    "message": f"Plan failed: {str(e)}",
                     "tool_calls": tool_calls_history,
                     "phase": phase.to_dict()
                 }
             
             # 解析Plan结果
-            if not plan_response.get("tool_calls"):
+            if not plan_response or not plan_response.get("tool_calls"):
                 print(f"[PhaseTaskExecutor] ⚠️ Plan阶段没有返回工具调用")
                 break
-            
-            plan_tool_call = plan_response["tool_calls"][0]
-            plan_args = json.loads(plan_tool_call["function"]["arguments"])
             tasks_data = plan_args.get("tasks", [])
             plan_reasoning = plan_args.get("plan_reasoning", "")
             

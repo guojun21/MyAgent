@@ -10,9 +10,9 @@ from utils.logger import safe_print as print
 class ToolEnforcer:
     """工具强制验证器"""
     
-    def __init__(self, llm_service):
+    def __init__(self, llm_service, max_retries=10):
         self.llm_service = llm_service
-        self.max_retries = 3  # 最多重试3次
+        self.max_retries = max_retries  # 默认重试10次
     
     async def enforce_tool_call(
         self,
