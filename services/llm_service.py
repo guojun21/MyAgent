@@ -56,15 +56,19 @@ edit_file批量编辑格式：
   "path": "文件路径",
   "edits": [
     {"old": "旧内容", "new": "新内容"},
-    {"old": "旧内容2", "new": "新内容2"}
+    最多10-15个编辑为宜
   ]
 }
 
-重要：JSON字符串转义！
+重要限制：
+- 一次最多编辑10-15处（避免参数过长）
+- 如需更多修改，分多次调用
+- old和new尽量简短，只包含必要部分
+
+JSON转义规则：
 - 换行符用 \\n 不要用真实换行
 - 制表符用 \\t
 - 引号用 \\"
-- 反斜杠用 \\\\
 
 禁止：只描述要做什么，必须真正调用工具！
 """
@@ -207,8 +211,8 @@ class DeepSeekService(LLMService):
             kwargs = {
                 "model": self.model,
                 "messages": messages,
-                "temperature": 0.0,               # 降低温度，更准确
-                "max_tokens": 2000,               # 限制输出，避免只输出文本
+                "temperature": 0.3,
+                "max_tokens": 8000,  # 提高到8000，支持批量编辑
             }
             
             # 如果有工具，强制要求使用工具
