@@ -258,22 +258,41 @@ class Agent:
                 arguments = json.loads(args_str)
             except json.JSONDecodeError as e1:
                 print(f"    [_execute_tool_call] 标准解析失败: {e1}")
+                print(f"    [_execute_tool_call] 参数内容前200字符: {args_str[:200]}")
                 
                 try:
-                    # 方法2: 使用ast.literal_eval（更宽松）
-                    import ast
-                    # 先尝试修复常见问题
-                    fixed_str = args_str.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+                    # 方法2: 修复常见问题
+                    fixed_str = args_str
+                    
+                    # 修复单引号（DeepSeek常见问题）
+                    # 将JSON中的单引号替换为双引号
+                    import re
+                    # 匹配键名的单引号
+                    fixed_str = re.sub(r"'([a-zA-Z_][a-zA-Z0-9_]*)':", r'"\1":', fixed_str)
+                    # 匹配值的单引号
+                    fixed_str = re.sub(r":\s*'([^']*)'", r': "\1"', fixed_str)
+                    
+                    # 修复转义符
+                    fixed_str = fixed_str.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+                    
                     arguments = json.loads(fixed_str)
-                    print(f"    [_execute_tool_call] 修复后解析成功")
+                    print(f"    [_execute_tool_call] ✅ 修复后解析成功")
                 except Exception as e2:
                     print(f"    [_execute_tool_call] 修复后解析仍失败: {e2}")
                     
-                    # 方法3: 降级 - 返回错误让LLM重新生成
-                    return {
-                        "success": False,
-                        "error": f"参数格式错误，请简化参数内容。错误: {str(e1)}"
-                    }
+                    try:
+                        # 方法3: 使用ast.literal_eval（Python字面量）
+                        import ast
+                        arguments = ast.literal_eval(args_str)
+                        print(f"    [_execute_tool_call] ✅ Python字面量解析成功")
+                    except Exception as e3:
+                        print(f"    [_execute_tool_call] 所有方法都失败: {e3}")
+                        
+                        # 返回错误让LLM重新生成
+                        return {
+                            "success": False,
+                            "error": f"参数格式错误。请使用标准JSON格式（双引号）。错误: {str(e1)}"
+                        }
             
             print(f"    [_execute_tool_call] ✅ 参数解析成功，keys: {list(arguments.keys())}")
         except Exception as e:
