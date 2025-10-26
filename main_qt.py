@@ -480,6 +480,48 @@ class AgentBridge(QObject):
                 self._emit_workspace_list()
                 break
     
+    @pyqtSlot(str)
+    def saveFrontendLogs(self, logs_json):
+        """保存前端日志到文件"""
+        try:
+            from datetime import datetime
+            from pathlib import Path
+            import json
+            
+            logs = json.loads(logs_json)
+            
+            if len(logs) == 0:
+                return
+            
+            # 生成前端日志文件名
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_file = Path("llmlogs") / f"frontend_log_{timestamp}.txt"
+            
+            # 确保目录存在
+            log_file.parent.mkdir(exist_ok=True)
+            
+            # 写入日志
+            with open(log_file, 'a', encoding='utf-8') as f:
+                if log_file.stat().st_size == 0:
+                    # 新文件，写入头部
+                    f.write("="*80 + "\n")
+                    f.write("前端Console日志\n")
+                    f.write(f"启动时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    f.write("="*80 + "\n\n")
+                
+                # 写入日志条目
+                for log in logs:
+                    level = log.get('level', 'log').upper()
+                    timestamp = log.get('timestamp', '')
+                    message = log.get('message', '')
+                    
+                    f.write(f"[{timestamp}] [{level}] {message}\n")
+            
+            print(f"[saveFrontendLogs] 已保存{len(logs)}条前端日志到: {log_file}")
+            
+        except Exception as e:
+            print(f"[saveFrontendLogs] 保存失败: {e}")
+    
     @pyqtSlot(str, str)
     def renameConversation(self, conv_id, new_name):
         """重命名对话"""
@@ -941,6 +983,7 @@ def main():
     app.setApplicationName("AI编程助手")
     
     print(f"\n数据目录: {persistence_manager.data_dir.resolve()}")
+    print(f"前端日志目录: llmlogs/frontend_log_*.txt")
     
     window = MainWindow()
     window.show()
@@ -950,6 +993,14 @@ def main():
     
     print("\n[主程序] 应用退出，保存数据...")
     workspace_manager.auto_save()
+    
+    # 触发前端日志最后一次保存
+    try:
+        if hasattr(window, 'bridge') and window.bridge:
+            # 前端会在关闭前自动保存
+            pass
+    except:
+        pass
     
     print("[主程序] 关闭日志文件")
     close_logger()

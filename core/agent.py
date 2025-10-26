@@ -91,14 +91,9 @@ class Agent:
                 print(f"[Agent.run] 异常类型: {type(e).__name__}")
                 print(f"[Agent.run] 异常消息前500字符: {error_msg[:500]}")
                 
-                # 严格检测Context超长错误（必须是API明确返回的错误）
-                is_context_error = (
-                    "maximum context length" in error_msg and 
-                    "131072" in error_msg
-                )
-                
-                if is_context_error:
-                    print(f"[Agent.run] ✅ 确认是Context超长（API明确报错），触发Auto-Compact")
+                # 检测Context超长错误
+                if "maximum context length" in error_msg:
+                    print(f"[Agent.run] ✅ 确认是Context超长，触发Auto-Compact")
                     print(f"[Agent.run] 不显示错误给用户，准备压缩...")
                     
                     # 返回特殊标记
