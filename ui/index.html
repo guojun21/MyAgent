@@ -1130,6 +1130,17 @@
                 html += `<div>写入: ${result.bytes_written || 0} 字节</div>`;
                 html += `</div>`;
             }
+            // edit_file - 编辑结果（批量）
+            else if (toolName === 'edit_file') {
+                html += `<div style="color: #666;">`;
+                html += `<div>路径: ${result.path || ''}</div>`;
+                html += `<div>总编辑数: ${result.total_edits || 0}</div>`;
+                html += `<div style="color: #4caf50;">成功: ${result.successful_edits || 0}</div>`;
+                if (result.failed_edits > 0) {
+                    html += `<div style="color: #ff9800;">失败: ${result.failed_edits}</div>`;
+                }
+                html += `</div>`;
+            }
             // search_code - 搜索结果
             else if (toolName === 'search_code') {
                 const results = result.results || [];

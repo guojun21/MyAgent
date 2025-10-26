@@ -155,6 +155,67 @@ class FileService:
                 "error": f"写入文件失败: {str(e)}"
             }
     
+    def edit_file_batch(
+        self,
+        path: str,
+        edits: list
+    ) -> Dict[str, Any]:
+        """
+        批量编辑文件
+        
+        Args:
+            path: 文件路径
+            edits: 编辑列表 [{"old": "...", "new": "..."}, ...]
+            
+        Returns:
+            操作结果
+        """
+        print(f"        [FileService.edit_file_batch] 批量编辑文件")
+        print(f"        [FileService.edit_file_batch] 路径: {path}")
+        print(f"        [FileService.edit_file_batch] 编辑数: {len(edits)}")
+        
+        try:
+            file_path = self._get_full_path(path)
+            
+            if not file_path.exists():
+                return {"success": False, "error": f"文件不存在: {path}"}
+            
+            # 读取文件
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            
+            original_content = content
+            replacements = 0
+            
+            # 逐个执行替换
+            for i, edit in enumerate(edits, 1):
+                old = edit.get("old", "")
+                new = edit.get("new", "")
+                
+                if old in content:
+                    content = content.replace(old, new, 1)  # 只替换第一个
+                    replacements += 1
+                    print(f"        [FileService.edit_file_batch] 编辑{i}: ✅ 成功")
+                else:
+                    print(f"        [FileService.edit_file_batch] 编辑{i}: ⚠️ 未找到")
+            
+            # 写回文件
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            print(f"        [FileService.edit_file_batch] ✅ 完成，成功替换{replacements}/{len(edits)}处")
+            
+            return {
+                "success": True,
+                "path": str(file_path.relative_to(self.workspace_root)),
+                "total_edits": len(edits),
+                "successful_edits": replacements,
+                "failed_edits": len(edits) - replacements
+            }
+            
+        except Exception as e:
+            return {"success": False, "error": f"批量编辑失败: {str(e)}"}
+    
     def edit_file(
         self, 
         path: str, 

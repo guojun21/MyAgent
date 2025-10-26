@@ -45,21 +45,18 @@ class LLMService:
 - 调用必要的工具来完成任务
 - 总结执行结果
 
-重要规则 - 必须使用工具：
-- 不要只描述要做什么，必须真正调用工具！
-- 看到用户请求后，立即调用相应的工具
-- edit_file：每次只修改一处，分多次调用
-- 其他工具：可以正常调用
+关键规则：
+1. 你必须使用工具，不要只描述！
+2. 用户请求 = 立即调用工具
+3. edit_file每次只改一处
+4. 不要返回长文本，直接调用工具！
 
-示例（正确）：
-用户: "修改config.py的端口"
-你: 先read_file，再edit_file修改 ✅
+工作流程：
+步骤1: 用户请求 → 调用工具
+步骤2: 看到工具结果 → 继续下一步
+步骤3: 完成后简短总结
 
-示例（错误）：
-用户: "修改config.py的端口"  
-你: "我会修改...需要执行edit_file..." ❌ (只说不做)
-
-必须调用工具，不要只描述！
+禁止：只描述要做什么，必须真正调用工具！
 """
     
     # ============================================================
@@ -198,17 +195,17 @@ class DeepSeekService(LLMService):
         try:
             # ======== 第一步：准备API请求参数 ========
             kwargs = {
-                "model": self.model,              # 使用哪个模型（deepseek-chat）
-                "messages": messages,             # 对话历史（包含用户消息、AI回复、工具结果等）
-                "temperature": 0.7,               # 温度0.7 = 平衡创造性和准确性
+                "model": self.model,
+                "messages": messages,
+                "temperature": 0.0,               # 降低温度，更准确
+                "max_tokens": 2000,               # 限制输出，避免只输出文本
             }
             
-            # ======== 第二步：如果有工具，把工具信息也发给AI ========
-            # 这样AI就知道它可以调用哪些工具了
+            # 如果有工具，强制要求使用工具
             if tools:
-                kwargs["tools"] = tools                    # 工具定义列表（工具使用手册）
-                kwargs["tool_choice"] = tool_choice        # 工具选择策略（auto让AI自己决定）
-                print(f"    [DeepSeek.chat] 工具选择策略: {tool_choice}")
+                kwargs["tools"] = tools
+                kwargs["tool_choice"] = "required"  # 强制使用工具！
+                print(f"    [DeepSeek.chat] ⚠️ 强制工具调用模式：required")
             
             # ======== 第三步：发送请求到DeepSeek API ========
             print(f"    [DeepSeek.chat] 发送API请求...")

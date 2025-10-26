@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     
     # DeepSeek配置
     deepseek_api_key: str = "sk-66137666196b4d73b892183a876994b0"
-    deepseek_model: str = "deepseek-coder"
+    deepseek_model: str = "deepseek-chat"  # 官方统一模型（coder已废弃）
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_max_tokens: int = 131072
     

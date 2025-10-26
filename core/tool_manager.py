@@ -43,7 +43,7 @@ class ToolManager:
         # 文件操作工具
         self.tools['read_file'] = lambda **kwargs: ReadFileTool.execute(self.file_service, **kwargs)
         self.tools['write_file'] = lambda **kwargs: WriteFileTool.execute(self.file_service, **kwargs)
-        self.tools['edit_file'] = lambda **kwargs: EditFileTool.execute(self.file_service, **kwargs)
+        self.tools['edit_file'] = lambda **kwargs: EditFileTool.execute(self.file_service, **kwargs)  # 批量版
         self.tools['list_files'] = lambda **kwargs: ListFilesTool.execute(self.file_service, **kwargs)
         
         # 代码搜索工具
