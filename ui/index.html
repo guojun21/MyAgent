@@ -95,6 +95,46 @@
         
         .editable-name { cursor: pointer; display: inline-block; padding: 2px 6px; border-radius: 2px; }
         .editable-name:hover { background: rgba(255,255,255,0.1); }
+        
+        /* 流式渲染动画 */
+        @keyframes fadeInPulse {
+            0% { opacity: 0; transform: scale(0.95); }
+            50% { opacity: 0.5; transform: scale(1.02); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 执行中指示器 */
+        .executing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 12px;
+            font-size: 11px;
+            color: #856404;
+            font-weight: 500;
+            animation: slideInUp 0.3s ease;
+        }
+        
+        .executing-indicator .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #ffc107;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -222,6 +262,7 @@
         let currentWorkspaceId = null;
         let currentConversationId = null;
         let isQtMode = false;  // Qt模式 or Web模式
+        let enableStreaming = true;  // 是否启用流式渲染（加载历史时禁用）
 
         // 检测环境并初始化
         if (typeof qt !== 'undefined' && qt.webChannelTransport) {
@@ -617,7 +658,7 @@
             document.getElementById('testPanel').style.display = tab === 'test' ? 'flex' : 'none';
         }
 
-        function handleMessage(data) {
+        async function handleMessage(data) {
             console.log('📬 handleMessage:', data.type);
             
             if (data.type === 'thinking') {
@@ -629,9 +670,9 @@
             else if (data.type === 'response') {
                 hideThinking();
                 
-                if (data.message?.trim()) {
-                    // 只在新消息时才添加（不是历史加载）
-                    addAssistantMessage(data);
+                // 流式渲染消息
+                if (data.message?.trim() || (data.tool_calls && data.tool_calls.length > 0)) {
+                    await addAssistantMessage(data);
                 }
                 
                 isProcessing = false;
@@ -667,63 +708,154 @@
             area.scrollTop = area.scrollHeight;
         }
 
-        function addAssistantMessage(data) {
-            console.log('➕ addAssistantMessage被调用');
-            console.log('  - data.tool_calls:', data.tool_calls);
+        // 流式渲染助手消息
+        async function addAssistantMessage(data, streaming = null) {
+            // 如果未指定，使用全局设置
+            const useStreaming = streaming !== null ? streaming : enableStreaming;
+            
+            console.log('➕ 渲染助手消息 (流式:', useStreaming, ')');
             console.log('  - 工具调用数:', data.tool_calls?.length || 0);
-            console.log('  - data完整:', data);
             
             const area = document.getElementById('chatArea');
-            const div = document.createElement('div');
-            div.className = 'message assistant';
             
-            let content = `<div class="message-content">${formatMarkdown(data.message)}`;
+            // 1. 创建消息容器
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            messageDiv.innerHTML = '<div class="message-content" id="streaming-message"></div>';
+            area.appendChild(messageDiv);
             
-            // 详细添加工具调用显示（入参+出参）
+            const contentDiv = document.getElementById('streaming-message');
+            
+            // 2. 如果有工具调用，渲染工具
             if (data.tool_calls && data.tool_calls.length > 0) {
-                content += `<div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; font-size: 12px; border-left: 3px solid #666;">`;
-                content += `<div style="font-weight: 600; margin-bottom: 10px; color: #666;">🔧 执行了 ${data.tool_calls.length} 个工具</div>`;
+                // 创建工具容器
+                const toolsContainer = document.createElement('div');
+                toolsContainer.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; font-size: 12px; border-left: 3px solid #666;';
                 
-                data.tool_calls.forEach((call, i) => {
-                    content += `<div style="padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd;">`;
+                // 添加标题（带脉冲动画）
+                const headerDiv = document.createElement('div');
+                headerDiv.style.cssText = 'font-weight: 600; margin-bottom: 10px; color: #666;';
+                headerDiv.innerHTML = `🔧 执行了 ${data.tool_calls.length} 个工具`;
+                
+                if (useStreaming) {
+                    headerDiv.style.cssText += ' opacity: 0; animation: fadeInPulse 0.5s ease forwards;';
+                }
+                
+                toolsContainer.appendChild(headerDiv);
+                contentDiv.appendChild(toolsContainer);
+                
+                // 逐个渲染工具调用
+                for (let i = 0; i < data.tool_calls.length; i++) {
+                    const call = data.tool_calls[i];
                     
-                    // 工具名
-                    content += `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 13px; font-family: Consolas, monospace;">${i+1}. ${call.tool}</div>`;
+                    // 流式模式：先显示"正在执行"指示器
+                    let executingIndicator = null;
+                    if (useStreaming) {
+                        executingIndicator = document.createElement('div');
+                        executingIndicator.className = 'executing-indicator';
+                        executingIndicator.style.margin = '8px 0';
+                        executingIndicator.innerHTML = `
+                            <div class="spinner"></div>
+                            <span>正在执行 ${call.tool}...</span>
+                        `;
+                        toolsContainer.appendChild(executingIndicator);
+                        area.scrollTop = area.scrollHeight;
+                        await sleep(300);
+                    }
+                    
+                    // 创建工具卡片
+                    const toolCard = document.createElement('div');
+                    const baseStyle = 'padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd;';
+                    
+                    if (useStreaming) {
+                        toolCard.style.cssText = baseStyle + ' opacity: 0; transform: translateY(10px); transition: all 0.3s ease;';
+                    } else {
+                        toolCard.style.cssText = baseStyle;
+                    }
+                    
+                    // 工具名（带图标）
+                    toolCard.innerHTML = `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 13px; font-family: Consolas, monospace;">⚡ ${i+1}. ${call.tool}</div>`;
                     
                     // 入参
-                    content += `<div style="margin-bottom: 6px;">`;
-                    content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>`;
-                    content += `<div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>`;
-                    content += `</div>`;
+                    toolCard.innerHTML += `
+                        <div style="margin-bottom: 6px;">
+                            <div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>
+                            <div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(call.arguments, null, 2)}</div>
+                        </div>
+                    `;
                     
                     // 出参
                     if (call.result) {
-                        content += `<div>`;
-                        content += `<div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>`;
-                        
                         const success = call.result.success;
                         const statusColor = success ? '#4caf50' : '#f44336';
                         const statusText = success ? '✅ 成功' : '❌ 失败';
                         
-                        content += `<div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">`;
-                        content += `<div style="color: ${statusColor}; font-weight: 600; margin-bottom: 4px;">${statusText}</div>`;
-                        content += `<div style="color: #666; white-space: pre-wrap;">${JSON.stringify(call.result, null, 2)}</div>`;
-                        content += `</div>`;
-                        content += `</div>`;
+                        toolCard.innerHTML += `
+                            <div>
+                                <div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>
+                                <div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">
+                                    <div style="color: ${statusColor}; font-weight: 600; margin-bottom: 4px;">${statusText}</div>
+                                    <div style="color: #666; white-space: pre-wrap;">${JSON.stringify(call.result, null, 2)}</div>
+                                </div>
+                            </div>
+                        `;
                     }
                     
-                    content += `</div>`;
-                });
+                    // 移除"正在执行"指示器，显示实际结果
+                    if (useStreaming && executingIndicator) {
+                        executingIndicator.remove();
+                    }
+                    
+                    toolsContainer.appendChild(toolCard);
+                    
+                    // 流式渲染：延迟后显示
+                    if (useStreaming) {
+                        await sleep(100);
+                        toolCard.style.opacity = '1';
+                        toolCard.style.transform = 'translateY(0)';
+                        area.scrollTop = area.scrollHeight;
+                    }
+                }
                 
-                content += `</div>`;
+                // 工具渲染完成后稍作停顿
+                if (useStreaming) {
+                    await sleep(200);
+                }
             }
             
-            content += `</div>`;
-            div.innerHTML = content;
-            area.appendChild(div);
-            area.scrollTop = area.scrollHeight;
+            // 3. 渲染文本消息
+            if (data.message && data.message.trim()) {
+                const textDiv = document.createElement('div');
+                
+                if (useStreaming) {
+                    textDiv.style.cssText = 'opacity: 0; transform: translateY(5px); transition: all 0.4s ease;';
+                }
+                
+                contentDiv.appendChild(textDiv);
+                
+                if (useStreaming) {
+                    await sleep(100);
+                }
+                
+                textDiv.innerHTML = formatMarkdown(data.message);
+                
+                if (useStreaming) {
+                    textDiv.style.opacity = '1';
+                    textDiv.style.transform = 'translateY(0)';
+                }
+                
+                area.scrollTop = area.scrollHeight;
+            }
             
-            console.log('✅ 助手消息已添加');
+            // 移除临时ID
+            contentDiv.removeAttribute('id');
+            
+            console.log('✅ 消息渲染完成');
+        }
+        
+        // 辅助函数：延迟
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
 
         function showThinking() {
