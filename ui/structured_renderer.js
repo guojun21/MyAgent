@@ -63,6 +63,11 @@ function renderStructuredContext(structuredCtx) {
         html += '</div>';
         
         phases.forEach((phase, phaseIdx) => {
+            // 🔥 Phase之间添加分割线
+            if (phaseIdx > 0) {
+                html += '<hr class="phase-separator">';
+            }
+            
             html += `<div style="margin: 10px 0 10px 20px; padding: 10px; border: 2px solid #000;">`;
             html += `<div style="font-size: 12px; font-weight: 700; color: #000; margin-bottom: 4px;">│ Phase ${phase.id}: ${escapeHtml(phase.name)}</div>`;
             html += `<div style="font-size: 11px; color: #333; margin-bottom: 6px;">│ Goal: ${escapeHtml(phase.goal)}</div>`;

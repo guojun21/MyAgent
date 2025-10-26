@@ -1203,6 +1203,11 @@
                 if (needsPhases && phases.length > 0) {
                     // 多Phase场景
                     phases.forEach((phase, i) => {
+                        // 🔥 Phase之间添加分割线
+                        if (i > 0) {
+                            contentHtml += `<hr class="phase-separator">`;
+                        }
+                        
                         const borderStyle = phase.priority === 'high' ? '2px solid' : '1px solid';
                         contentHtml += `
                             <div style="margin: 10px 0 10px 20px; padding: 10px; border: ${borderStyle} #000;">
@@ -1302,7 +1307,7 @@
                         tasksHtml += `
                             <div style="padding: 6px 10px; margin: 4px 0; background: rgba(255,255,255,0.7); border-radius: 4px; border-left: 3px solid ${scoreColor};">
                                 <div style="font-size: 12px; font-weight: 600; color: #333;">
-                                    ${statusIcon} Task ${task.task_id} - 质量: ${task.quality_score.toFixed(1)}/10
+                                    ${statusIcon} Task ${task.task_id || task.id || '?'} - 质量: ${task.quality_score.toFixed(1)}/10
                                 </div>
                                 ${task.notes ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">${escapeHtml(task.notes)}</div>` : ''}
                             </div>
@@ -1382,7 +1387,7 @@
                             tasksHtml += `
                                 <div style="padding: 6px 10px; margin: 4px 0; background: rgba(255,255,255,0.8); border-radius: 4px; border-left: 3px solid ${scoreColor};">
                                     <div style="font-size: 12px; font-weight: 600; color: #333;">
-                                        ${statusIcon} Task ${task.task_id} - 质量: ${task.quality_score.toFixed(1)}/10
+                                        ${statusIcon} Task ${task.task_id || task.id || '?'} - 质量: ${task.quality_score.toFixed(1)}/10
                                     </div>
                                     ${task.notes ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">${escapeHtml(task.notes)}</div>` : ''}
                                 </div>
@@ -1572,6 +1577,11 @@
                 // 渲染Phases
                 if (metadata.phases && metadata.phases.length > 0) {
                     metadata.phases.forEach((phase, i) => {
+                        // 🔥 Phase之间添加分割线
+                        if (i > 0) {
+                            html += '<hr class="phase-separator">';
+                        }
+                        
                         html += `<div style="margin: 10px 0 10px 20px; padding: 10px; border: 2px solid #000;">`;
                         html += `<div style="font-size: 12px; font-weight: 700; color: #000;">│ Phase ${phase.phase_id}: ${escapeHtml(phase.phase_name)}</div>`;
                         html += `<div style="font-size: 11px; color: #333;">│ Tasks: ${phase.tasks_count} | Rounds: ${phase.rounds}</div>`;
@@ -1588,18 +1598,8 @@
             html += '<div style="font-size: 11px; color: #666;">Tool executions completed (details hidden in history)</div>';
             html += '</div>';
             
-            // Level 4: Summarizer
-            if (metadata.summarizer) {
-                const summary = metadata.summarizer.result?.summary || metadata.summarizer.arguments?.summary || 'Task completed';
-                html += '<div style="padding: 16px; margin: 16px 0; background: #fff; border: 3px solid #000; font-family: Consolas;">';
-                html += '<div style="border-bottom: 1px solid #000; padding-bottom: 8px; margin-bottom: 10px;">';
-                html += '<div style="font-size: 14px; font-weight: 700; color: #000;">┌─ Level 4: Final Summary ───────────────────</div>';
-                html += `<div style="font-size: 10px; color: #666; margin-top: 4px;">│ Phases: ${metadata.phases_count || metadata.phases.length}</div>`;
-                html += '</div>';
-                html += `<div style="font-size: 12px; color: #000; line-height: 1.6; white-space: pre-wrap; padding-left: 10px;">${escapeHtml(summary)}</div>`;
-                html += '<div style="font-size: 10px; color: #666; margin-top: 10px; border-top: 1px solid #000; padding-top: 8px;">└─ Task completed ───────────────────────────</div>';
-                html += '</div>';
-            }
+            // Level 4: Summarizer - 已在实时流式渲染中显示，这里不再重复渲染
+            // 保留黑框样式，但内容已在上面的实时渲染中显示过了
             
             html += '</div>';
             return html;
@@ -1979,8 +1979,13 @@
                     console.log('  🎯 检测到结构化Context，使用完整渲染');
                     content += renderStructuredContext(msg.structured_context);
                 } else if (msg.structured_metadata && msg.structured_metadata.architecture === 'request-phase-task') {
-                    console.log('  🎯 检测到新架构消息，使用结构化渲染');
-                    content += renderStructuredArchitecture(msg.structured_metadata);
+                    // 如果已经有summarizer在实时流式渲染中显示了，就不再重复渲染结构化信息
+                    if (!msg.structured_metadata.summarizer) {
+                        console.log('  🎯 检测到新架构消息（无summarizer），使用结构化渲染');
+                        content += renderStructuredArchitecture(msg.structured_metadata);
+                    } else {
+                        console.log('  ✅ Summarizer已在实时流式中显示，跳过结构化渲染');
+                    }
                 } else if (msg.tool_calls && msg.tool_calls.length > 0) {
                     // 旧架构：普通工具调用渲染
                     content += `<div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; border-left: 3px solid #666;">`;

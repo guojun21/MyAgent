@@ -47,6 +47,11 @@ class AgentWorker(QThread):
             # 如果到这里说明是其他严重错误
             print(f"[AgentWorker] 未预期的异常: {error_msg}")
             
+            # 打印详细错误栈
+            import traceback
+            print(f"[AgentWorker] 详细错误栈:")
+            traceback.print_exc()
+            
             self.finished.emit({
                 "success": False,
                 "message": f"系统错误: {error_msg}",
