@@ -312,17 +312,29 @@ class DeepSeekService(LLMService):
         except Exception as e:
             error_msg = str(e)
             
-            # 检测Context超长错误 - 不返回给用户，抛出异常让Agent处理
-            if "maximum context length" in error_msg or "131072 tokens" in error_msg:
-                print(f"    [DeepSeek.chat] 检测到Context超长错误")
-                raise  # 抛出异常，由Agent.run处理
+            # 打印真实错误信息
+            print(f"    [DeepSeek.chat] ❌ API调用异常")
+            print(f"    [DeepSeek.chat] 异常类型: {type(e).__name__}")
+            print(f"    [DeepSeek.chat] 异常消息: {error_msg[:500]}")
             
-            # 其他错误才返回错误消息
-            return {
-                "role": "assistant",
-                "content": f"LLM调用失败: {error_msg}",
-                "error": error_msg
-            }
+            # 严格检测Context超长错误（必须包含明确的错误标识）
+            is_context_error = (
+                "maximum context length" in error_msg and 
+                "131072" in error_msg and
+                "requested" in error_msg
+            )
+            
+            if is_context_error:
+                print(f"    [DeepSeek.chat] ✅ 确认是Context超长错误，触发压缩")
+                raise  # 抛出异常，由Agent.run处理
+            else:
+                # 其他错误：网络、超时、限流等，正常返回
+                print(f"    [DeepSeek.chat] ⚠️ 其他类型错误，不触发压缩")
+                return {
+                    "role": "assistant",
+                    "content": f"API调用失败: {error_msg}",
+                    "error": error_msg
+                }
     
     def parse_query(self, query: str) -> Dict[str, str]:
         """使用DeepSeek解析查询（向后兼容）"""

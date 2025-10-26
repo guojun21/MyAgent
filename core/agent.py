@@ -28,7 +28,8 @@ class Agent:
     async def run(
         self, 
         user_message: str,
-        context_history: Optional[List[Dict[str, Any]]] = None
+        context_history: Optional[List[Dict[str, Any]]] = None,
+        on_tool_executed: Optional[callable] = None
     ) -> Dict[str, Any]:
         """
         运行Agent处理用户请求
@@ -86,25 +87,34 @@ class Agent:
             except Exception as e:
                 error_msg = str(e)
                 
-                # 检测是否是Context超长错误
-                if "maximum context length" in error_msg or "131072 tokens" in error_msg:
-                    print(f"\n[Agent.run] ⚠️ Context超长错误，触发Auto-Compact")
+                print(f"\n[Agent.run] ❌ LLM调用异常")
+                print(f"[Agent.run] 异常类型: {type(e).__name__}")
+                print(f"[Agent.run] 异常消息前500字符: {error_msg[:500]}")
+                
+                # 严格检测Context超长错误（必须是API明确返回的错误）
+                is_context_error = (
+                    "maximum context length" in error_msg and 
+                    "131072" in error_msg
+                )
+                
+                if is_context_error:
+                    print(f"[Agent.run] ✅ 确认是Context超长（API明确报错），触发Auto-Compact")
                     print(f"[Agent.run] 不显示错误给用户，准备压缩...")
                     
-                    # 返回特殊标记 - 不包含错误信息！
+                    # 返回特殊标记
                     return {
                         "success": False,
                         "need_compression": True,
-                        "message": "",  # 空消息，不显示错误
+                        "message": "",
                         "original_user_message": user_message,
                         "context_history": context_history
                     }
                 else:
-                    # 其他错误：包装成结果返回
-                    print(f"\n[Agent.run] ❌ 其他错误: {error_msg}")
+                    # 其他错误：网络、超时、限流等
+                    print(f"[Agent.run] ⚠️ 非Context错误，正常返回给用户")
                     return {
                         "success": False,
-                        "message": f"执行失败: {error_msg}",
+                        "message": f"执行失败: {error_msg[:200]}",
                         "error": error_msg,
                         "tool_calls": [],
                         "iterations": iterations
@@ -150,11 +160,17 @@ class Agent:
                         # 如果参数解析失败，记录原始字符串
                         parsed_args = {"raw": tool_call["function"]["arguments"][:500]}
                     
-                    tool_calls_history.append({
+                    tool_data = {
                         "tool": tool_call["function"]["name"],
                         "arguments": parsed_args,
                         "result": tool_result
-                    })
+                    }
+                    tool_calls_history.append(tool_data)
+                    
+                    # 🔥 流式回调：立即通知前端
+                    if on_tool_executed:
+                        print(f"[Agent.run] 🔥 触发工具执行回调: {tool_call['function']['name']}")
+                        on_tool_executed(tool_data)
                     
                     # 添加工具结果消息
                     messages.append({
@@ -337,7 +353,8 @@ class Agent:
     def run_sync(
         self,
         user_message: str,
-        context_history: Optional[List[Dict[str, Any]]] = None
+        context_history: Optional[List[Dict[str, Any]]] = None,
+        on_tool_executed: Optional[callable] = None
     ) -> Dict[str, Any]:
         """
         同步版本的run方法
@@ -345,6 +362,7 @@ class Agent:
         Args:
             user_message: 用户消息
             context_history: Context历史
+            on_tool_executed: 工具执行回调（流式推送）
             
         Returns:
             Agent响应结果
@@ -355,7 +373,7 @@ class Agent:
         
         try:
             result = loop.run_until_complete(
-                self.run(user_message, context_history)
+                self.run(user_message, context_history, on_tool_executed)
             )
             return result
         finally:

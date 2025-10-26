@@ -17,6 +17,7 @@ from utils.logger import safe_print as print
 class AgentWorker(QThread):
     """Agent工作线程"""
     finished = pyqtSignal(dict)
+    tool_executed = pyqtSignal(dict)  # 新增：每个工具执行后的信号
     
     def __init__(self, agent, message, context_history=None):
         super().__init__()
@@ -27,9 +28,16 @@ class AgentWorker(QThread):
     def run(self):
         """在后台线程运行Agent"""
         try:
+            # 设置工具执行回调
+            def on_tool_executed(tool_data):
+                """工具执行回调 - 流式推送每个工具"""
+                print(f"[AgentWorker] 🔥 工具执行回调触发: {tool_data.get('tool')}")
+                self.tool_executed.emit(tool_data)
+            
             result = self.agent.run_sync(
                 user_message=self.message,
-                context_history=self.context_history
+                context_history=self.context_history,
+                on_tool_executed=on_tool_executed  # 传递回调
             )
             self.finished.emit(result)
         except Exception as e:
@@ -209,8 +217,19 @@ class AgentBridge(QObject):
             context_history
         )
         self.current_worker.finished.connect(self._on_agent_finished)
+        self.current_worker.tool_executed.connect(self._on_tool_executed)  # 连接工具执行信号
         print(f"[AgentBridge.sendMessage] 启动工作线程")
         self.current_worker.start()
+    
+    def _on_tool_executed(self, tool_data):
+        """工具执行完成回调 - 流式推送每个工具"""
+        print(f"\n[AgentBridge._on_tool_executed] 🔥 工具执行完成: {tool_data.get('tool')}")
+        
+        # 立即发送给前端进行流式渲染
+        self._send_to_frontend({
+            "type": "tool_executed",
+            "tool_data": tool_data
+        })
     
     def _on_agent_finished(self, result):
         """Agent执行完成"""
@@ -742,6 +761,7 @@ class AgentBridge(QObject):
                 compressed_history
             )
             self.current_worker.finished.connect(self._on_agent_finished)
+            self.current_worker.tool_executed.connect(self._on_tool_executed)  # 连接工具执行信号
             self.current_worker.start()
             
         except Exception as e:

@@ -663,6 +663,13 @@
             
             if (data.type === 'thinking') {
                 showThinking();
+                // 创建流式消息容器
+                prepareStreamingContainer();
+            }
+            else if (data.type === 'tool_executed') {
+                // 🔥 流式渲染：收到单个工具执行结果
+                console.log('🔥 收到工具执行:', data.tool_data.tool);
+                await renderStreamingTool(data.tool_data);
             }
             else if (data.type === 'compressing') {
                 showCompressing();
@@ -670,10 +677,13 @@
             else if (data.type === 'response') {
                 hideThinking();
                 
-                // 流式渲染消息
-                if (data.message?.trim() || (data.tool_calls && data.tool_calls.length > 0)) {
-                    await addAssistantMessage(data);
+                // 渲染最终文本消息
+                if (data.message?.trim()) {
+                    await renderFinalMessage(data.message);
                 }
+                
+                // 清理流式容器
+                finishStreamingContainer();
                 
                 isProcessing = false;
                 updateSendButton();
@@ -797,9 +807,9 @@
                                     <div style="color: ${statusColor}; font-weight: 600; margin-bottom: 4px;">${statusText}</div>
                                     <div style="color: #666; white-space: pre-wrap;">${JSON.stringify(call.result, null, 2)}</div>
                                 </div>
-                            </div>
-                        `;
-                    }
+                    </div>
+                `;
+            }
                     
                     // 移除"正在执行"指示器，显示实际结果
                     if (useStreaming && executingIndicator) {
@@ -856,6 +866,148 @@
         // 辅助函数：延迟
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // === 流式渲染核心函数 ===
+        let streamingMessageDiv = null;
+        let streamingContentDiv = null;
+        let streamingToolsContainer = null;
+        let streamingToolCount = 0;
+        
+        function prepareStreamingContainer() {
+            /* 创建流式渲染容器 */
+            console.log('📦 创建流式渲染容器');
+            
+            const area = document.getElementById('chatArea');
+            
+            // 创建消息容器
+            streamingMessageDiv = document.createElement('div');
+            streamingMessageDiv.className = 'message assistant';
+            streamingMessageDiv.id = 'streaming-message-container';
+            
+            streamingContentDiv = document.createElement('div');
+            streamingContentDiv.className = 'message-content';
+            
+            // 创建工具容器
+            streamingToolsContainer = document.createElement('div');
+            streamingToolsContainer.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f5f5f5; border-radius: 3px; font-size: 12px; border-left: 3px solid #666;';
+            
+            streamingContentDiv.appendChild(streamingToolsContainer);
+            streamingMessageDiv.appendChild(streamingContentDiv);
+            area.appendChild(streamingMessageDiv);
+            
+            streamingToolCount = 0;
+        }
+        
+        async function renderStreamingTool(toolData) {
+            /* 流式渲染单个工具 */
+            if (!streamingToolsContainer) {
+                console.error('❌ streamingToolsContainer未初始化');
+                return;
+            }
+            
+            streamingToolCount++;
+            const area = document.getElementById('chatArea');
+            
+            console.log(`🔧 渲染工具 #${streamingToolCount}: ${toolData.tool}`);
+            
+            // 更新标题
+            const headerDiv = streamingToolsContainer.querySelector('.tool-header') || createToolHeader();
+            headerDiv.innerHTML = `🔧 执行了 ${streamingToolCount} 个工具`;
+            
+            // 显示"正在执行"指示器
+            const executingIndicator = document.createElement('div');
+            executingIndicator.className = 'executing-indicator';
+            executingIndicator.style.margin = '8px 0';
+            executingIndicator.innerHTML = `
+                <div class="spinner"></div>
+                <span>正在执行 ${toolData.tool}...</span>
+            `;
+            streamingToolsContainer.appendChild(executingIndicator);
+            area.scrollTop = area.scrollHeight;
+            
+            await sleep(300);
+            
+            // 移除指示器
+            executingIndicator.remove();
+            
+            // 创建工具卡片
+            const toolCard = document.createElement('div');
+            toolCard.style.cssText = 'padding: 10px; margin: 8px 0; background: #fff; border-radius: 3px; border: 1px solid #ddd; opacity: 0; transform: translateY(10px); transition: all 0.3s ease;';
+            
+            // 工具名
+            toolCard.innerHTML = `<div style="font-weight: 600; color: #2c2c2c; margin-bottom: 8px; font-size: 13px; font-family: Consolas, monospace;">⚡ ${streamingToolCount}. ${toolData.tool}</div>`;
+            
+            // 入参
+            toolCard.innerHTML += `
+                <div style="margin-bottom: 6px;">
+                    <div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📥 入参:</div>
+                    <div style="font-size: 11px; color: #2c2c2c; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0; white-space: pre-wrap;">${JSON.stringify(toolData.arguments, null, 2)}</div>
+                </div>
+            `;
+            
+            // 出参
+            if (toolData.result) {
+                const success = toolData.result.success;
+                const statusColor = success ? '#4caf50' : '#f44336';
+                const statusText = success ? '✅ 成功' : '⚠️ 失败（AI将自动修正）';
+                
+                toolCard.innerHTML += `
+                    <div>
+                        <div style="font-size: 10px; color: #999; margin-bottom: 3px; font-weight: 500;">📤 出参:</div>
+                        <div style="font-size: 11px; font-family: Consolas, monospace; background: #fafafa; padding: 6px 8px; border-radius: 2px; border: 1px solid #e0e0e0;">
+                            <div style="color: ${statusColor}; font-weight: 600; margin-bottom: 4px;">${statusText}</div>
+                            <div style="color: #666; white-space: pre-wrap;">${JSON.stringify(toolData.result, null, 2)}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            streamingToolsContainer.appendChild(toolCard);
+            
+            await sleep(100);
+            toolCard.style.opacity = '1';
+            toolCard.style.transform = 'translateY(0)';
+            area.scrollTop = area.scrollHeight;
+        }
+        
+        function createToolHeader() {
+            /* 创建工具标题 */
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'tool-header';
+            headerDiv.style.cssText = 'font-weight: 600; margin-bottom: 10px; color: #666; opacity: 0; animation: fadeInPulse 0.5s ease forwards;';
+            streamingToolsContainer.insertBefore(headerDiv, streamingToolsContainer.firstChild);
+            return headerDiv;
+        }
+        
+        async function renderFinalMessage(message) {
+            /* 渲染最终文本消息 */
+            if (!streamingContentDiv) {
+                console.error('❌ streamingContentDiv未初始化');
+                return;
+            }
+            
+            console.log('💬 渲染最终消息');
+            
+            const area = document.getElementById('chatArea');
+            const textDiv = document.createElement('div');
+            textDiv.style.cssText = 'opacity: 0; transform: translateY(5px); transition: all 0.4s ease;';
+            streamingContentDiv.appendChild(textDiv);
+            
+            await sleep(100);
+            textDiv.innerHTML = formatMarkdown(message);
+            textDiv.style.opacity = '1';
+            textDiv.style.transform = 'translateY(0)';
+            area.scrollTop = area.scrollHeight;
+        }
+        
+        function finishStreamingContainer() {
+            /* 完成流式渲染 */
+            console.log('✅ 流式渲染完成');
+            streamingMessageDiv = null;
+            streamingContentDiv = null;
+            streamingToolsContainer = null;
+            streamingToolCount = 0;
         }
 
         function showThinking() {
