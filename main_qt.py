@@ -340,6 +340,23 @@ class AgentBridge(QObject):
                 "iterations": iterations
             }
             
+            # 🔥 添加structured_metadata用于新架构的持久化
+            if "structured_metadata" in result:
+                assistant_message_data["structured_metadata"] = result["structured_metadata"]
+                print(f"  - 包含structured_metadata: {result['structured_metadata'].get('architecture', 'unknown')}")
+            
+            # 🔥 添加structured_context（完整结构化Context）
+            if "structured_context" in result:
+                from core.structured_message import StructuredMessage
+                
+                # 创建结构化消息
+                structured_msg = StructuredMessage.from_structured_context(result["structured_context"])
+                assistant_message_data["structured_context"] = structured_msg.to_dict()
+                
+                print(f"  - 包含structured_context: Phases={len(result['structured_context'].get('phases', []))}")
+                print(f"  - 结构化消息ID: {structured_msg.data['id']}")
+                print(f"  - JSON大小: {len(structured_msg.to_compact_json())} 字符")
+            
             print(f"  - assistant_message_data keys: {list(assistant_message_data.keys())}")
             print(f"==================\n")
             
@@ -349,11 +366,25 @@ class AgentBridge(QObject):
         workspace.add_to_message_history("user", user_msg)
         
         if result.get("success"):
-            workspace.add_to_message_history_with_metadata("assistant", {
+            assistant_history_data = {
                 "content": assistant_msg,
                 "tool_calls": result.get("tool_calls", []),
                 "iterations": result.get("iterations", 0)
-            })
+            }
+            
+            # 🔥 添加structured_metadata用于新架构的持久化
+            if "structured_metadata" in result:
+                assistant_history_data["structured_metadata"] = result["structured_metadata"]
+            
+            # 🔥 添加structured_context（完整结构化Context）
+            if "structured_context" in result:
+                from core.structured_message import StructuredMessage
+                
+                # 创建结构化消息
+                structured_msg = StructuredMessage.from_structured_context(result["structured_context"])
+                assistant_history_data["structured_context"] = structured_msg.to_dict()
+            
+            workspace.add_to_message_history_with_metadata("assistant", assistant_history_data)
         
         # 保存对话基本信息（token统计等）
         workspace_manager.auto_save()

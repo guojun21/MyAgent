@@ -8,6 +8,7 @@ import asyncio
 from core.models.task import Task, Phase
 from core.tool_enforcer import ToolEnforcer
 from core.validators import RuleValidator
+from core.structured_context import RoundData
 from utils.logger import safe_print as print
 
 
@@ -26,6 +27,7 @@ class PhaseTaskExecutor:
         self.tool_manager = agent.tool_manager
         self.tool_enforcer = ToolEnforcer(agent.llm_service, max_retries=10)  # 工具强制验证器（10次重试）
         self.rule_validator = RuleValidator()  # 规则验证器
+        self.rounds_data = []  # 🔥 存储每个Round的结构化数据
     
     async def execute_with_phase_task(
         self,
@@ -74,6 +76,9 @@ class PhaseTaskExecutor:
             print(f"\n{'='*70}")
             print(f"[PhaseTaskExecutor] Phase {phase.id} - Round {phase.rounds}")
             print(f"{'='*70}")
+            
+            # 🔥 创建当前Round的结构化数据
+            current_round = RoundData(phase.rounds)
             
             # ========== 1️⃣ Plan阶段：规划Task列表（强制调用plan_tool_call）==========
             print(f"\n[PhaseTaskExecutor] 🎯 Phase 1/3: Plan - 规划Task列表")
@@ -147,6 +152,9 @@ class PhaseTaskExecutor:
             
             print(f"[PhaseTaskExecutor] ✅ 已规划 {len(tasks_data)} 个Tasks")
             print(f"[PhaseTaskExecutor] 规划思路: {plan_reasoning}")
+            
+            # 🔥 记录Plan到结构化数据
+            current_round.set_plan(tasks_data, plan_reasoning)
             
             # 记录Plan到messages
             messages.append({
@@ -302,6 +310,9 @@ class PhaseTaskExecutor:
             print(f"[PhaseTaskExecutor] 决策: {judge_result.get('decision', {}).get('action', 'unknown')}")
             print(f"[PhaseTaskExecutor] Phase完成: {judge_result.get('phase_completed', False)}")
             
+            # 🔥 记录Judge到结构化数据
+            current_round.set_judge(judge_result)
+            
             # 更新Task质量分
             if "task_evaluation" in judge_result:
                 for eval_item in judge_result.get("task_evaluation", []):
@@ -340,6 +351,9 @@ class PhaseTaskExecutor:
             # 更新Phase统计
             phase.update_metrics()
             phase.summary = judge_result.get("user_summary") or judge_result.get("summary", "")
+            
+            # 🔥 保存当前Round到rounds_data
+            self.rounds_data.append(current_round.to_dict())
             
             # ========== 4️⃣ 决策：是否结束Phase ==========
             phase_completed = judge_result.get("phase_completed", False)
@@ -400,7 +414,8 @@ class PhaseTaskExecutor:
             "message": phase.summary,
             "tool_calls": tool_calls_history,
             "phase": phase.to_dict(),
-            "iterations": phase.rounds
+            "iterations": phase.rounds,
+            "rounds_data": self.rounds_data  # 🔥 返回结构化Round数据
         }
 
 
