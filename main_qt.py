@@ -179,7 +179,14 @@ class AgentBridge(QObject):
         
         # 3. 初始化Agent（传入workspace_manager用于query_history工具）
         print(f"[AgentBridge._init_workspaces] 初始化Agent: {self.workspace_root}")
-        self.agent = Agent(workspace_root=str(self.workspace_root), workspace_manager=workspace_manager)
+        # 创建Agent（启用Phase-Task架构）
+        use_phase_task = True  # 🔥 启用Phase-Task架构MVP版本
+        self.agent = Agent(
+            workspace_root=str(self.workspace_root), 
+            workspace_manager=workspace_manager,
+            use_phase_task=use_phase_task
+        )
+        print(f"[Agent初始化] Phase-Task架构: {'✅ 启用' if use_phase_task else '❌ 禁用'}")
         
         # 4. 输出最终状态
         workspace = workspace_manager.get_active_workspace()
@@ -471,18 +478,25 @@ class AgentBridge(QObject):
             
             # 更新Agent（传入workspace_manager）
             self.workspace_root = Path(workspace.path).resolve()
-            self.agent = Agent(workspace_root=str(self.workspace_root), workspace_manager=workspace_manager)
-            
-            # 重置压缩计数
-            self.compression_attempts = 0
-            
-            # 通知前端刷新所有数据
-            self.workspaceChanged.emit(workspace.path)
-            self._emit_workspace_list()  # 刷新工作空间列表
-            self._emit_conversations_update()  # 刷新对话列表
-            self._emit_context_update()  # 刷新Context
-            
-            print(f"[AgentBridge.switchWorkspace] 切换完成")
+            # 创建Agent（启用Phase-Task架构）
+        use_phase_task = True  # 🔥 启用Phase-Task架构MVP版本
+        self.agent = Agent(
+            workspace_root=str(self.workspace_root), 
+            workspace_manager=workspace_manager,
+            use_phase_task=use_phase_task
+        )
+        print(f"[Agent初始化] Phase-Task架构: {'✅ 启用' if use_phase_task else '❌ 禁用'}")
+        
+        # 重置压缩计数
+        self.compression_attempts = 0
+        
+        # 通知前端刷新所有数据
+        self.workspaceChanged.emit(workspace.path)
+        self._emit_workspace_list()  # 刷新工作空间列表
+        self._emit_conversations_update()  # 刷新对话列表
+        self._emit_context_update()  # 刷新Context
+        
+        print(f"[AgentBridge.switchWorkspace] 切换完成")
     
     @pyqtSlot(str, str)
     def renameWorkspace(self, ws_id, new_name):
@@ -667,15 +681,22 @@ class AgentBridge(QObject):
             self.workspace_id = workspace_manager.create_workspace(str(self.workspace_root))
             
             # 重新初始化Agent（传入workspace_manager）
-            self.agent = Agent(workspace_root=str(self.workspace_root), workspace_manager=workspace_manager)
-            print(f"[Agent重新初始化] 工作空间: {self.workspace_root}")
-            
-            # 通知前端刷新
-            self._emit_workspace_list()  # 刷新工作空间列表
-            self._emit_conversations_update()  # 刷新对话列表
-            self._emit_context_update()
-            
-            self._send_to_frontend({
+            # 创建Agent（启用Phase-Task架构）
+        use_phase_task = True  # 🔥 启用Phase-Task架构MVP版本
+        self.agent = Agent(
+            workspace_root=str(self.workspace_root), 
+            workspace_manager=workspace_manager,
+            use_phase_task=use_phase_task
+        )
+        print(f"[Agent初始化] Phase-Task架构: {'✅ 启用' if use_phase_task else '❌ 禁用'}")
+        print(f"[Agent重新初始化] 工作空间: {self.workspace_root}")
+        
+        # 通知前端刷新
+        self._emit_workspace_list()  # 刷新工作空间列表
+        self._emit_conversations_update()  # 刷新对话列表
+        self._emit_context_update()
+        
+        self._send_to_frontend({
                 "type": "workspace_changed",
                 "workspace": str(self.workspace_root),
                 "message": f"已切换到工作空间: {self.workspace_root}"

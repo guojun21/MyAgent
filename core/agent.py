@@ -1,5 +1,6 @@
 """
 Agent核心引擎 - 实现多轮对话和工具调用
+支持Phase-Task架构（MVP版本）
 """
 from typing import Dict, Any, List, Optional
 import json
@@ -7,23 +8,27 @@ import asyncio
 from services.llm_service import get_llm_service, LLMService
 from core.tool_manager import ToolManager
 from core.context_compressor import context_compressor
+from core.phase_task_executor import PhaseTaskExecutor
 from utils.logger import safe_print as print
 
 
 class Agent:
     """智能编程助手Agent"""
     
-    def __init__(self, workspace_root: str = ".", workspace_manager=None):
+    def __init__(self, workspace_root: str = ".", workspace_manager=None, use_phase_task: bool = False):
         """
         初始化Agent
         
         Args:
             workspace_root: 工作空间根目录
             workspace_manager: 工作空间管理器（用于query_history工具）
+            use_phase_task: 是否使用Phase-Task架构（MVP版本）
         """
         self.llm_service: LLMService = get_llm_service()
         self.tool_manager = ToolManager(workspace_root, workspace_manager)
         self.max_iterations = 30  # 提高到30次，支持多次edit_file
+        self.use_phase_task = use_phase_task  # Phase-Task架构开关
+        self.phase_task_executor = PhaseTaskExecutor(self)  # Phase-Task执行器
     
     async def run(
         self, 
@@ -61,6 +66,19 @@ class Agent:
         tools = self.tool_manager.get_tool_definitions()
         print(f"[Agent.run] 可用工具数: {len(tools)}")
         print(f"[Agent.run] 工具列表: {[t['function']['name'] for t in tools]}")
+        
+        # 检查是否使用Phase-Task架构
+        if self.use_phase_task:
+            print(f"\n[Agent.run] 🎯 使用Phase-Task架构（MVP版本）")
+            return await self.phase_task_executor.execute_with_phase_task(
+                user_message=user_message,
+                messages=messages,
+                tools=tools,
+                on_tool_executed=on_tool_executed
+            )
+        
+        # 否则使用原有的执行逻辑
+        print(f"\n[Agent.run] 使用原有Planner-Executor模式")
         
         # Agent执行循环
         iterations = 0
@@ -255,42 +273,42 @@ class Agent:
                                 # 使用对应的fake_tool_call
                                 fake_tool_call = planned_tool_calls[idx - 1]
                                 
-                    tool_result = await self._execute_tool_call(fake_tool_call)
-                    
-                    print(f"  - 执行结果: {tool_result.get('success', False)}")
-                    if not tool_result.get('success'):
-                        print(f"  - 错误信息: {tool_result.get('error', 'Unknown')[:200]}")
-                    
-                    # 记录工具执行历史
-                    tool_data = {
-                        "tool": tool_name,
-                        "arguments": tool_args,
-                        "result": tool_result
-                    }
-                    tool_calls_history.append(tool_data)
-                    
-                    # 🔥 流式回调：立即通知前端
-                    if on_tool_executed:
-                        print(f"[Agent.run] 🔥 触发工具执行回调: {tool_name}")
-                        on_tool_executed(tool_data)
-                    
-                    # 添加工具结果消息
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": fake_tool_call["id"],
-                        "content": json.dumps(tool_result, ensure_ascii=False)
-                    })
-                    
-                    # 🎯 检测task_done：如果任务完成，立即终止循环
-                    if tool_name == "task_done" and tool_result.get("task_completed"):
-                        print(f"\n[Agent.run] ✅ 检测到task_done，任务已完成，终止循环")
-                        final_message = tool_result.get("summary", "任务已完成")
-                        return {
-                            "success": True,
-                            "message": final_message,
-                            "tool_calls": tool_calls_history,
-                            "iterations": iterations
-                        }
+                                tool_result = await self._execute_tool_call(fake_tool_call)
+                                
+                                print(f"  - 执行结果: {tool_result.get('success', False)}")
+                                if not tool_result.get('success'):
+                                    print(f"  - 错误信息: {tool_result.get('error', 'Unknown')[:200]}")
+                                
+                                # 记录工具执行历史
+                                tool_data = {
+                                    "tool": tool_name,
+                                    "arguments": tool_args,
+                                    "result": tool_result
+                                }
+                                tool_calls_history.append(tool_data)
+                                
+                                # 🔥 流式回调：立即通知前端
+                                if on_tool_executed:
+                                    print(f"[Agent.run] 🔥 触发工具执行回调: {tool_name}")
+                                    on_tool_executed(tool_data)
+                                
+                                # 添加工具结果消息
+                                messages.append({
+                                    "role": "tool",
+                                    "tool_call_id": fake_tool_call["id"],
+                                    "content": json.dumps(tool_result, ensure_ascii=False)
+                                })
+                                
+                                # 🎯 检测task_done：如果任务完成，立即终止循环
+                                if tool_name == "task_done" and tool_result.get("task_completed"):
+                                    print(f"\n[Agent.run] ✅ 检测到task_done，任务已完成，终止循环")
+                                    final_message = tool_result.get("summary", "任务已完成")
+                                    return {
+                                        "success": True,
+                                        "message": final_message,
+                                        "tool_calls": tool_calls_history,
+                                        "iterations": iterations
+                                    }
                             
                             # Planner阶段完成，下一轮进入Executor阶段
                             is_first_iteration = False
