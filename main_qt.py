@@ -242,12 +242,35 @@ class AgentBridge(QObject):
         user_msg = self.current_worker.message
         assistant_msg = result.get("message", "")
         
-        # 记录token使用
+        # 记录token使用（只记录completion，prompt会重复计算）
         if "token_usage" in result and conversation:
             usage = result["token_usage"]
-            conversation.token_usage["prompt_tokens"] += usage.get("prompt_tokens", 0)
-            conversation.token_usage["completion_tokens"] += usage.get("completion_tokens", 0)
-            conversation.token_usage["total_tokens"] += usage.get("total_tokens", 0)
+            
+            # 只累计completion_tokens（新生成的内容）
+            # prompt_tokens会随着context增长自然增长，不应该累加
+            new_completion = usage.get("completion_tokens", 0)
+            current_prompt = usage.get("prompt_tokens", 0)  # 当前context大小
+            
+            conversation.token_usage["prompt_tokens"] = current_prompt  # 直接赋值，不累加
+            conversation.token_usage["completion_tokens"] += new_completion  # 累加
+            conversation.token_usage["total_tokens"] = current_prompt + conversation.token_usage["completion_tokens"]
+            
+            print(f"[保存Token使用] ==================")
+            print(f"  - 本次prompt: {current_prompt} (当前Context大小)")
+            print(f"  - 本次completion: {new_completion}")
+            print(f"  - 累计completion: {conversation.token_usage['completion_tokens']}")
+            print(f"  - 总计: {conversation.token_usage['total_tokens']}")
+            print(f"==================\n")
+            
+            # 立即保存到JSON
+            from core.persistence import persistence_manager
+            ctx_data = persistence_manager.get_context(conversation.id)
+            if ctx_data:
+                persistence_manager.save_context(
+                    conversation.id,
+                    ctx_data.get("context_messages", []),
+                    conversation.token_usage
+                )
         
         # 添加到对话的Context（直接写入contexts.json）
         # 用户消息
