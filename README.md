@@ -9,7 +9,6 @@
 <img width="963" height="9033" alt="QQ截图20251027134810" src="https://github.com/user-attachments/assets/3acd8e31-55ef-4f2f-8498-63b70046f2a9" />
 
 
-> **图片说明**：手动将架构流程图复制到 `docs/images/architecture-flow.png`
 
 ---
 
