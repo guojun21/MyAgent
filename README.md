@@ -66,7 +66,7 @@ pip install -r requirements.txt
 4. **启动服务**
 ```bash
 # Windows用户
-启动AI助手.bat
+script\bat\启动AI助手.bat
 
 # 或直接运行
 python main.py
@@ -87,6 +87,21 @@ MyAgent 采用了**独创的四层递进式架构**，这是与传统 Agent（�
 ![MyAgent架构流程图](docs/images/architecture-flow.png)
 
 > **架构流程图说明**：完整展示从用户请求到任务完成的全过程，包括Request分析、Phase规划、多轮PEJ循环和最终Summarizer总结。图片需手动放置到 `docs/images/architecture-flow.png`
+
+### 📚 文档索引
+
+为了保持项目根目录整洁，相关文档已移动至 `docs/` 目录：
+
+- [**AGENT_USAGE.md**](docs/AGENT_USAGE.md) - Agent 使用说明
+- [**ARCHITECTURE.md**](docs/ARCHITECTURE.md) - 详细架构说明
+- [**DEMO.md**](docs/DEMO.md) - 演示文档
+- [**IMPLEMENTATION_SUMMARY.md**](docs/IMPLEMENTATION_SUMMARY.md) - 实施总结
+- [**QT_README.md**](docs/QT_README.md) - Qt 版本说明
+- [**QUICKSTART.md**](docs/QUICKSTART.md) - 快速开始指南
+- [**README.keySolution.md**](docs/README.keySolution.md) - 核心技术方案
+- [**README.toDo.md**](docs/README.toDo.md) - 待办事项与规划
+- [**测试prompt.md**](docs/测试prompt.md) - 测试提示词
+
 
 ### 📊 完整执行流程
 
@@ -596,8 +611,8 @@ class Settings:
 
 ### 📖 核心文档
 - **`README.md`** - 项目主文档（本文档）
-- **`README.keySolution.md`** - 已实施的核心技术方案汇总 ⭐
-- **`README.toDo.md`** - 未来规划与发展路线 🚀
+- **`docs/README.keySolution.md`** - 已实施的核心技术方案汇总 ⭐
+- **`docs/README.toDo.md`** - 未来规划与发展路线 🚀
 
 ### 🔧 技术文档
 - `docs/API日志记录使用说明.md` - API日志功能说明
@@ -606,8 +621,8 @@ class Settings:
 
 ### 💡 技术方案库
 - `docs/resolution/` - 20+个详细技术方案
-  - ✅ **已实施**：7个核心方案（见 `README.keySolution.md`）
-  - 📋 **规划中**：12个扩展方案（见 `README.toDo.md`）
+  - ✅ **已实施**：7个核心方案（见 `docs/README.keySolution.md`）
+  - 📋 **规划中**：12个扩展方案（见 `docs/README.toDo.md`）
 - 包含架构设计、实施记录、问题解决等
 
 ### 🧪 示例和测试
@@ -618,7 +633,7 @@ class Settings:
 
 ## 🚀 未来规划
 
-> 详细规划请参考：**`README.toDo.md`** 📋
+> 详细规划请参考：**`docs/README.toDo.md`** 📋
 
 ### 短期规划（1-2个月）⭐
 
@@ -641,7 +656,7 @@ class Settings:
 - **企业级SaaS**：多租户、权限管理、商业化
 - **社区生态**：插件市场、API服务、开源贡献
 
-**完整技术方案**：共12个规划方案，详见 `docs/resolution/` 和 `README.toDo.md`
+**完整技术方案**：共12个规划方案，详见 `docs/resolution/` 和 `docs/README.toDo.md`
 
 ---
 

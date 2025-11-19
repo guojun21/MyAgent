@@ -2,8 +2,12 @@
 Qt桌面版主程序 - 使用PyQt6 + WebEngine
 """
 import sys
-import json
 from pathlib import Path
+
+# 添加 backend 目录到 sys.path
+sys.path.append(str(Path(__file__).parent / "backend"))
+
+import json
 from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl, QThread
 from PyQt6.QtWidgets import QApplication, QMainWindow
 from PyQt6.QtWebEngineWidgets import QWebEngineView
