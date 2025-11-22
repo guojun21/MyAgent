@@ -1,15 +1,21 @@
 """
-File Operations Tool (Merged Version)
-Integrates: read_file, write_file, edit_file, list_files
+File Operations Tool (Unified Interface)
+Integrates: 
+1. Basic File Ops: read_file, write_file, edit_file, list_files
+2. Search Code: grep search
+3. Analyze Code: definition, references (Tree-sitter)
 """
 from typing import Dict, Any
 
-
 class FileOperationsTool:
-    """File Operations Tool (Unified Interface)"""
+    """
+    Unified File Operations Tool.
+    Combines file IO, searching, and static analysis into one tool to reduce cognitive load.
+    """
     
-    def __init__(self, file_service):
+    def __init__(self, file_service, code_service=None):
         self.file_service = file_service
+        self.code_service = code_service
     
     def get_definition(self) -> Dict[str, Any]:
         """Get tool definition"""
@@ -17,115 +23,137 @@ class FileOperationsTool:
             "type": "function",
             "function": {
                 "name": "file_operations",
-                "description": """File operations tool (supports read, write, edit, list files)
+                "description": """Unified file and code operations tool.
+Supports reading, writing, editing files, listing directories, searching code, and analyzing symbols.
 
-Operation types:
-1. read - Read file content
-2. write - Write/create file
-3. edit - Batch edit file (multiple edits)
-4. list - List directory files
+Operation Types:
+1. File IO:
+   - read: Read file content.
+   - write: Create or overwrite file.
+   - edit: Batch string replacement.
+   - list: List files in directory.
+
+2. Code Search & Analysis:
+   - search: Grep/regex search for text patterns.
+   - definition: Find symbol definition (classes/functions).
+   - references: Find symbol usages.
 
 Examples:
 - Read: {"operation": "read", "path": "main.py"}
-- Write: {"operation": "write", "path": "new.py", "content": "print('hello')"}
-- Edit: {"operation": "edit", "path": "main.py", "edits": [{"old": "old_code", "new": "new_code"}]}
-- List: {"operation": "list", "path": "src/"}
-
-Notes:
-- Edit operation JSON strings must be escaped: \\n (newline), \\t (tab), \\" (quote)
-- Edit supports batch modifications
-- List recursively lists all sub-files""",
+- Write: {"operation": "write", "path": "test.py", "content": "print('hi')"}
+- Edit: {"operation": "edit", "path": "main.py", "edits": [{"old": "foo", "new": "bar"}]}
+- List: {"operation": "list", "path": "src"}
+- Search: {"operation": "search", "query": "TODO", "path": "src"}
+- Definition: {"operation": "definition", "symbol": "AgentLoop", "path": "backend/agent.py"}
+""",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "operation": {
                             "type": "string",
-                            "enum": ["read", "write", "edit", "list"],
+                            "enum": ["read", "write", "edit", "list", "search", "definition", "references"],
                             "description": "Operation type"
                         },
+                        # Common parameters
                         "path": {
                             "type": "string",
-                            "description": "File or directory path (relative to workspace)"
+                            "description": "File path, directory path, or context path (depends on operation)"
                         },
+                        # IO parameters
                         "content": {
                             "type": "string",
-                            "description": "Content to write (required for write operation)"
+                            "description": "Content for write operation"
                         },
                         "edits": {
                             "type": "array",
-                            "description": "Batch edit list (required for edit operation)",
                             "items": {
                                 "type": "object",
                                 "properties": {
-                                    "old": {
-                                        "type": "string",
-                                        "description": "Old content to replace (must match exactly, including indentation and newlines)"
-                                    },
-                                    "new": {
-                                        "type": "string",
-                                        "description": "New content"
-                                    }
+                                    "old": {"type": "string"},
+                                    "new": {"type": "string"}
                                 },
                                 "required": ["old", "new"]
-                            }
+                            },
+                            "description": "Edits for edit operation"
                         },
-                        "start_line": {
-                            "type": "integer",
-                            "description": "Start line number (optional for read operation, for reading partial content)"
+                        "start_line": {"type": "integer", "description": "Start line for read"},
+                        "end_line": {"type": "integer", "description": "End line for read"},
+                        
+                        # Search/Analysis parameters
+                        "query": {
+                            "type": "string",
+                            "description": "Search term for search operation"
                         },
-                        "end_line": {
-                            "type": "integer",
-                            "description": "End line number (optional for read operation)"
+                        "symbol": {
+                            "type": "string",
+                            "description": "Symbol name for definition/references operations"
                         }
                     },
-                    "required": ["operation", "path"]
+                    "required": ["operation"]
                 }
             }
         }
     
-    def execute(self, operation: str, path: str, **kwargs) -> Dict[str, Any]:
-        """Execute file operation"""
-        print(f"[FileOperations] Execute operation: {operation} - {path}")
+    def execute(self, operation: str, **kwargs) -> Dict[str, Any]:
+        """Execute unified file operation"""
+        path = kwargs.get("path", ".") # Default to current dir if not provided, though usually required
         
         try:
+            # === 1. File IO Operations ===
             if operation == "read":
-                start_line = kwargs.get("start_line")
-                end_line = kwargs.get("end_line")
-                result = self.file_service.read_file(path, start_line, end_line)
-                return result
+                return self.file_service.read_file(path, kwargs.get("start_line"), kwargs.get("end_line"))
             
             elif operation == "write":
                 content = kwargs.get("content")
-                if content is None:
-                    return {
-                        "success": False,
-                        "error": "write operation requires content parameter"
-                    }
-                result = self.file_service.write_file(path, content)
-                return result
+                if content is None: return {"success": False, "error": "Missing content"}
+                return self.file_service.write_file(path, content)
             
             elif operation == "edit":
                 edits = kwargs.get("edits")
-                if not edits:
-                    return {
-                        "success": False,
-                        "error": "edit operation requires edits parameter"
-                    }
-                result = self.file_service.edit_file_batch(path, edits)
-                return result
+                if not edits: return {"success": False, "error": "Missing edits"}
+                return self.file_service.edit_file_batch(path, edits)
             
             elif operation == "list":
-                result = self.file_service.list_files(path)
-                return result
+                return self.file_service.list_files(path)
+            
+            # === 2. Search Operations ===
+            elif operation == "search":
+                query = kwargs.get("query")
+                if not query: return {"success": False, "error": "Missing query"}
+                # Use code_service (legacy local) or file_service (remote grep)
+                # The remote service has a /code/search endpoint if we use TerminalService logic
+                # But wait, file_service in remote_services.py doesn't expose search directly yet.
+                # Let's use the code_service if passed, or try to use remote call if possible.
+                
+                # Option A: Use local code_service (SearchCodeTool logic)
+                if self.code_service:
+                    return self.code_service.search_code(query=query, path=path)
+                
+                # Option B: Fallback to remote terminal grep via a custom call?
+                # For now, assuming code_service is passed (ToolManager does pass it).
+                return {"success": False, "error": "Search service not available"}
+
+            # === 3. Code Analysis Operations ===
+            elif operation == "definition":
+                symbol = kwargs.get("symbol")
+                if not symbol: return {"success": False, "error": "Missing symbol"}
+                # Call remote definition endpoint
+                if hasattr(self.file_service, 'call_endpoint'):
+                    payload = {"symbol": symbol}
+                    if path: payload["path"] = path
+                    return self.file_service.call_endpoint("code/definition", payload)
+                return {"success": False, "error": "Remote analysis not supported"}
+
+            elif operation == "references":
+                symbol = kwargs.get("symbol")
+                if not symbol: return {"success": False, "error": "Missing symbol"}
+                # Call remote references endpoint
+                if hasattr(self.file_service, 'call_endpoint'):
+                    return self.file_service.call_endpoint("code/references", {"symbol": symbol})
+                return {"success": False, "error": "Remote analysis not supported"}
             
             else:
-                return {
-                    "success": False,
-                    "error": f"Unsupported operation type: {operation}"
-                }
+                return {"success": False, "error": f"Unknown operation: {operation}"}
         
         except Exception as e:
-            return {
-                "success": False,
-                "error": f"File operation failed: {str(e)}"
-            }
+            return {"success": False, "error": f"Operation failed: {str(e)}"}

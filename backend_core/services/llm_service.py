@@ -207,6 +207,10 @@ class DeepSeekService(LLMService):
         )
         self.model = settings.deepseek_model         # 使用的模型名称（如deepseek-chat）
         
+        # Teacher模型配置（如果未配置则默认使用主模型）
+        self.teacher_model = getattr(settings, 'teacher_model', self.model)
+        print(f"[DeepSeekService] 主模型: {self.model}, 教师模型: {self.teacher_model}")
+        
         # 初始化API日志记录器
         from services.api_logger import APILogger
         self.api_logger = APILogger()
@@ -217,7 +221,8 @@ class DeepSeekService(LLMService):
         messages: List[Dict[str, str]], 
         tools: Optional[List[Dict[str, Any]]] = None,
         tool_choice: Union[str, Dict] = "auto",
-        context_info: Optional[Dict] = None  # 新增：上下文信息
+        context_info: Optional[Dict] = None,  # 新增：上下文信息
+        use_teacher: bool = False  # 🔥 新增：是否使用教师模型
     ) -> Dict[str, Any]:
         """
         与DeepSeek对话（支持Function Calling + API日志）
@@ -227,9 +232,12 @@ class DeepSeekService(LLMService):
         # 记录开始时间
         start_time = time.time()
         
+        # 决定使用哪个模型
+        current_model = self.teacher_model if use_teacher else self.model
+        
         # ======== 日志：记录调用信息，方便调试 ========
         print(f"\n    [DeepSeek.chat] 准备调用DeepSeek API")
-        print(f"    [DeepSeek.chat] 模型: {self.model}")
+        print(f"    [DeepSeek.chat] 模型: {current_model} ({'Teacher' if use_teacher else 'Student'})")
         print(f"    [DeepSeek.chat] 消息数: {len(messages)}")
         print(f"    [DeepSeek.chat] 工具数: {len(tools) if tools else 0}")
         print(f"    [DeepSeek.chat] 温度: 0.3")
@@ -237,7 +245,7 @@ class DeepSeekService(LLMService):
         try:
             # ======== 第一步：准备API请求参数 ========
             kwargs = {
-                "model": self.model,
+                "model": current_model,
                 "messages": messages,
                 "temperature": 0.3,
                 "max_tokens": 8000,  # 提高到8000，支持批量编辑

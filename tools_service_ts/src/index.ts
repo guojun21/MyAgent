@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import { FileService } from './services/FileService';
 import { TerminalService } from './services/TerminalService';
+import { CodeAnalysisService } from './services/CodeAnalysisService';
 import path from 'path';
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(bodyParser.json({ limit: '50mb' }));
 const WORKSPACE_ROOT = path.resolve(__dirname, '../../'); 
 const fileService = new FileService(WORKSPACE_ROOT);
 const terminalService = new TerminalService();
+const codeAnalysisService = new CodeAnalysisService(WORKSPACE_ROOT);
 
 console.log(`[TS-ToolService] Initialized with Workspace: ${WORKSPACE_ROOT}`);
 
@@ -55,11 +57,37 @@ app.post('/terminal/run', async (req, res) => {
   res.json(result);
 });
 
-// ============ Code Search API (Simple grep fallback) ============
-// For now, we implement a simple grep using TerminalService as CodeService placeholder
+// ============ Code Analysis API (Tree-sitter) ============
+
+app.post('/code/definition', async (req, res) => {
+  const { symbol, path } = req.body;
+  try {
+    const result = await codeAnalysisService.findDefinitions(symbol, path);
+    res.json({
+      success: true,
+      definitions: result
+    });
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+app.post('/code/references', async (req, res) => {
+  const { symbol } = req.body;
+  try {
+    const result = await codeAnalysisService.findReferences(symbol);
+    res.json({
+      success: true,
+      references: result
+    });
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// Legacy Grep Search (kept for fallback)
 app.post('/code/search', async (req, res) => {
     const { query, directory } = req.body;
-    // Use grep for simplicity in MVP
     const cmd = `grep -r "${query}" "${directory || '.'}" | head -n 100`;
     const result = await terminalService.executeCommand(cmd);
     
@@ -82,4 +110,3 @@ app.post('/code/search', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[TS-ToolService] Running on http://0.0.0.0:${PORT}`);
 });
-
