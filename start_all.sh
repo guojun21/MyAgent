@@ -21,7 +21,7 @@ sleep 3
 # 启动 Core Service (后台运行)
 echo "Starting Core Service (Port 8000)..."
 cd backend_core
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload > ../core_service.log 2>&1 &
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload > ../core_service.log 2>&1 &
 CORE_PID=$!
 cd ..
 

@@ -5,6 +5,8 @@
     "sourceMap": true,
     "outDir": "../dist-electron",
     "baseUrl": ".",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
     "paths": {
       "*": ["node_modules/*"]
     }

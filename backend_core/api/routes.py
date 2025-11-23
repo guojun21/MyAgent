@@ -1,258 +1,98 @@
 """
-RESTful API路由 - 所有接口定义
+API路由定义
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
-from core.workspace_manager import workspace_manager
-from core.agent import Agent
+from typing import List, Dict, Any, Optional
+from pathlib import Path
+from datetime import datetime
+import json
 
 router = APIRouter()
 
-# ========== 请求模型 ==========
 
-class SendMessageRequest(BaseModel):
+class FrontendLogEntry(BaseModel):
+    level: str
     message: str
-    conversation_id: str
+    timestamp: str
+    stack: Optional[str] = None
 
-class CreateConversationRequest(BaseModel):
-    workspace_id: str
-    name: Optional[str] = None
 
-class RenameRequest(BaseModel):
-    new_name: str
+class FrontendLogsRequest(BaseModel):
+    logs: List[FrontendLogEntry]
 
-class SwitchRequest(BaseModel):
-    target_id: str
 
-# ========== 工作空间接口 ==========
+# 全局前端日志文件（整个session共用）
+frontend_log_file = None
 
-@router.get("/workspaces")
-def get_workspaces():
-    """获取所有工作空间"""
-    workspaces = []
-    for ws_id, ws in workspace_manager.workspaces.items():
-        workspaces.append({
-            "id": ws.id,
-            "name": ws.name,
-            "path": ws.path,
-            "active": ws_id == workspace_manager.active_workspace_id,
-            "conversation_count": len(ws.conversations)
-        })
-    
-    return {"success": True, "data": workspaces}
 
-@router.post("/workspaces/{ws_id}/switch")
-def switch_workspace(ws_id: str):
-    """切换工作空间"""
-    if ws_id not in workspace_manager.workspaces:
-        raise HTTPException(404, "工作空间不存在")
+def init_frontend_log():
+    """初始化前端日志文件"""
+    global frontend_log_file
     
-    workspace_manager.active_workspace_id = ws_id
-    return {"success": True, "message": "已切换工作空间"}
+    if frontend_log_file is not None:
+        return
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    frontend_dir = Path("llmlogs") / "frontend"
+    frontend_dir.mkdir(parents=True, exist_ok=True)
+    frontend_log_file = frontend_dir / f"frontend_log_{timestamp}.txt"
+    
+    # 写入日志头部
+    with open(frontend_log_file, 'w', encoding='utf-8') as f:
+        f.write("="*80 + "\n")
+        f.write("前端Console日志\n")
+        f.write(f"启动时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"日志文件: {frontend_log_file}\n")
+        f.write("="*80 + "\n\n")
+    
+    print(f"[API] 前端日志文件已创建: {frontend_log_file}")
 
-@router.post("/workspaces/{ws_id}/rename")
-def rename_workspace(ws_id: str, req: RenameRequest):
-    """重命名工作空间"""
-    workspace = workspace_manager.workspaces.get(ws_id)
-    if not workspace:
-        raise HTTPException(404, "工作空间不存在")
-    
-    workspace.name = req.new_name
-    workspace_manager.auto_save()
-    
-    return {"success": True, "message": "已重命名"}
 
-# ========== 对话接口 ==========
+@router.post("/api/logs/frontend")
+async def save_frontend_logs(request: FrontendLogsRequest):
+    """接收并保存前端日志"""
+    try:
+        # 初始化日志文件（如果还没有）
+        init_frontend_log()
+        
+        if len(request.logs) == 0:
+            return {"status": "ok", "saved": 0}
+        
+        # 追加到已有文件
+        with open(frontend_log_file, 'a', encoding='utf-8') as f:
+            for log in request.logs:
+                level = log.level.upper()
+                timestamp = log.timestamp
+                message = log.message
+                
+                f.write(f"[{timestamp}] [{level}] {message}\n")
+                
+                # 如果有堆栈信息，也记录
+                if log.stack:
+                    f.write(f"Stack: {log.stack}\n")
+                
+                f.write("\n")
+        
+        print(f"[API] 保存了 {len(request.logs)} 条前端日志")
+        
+        return {"status": "ok", "saved": len(request.logs)}
+        
+    except Exception as e:
+        print(f"[API] 保存前端日志失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/conversations")
-def get_conversations(workspace_id: Optional[str] = None):
-    """获取对话列表"""
-    if workspace_id:
-        workspace = workspace_manager.workspaces.get(workspace_id)
-    else:
-        workspace = workspace_manager.get_active_workspace()
-    
-    if not workspace:
-        return {"success": True, "data": []}
-    
-    conversations = []
-    for conv_id, conv in workspace.conversations.items():
-        conversations.append({
-            "id": conv.id,
-            "name": conv.name,
-            "active": conv_id == workspace.active_conversation_id,
-            "message_count": len(conv.context_messages),
-            "last_active": conv.last_active
-        })
-    
-    return {"success": True, "data": conversations}
 
-@router.post("/conversations")
-def create_conversation(req: CreateConversationRequest):
-    """创建新对话"""
-    workspace = workspace_manager.workspaces.get(req.workspace_id)
-    if not workspace:
-        workspace = workspace_manager.get_active_workspace()
-    
-    if not workspace:
-        raise HTTPException(404, "工作空间不存在")
-    
-    conv_id = workspace.create_conversation(req.name)
-    workspace.switch_conversation(conv_id)
-    workspace_manager.auto_save()
-    
-    return {"success": True, "conversation_id": conv_id}
+@router.get("/health")
+async def health_check():
+    """健康检查"""
+    return {"status": "ok", "service": "backend_core"}
 
-@router.post("/conversations/{conv_id}/switch")
-def switch_conversation(conv_id: str):
-    """切换对话"""
-    workspace = workspace_manager.get_active_workspace()
-    if not workspace:
-        raise HTTPException(404, "无活跃工作空间")
-    
-    workspace.switch_conversation(conv_id)
-    return {"success": True}
 
-@router.post("/conversations/{conv_id}/rename")
-def rename_conversation(conv_id: str, req: RenameRequest):
-    """重命名对话"""
-    workspace = workspace_manager.get_active_workspace()
-    if not workspace:
-        raise HTTPException(404, "无活跃工作空间")
-    
-    conv = workspace.conversations.get(conv_id)
-    if not conv:
-        raise HTTPException(404, "对话不存在")
-    
-    conv.name = req.new_name
-    workspace_manager.auto_save()
-    
-    return {"success": True}
-
-# ========== Context接口 ==========
-
-@router.get("/context/{conversation_id}")
-def get_context(conversation_id: str):
-    """获取Context"""
-    workspace = workspace_manager.get_active_workspace()
-    if not workspace:
-        raise HTTPException(404, "无活跃工作空间")
-    
-    conv = workspace.conversations.get(conversation_id)
-    if not conv:
-        raise HTTPException(404, "对话不存在")
-    
-    messages = conv.get_context_messages()
-    
+@router.get("/api/workspaces")
+async def get_workspaces():
+    """获取工作空间列表（临时接口）"""
     return {
-        "success": True,
-        "data": {
-            "messages": messages,
-            "token_usage": conv.token_usage,
-            "message_count": len(messages)
-        }
+        "workspaces": [],
+        "message": "工作空间功能开发中"
     }
-
-@router.post("/context/{conversation_id}/compact")
-def compact_context(conversation_id: str):
-    """压缩Context"""
-    from core.context_compressor import context_compressor
-    
-    workspace = workspace_manager.get_active_workspace()
-    if not workspace:
-        raise HTTPException(404, "无活跃工作空间")
-    
-    conv = workspace.conversations.get(conversation_id)
-    if not conv:
-        raise HTTPException(404, "对话不存在")
-    
-    messages = conv.get_context_messages()
-    compressed = context_compressor.auto_compact(messages, keep_recent=1, max_tokens=131072)
-    
-    # 更新JSON
-    from core.persistence import persistence_manager
-    persistence_manager.update_context_messages(conversation_id, compressed)
-    
-    return {"success": True, "message": f"已压缩: {len(messages)}条 → {len(compressed)}条"}
-
-# ========== MessageHistory接口 ==========
-
-@router.get("/message-history/{workspace_id}")
-def get_message_history(workspace_id: str):
-    """获取消息历史"""
-    workspace = workspace_manager.workspaces.get(workspace_id)
-    if not workspace:
-        raise HTTPException(404, "工作空间不存在")
-    
-    messages = workspace.get_message_history()
-    
-    # 统计
-    total_chars = sum(len(m.get("content", "")) for m in messages)
-    chinese_chars = sum(len([c for c in m.get("content", "") if '\u4e00' <= c <= '\u9fa5']) for m in messages)
-    english_chars = sum(len([c for c in m.get("content", "") if c.isalpha() and c.isascii()]) for m in messages)
-    
-    return {
-        "success": True,
-        "data": {
-            "messages": messages,
-            "stats": {
-                "total_chars": total_chars,
-                "chinese_chars": chinese_chars,
-                "english_chars": english_chars,
-                "message_count": len(messages)
-            }
-        }
-    }
-
-# ========== Agent对话接口 ==========
-
-@router.post("/agent/chat")
-def agent_chat(req: SendMessageRequest):
-    """发送消息给Agent"""
-    workspace = workspace_manager.get_active_workspace()
-    if not workspace:
-        raise HTTPException(404, "无活跃工作空间")
-    
-    conv = workspace.conversations.get(req.conversation_id)
-    if not conv:
-        raise HTTPException(404, "对话不存在")
-    
-    # 获取Context
-    context_history = conv.get_context_messages()
-    
-    # 创建Agent（使用工作空间路径）
-    agent = Agent(workspace_root=workspace.path)
-    
-    # 执行
-    result = agent.run_sync(req.message, context_history)
-    
-    # 保存结果
-    if result.get("success"):
-        conv.add_to_context("user", req.message)
-        
-        # 准备消息数据，可能包含 structured_context
-        message_data = {"content": result.get("message", "")}
-        if "structured_context" in result:
-            message_data["structured_context"] = result["structured_context"]
-        if "structured_metadata" in result:
-             message_data["structured_metadata"] = result["structured_metadata"]
-        if "tool_calls" in result:
-             message_data["tool_calls"] = result["tool_calls"]
-             
-        conv.add_to_context_with_metadata("assistant", message_data)
-        
-        workspace.add_to_message_history("user", req.message)
-        workspace.add_to_message_history("assistant", result.get("message", ""))
-        
-        # 更新token
-        if "token_usage" in result:
-            usage = result["token_usage"]
-            conv.token_usage["prompt_tokens"] += usage.get("prompt_tokens", 0)
-            conv.token_usage["completion_tokens"] += usage.get("completion_tokens", 0)
-            conv.token_usage["total_tokens"] += usage.get("total_tokens", 0)
-        
-        workspace_manager.auto_save()
-    
-    return {"success": True, "data": result}
-
