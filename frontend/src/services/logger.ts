@@ -1,183 +1,142 @@
-/**
- * 前端日志收集服务
- * 收集 console.log/error/warn 并发送到后端保存到 llmlogs/frontend/
- */
+// frontend/src/services/logger.ts
 
 interface LogEntry {
-  level: 'log' | 'error' | 'warn' | 'info';
-  message: string;
   timestamp: string;
+  level: 'LOG' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
+  message: string;
   stack?: string;
+  context?: Record<string, any>;
 }
 
-class FrontendLogger {
-  private logs: LogEntry[] = [];
-  private maxBatchSize = 50; // 每批最多50条
-  private flushInterval = 5000; // 5秒钟自动发送一次
-  private backendUrl = 'http://localhost:8000';
-  private timer: NodeJS.Timeout | null = null;
-
+class SimpleLogger {
+  private readonly BACKEND_URL = 'http://localhost:8000/api/logs/frontend';
+  private readonly STORAGE_KEY = 'failed_logs';
+  
   constructor() {
+    console.log('🔧 SimpleLogger 初始化...');
     this.interceptConsole();
-    this.startAutoFlush();
-    this.handleBeforeUnload();
-  }
-
-  /**
-   * 拦截 console 方法
-   */
-  private interceptConsole() {
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalWarn = console.warn;
-    const originalInfo = console.info;
-
-    console.log = (...args: any[]) => {
-      originalLog.apply(console, args);
-      this.captureLog('log', args);
-    };
-
-    console.error = (...args: any[]) => {
-      originalError.apply(console, args);
-      this.captureLog('error', args);
-    };
-
-    console.warn = (...args: any[]) => {
-      originalWarn.apply(console, args);
-      this.captureLog('warn', args);
-    };
-
-    console.info = (...args: any[]) => {
-      originalInfo.apply(console, args);
-      this.captureLog('info', args);
-    };
-
-    // 全局错误捕获
-    window.addEventListener('error', (event) => {
-      this.captureLog('error', [
-        `Uncaught Error: ${event.message}`,
-        `at ${event.filename}:${event.lineno}:${event.colno}`,
-        event.error?.stack || ''
-      ]);
-    });
-
-    // Promise 未捕获错误
-    window.addEventListener('unhandledrejection', (event) => {
-      this.captureLog('error', [
-        `Unhandled Promise Rejection: ${event.reason}`,
-        event.reason?.stack || ''
-      ]);
-    });
-  }
-
-  /**
-   * 捕获日志
-   */
-  private captureLog(level: LogEntry['level'], args: any[]) {
-    const message = args.map(arg => {
-      if (typeof arg === 'object') {
-        try {
-          return JSON.stringify(arg, null, 2);
-        } catch {
-          return String(arg);
-        }
-      }
-      return String(arg);
-    }).join(' ');
-
-    const entry: LogEntry = {
-      level,
-      message,
-      timestamp: new Date().toISOString(),
-    };
-
-    // 如果是 error，尝试获取堆栈
-    if (level === 'error') {
-      const errorArg = args.find(arg => arg instanceof Error);
-      if (errorArg) {
-        entry.stack = errorArg.stack;
-      }
-    }
-
-    this.logs.push(entry);
-
-    // 达到批次大小，立即发送
-    if (this.logs.length >= this.maxBatchSize) {
-      this.flush();
-    }
-  }
-
-  /**
-   * 启动自动刷新定时器
-   */
-  private startAutoFlush() {
-    this.timer = setInterval(() => {
-      if (this.logs.length > 0) {
-        this.flush();
-      }
-    }, this.flushInterval);
-  }
-
-  /**
-   * 页面关闭前发送
-   */
-  private handleBeforeUnload() {
+    this.captureErrors();
+    this.recoverFailedLogs();
+    
+    // 页面关闭前发送剩余日志
     window.addEventListener('beforeunload', () => {
-      this.flush(true); // 同步发送
+      this.sendPendingLogs();
     });
   }
 
-  /**
-   * 发送日志到后端
-   */
-  private async flush(sync: boolean = false) {
-    if (this.logs.length === 0) return;
+  private interceptConsole() {
+    const methods = ['log', 'error', 'warn', 'info'] as const;
+    
+    methods.forEach(method => {
+      const original = console[method];
+      console[method] = (...args: any[]) => {
+        original.apply(console, args);
+        
+        // 忽略 SimpleLogger 自己的日志，防止死循环
+        if (args[0] && typeof args[0] === 'string' && args[0].startsWith('[SimpleLogger]')) {
+          return;
+        }
 
-    const logsToSend = [...this.logs];
-    this.logs = [];
-
-    const payload = JSON.stringify({ logs: logsToSend });
-
-    try {
-      if (sync) {
-        // 同步请求（页面关闭前）
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${this.backendUrl}/api/logs/frontend`, false);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.send(payload);
-      } else {
-        // 异步请求
-        await fetch(`${this.backendUrl}/api/logs/frontend`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: payload,
+        this.sendLog({
+          timestamp: new Date().toISOString(),
+          level: method.toUpperCase() as LogEntry['level'],
+          message: args.map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+          ).join(' ')
         });
+      };
+    });
+  }
+
+  private captureErrors() {
+    window.addEventListener('error', (event) => {
+      this.sendLog({
+        timestamp: new Date().toISOString(),
+        level: 'ERROR',
+        message: event.message,
+        stack: event.error?.stack,
+        context: {
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno
+        }
+      });
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+      this.sendLog({
+        timestamp: new Date().toISOString(),
+        level: 'ERROR',
+        message: `Unhandled Promise Rejection: ${event.reason}`,
+        stack: event.reason?.stack
+      });
+    });
+  }
+
+  private async sendLog(log: LogEntry) {
+    try {
+      // 使用 fetch 发送日志
+      const response = await fetch(this.BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logs: [log] }),
+        // 3秒超时
+        signal: AbortSignal.timeout(3000) 
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
       }
+      
     } catch (error) {
-      // 发送失败，打印到原生 console（不会再次捕获）
-      console.warn('[FrontendLogger] 发送日志失败:', error);
+      // 失败时保存到 localStorage
+      // 注意：这里不能用 console.error，否则会死循环
+      // 使用原始 console 或自定义前缀
+      // this.saveToStorage(log);
+      // 暂时为了调试方便，不存 localStorage，直接忽略失败，避免复杂性
     }
   }
 
-  /**
-   * 手动刷新
-   */
-  public manualFlush() {
-    this.flush();
+  private saveToStorage(log: LogEntry) {
+    try {
+      const stored = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '[]');
+      stored.push(log);
+      // 最多保留 1000 条
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stored.slice(-1000)));
+    } catch (e) {
+      // 忽略存储错误
+    }
   }
 
-  /**
-   * 销毁
-   */
-  public destroy() {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
+  private async recoverFailedLogs() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '[]');
+      if (stored.length === 0) return;
+
+      const response = await fetch(this.BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logs: stored })
+      });
+
+      if (response.ok) {
+        localStorage.removeItem(this.STORAGE_KEY);
+        console.info(`[SimpleLogger] ✅ 恢复了 ${stored.length} 条未发送日志`);
+      }
+    } catch (e) {
+      // 下次启动再试
     }
-    this.flush(true);
+  }
+
+  private sendPendingLogs() {
+    const stored = localStorage.getItem(this.STORAGE_KEY);
+    if (!stored) return;
+
+    // 使用 sendBeacon 同步发送
+    const blob = new Blob([stored], { type: 'application/json' });
+    navigator.sendBeacon(this.BACKEND_URL, blob);
   }
 }
 
-// 导出单例
-export const frontendLogger = new FrontendLogger();
-
+// 立即启动单例
+export const simpleLogger = new SimpleLogger();

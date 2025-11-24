@@ -27,39 +27,49 @@ function App() {
   const loadWorkspaces = async () => {
     try {
       const list = await api.getWorkspaces();
-      setWorkspaces(list);
-      const active = list.find(w => w.active);
+      // 确保 list 是数组，如果是 undefined/null 则设为空数组
+      const safeList = Array.isArray(list) ? list : (list?.workspaces || []);
+      setWorkspaces(safeList);
+      
+      const active = safeList.find(w => w.active);
       if (active) {
         setCurrentWorkspaceId(active.id);
-        loadConversations(active.id);
-      } else if (list.length > 0) {
-        switchWorkspace(list[0].id);
+        await loadConversations(active.id);
+      } else if (safeList.length > 0) {
+        switchWorkspace(safeList[0].id);
       }
     } catch (e) {
-      console.error(e);
+      console.error('[App] 加载工作空间失败:', e);
+      setWorkspaces([]); // 失败时重置为空数组，防止 map 报错
     }
   };
 
   const switchWorkspace = async (id: string) => {
     await api.switchWorkspace(id);
     setCurrentWorkspaceId(id);
-    loadConversations(id);
+    await loadConversations(id);
   };
 
   const loadConversations = async (wsId: string) => {
-      // Ensure backend knows we switched? The API switchWorkspace does that.
+    try {
       const list = await api.getConversations();
-      setConversations(list);
-      const active = list.find(c => c.active);
+      const safeList = Array.isArray(list) ? list : [];
+      setConversations(safeList);
+
+      const active = safeList.find(c => c.active);
       if (active) {
           setCurrentConversationId(active.id);
           loadContext(active.id);
-      } else if (list.length > 0) {
-          switchConversation(list[0].id);
+      } else if (safeList.length > 0) {
+          switchConversation(safeList[0].id);
       } else {
           setMessages([]);
           setCurrentConversationId(null);
       }
+    } catch (e) {
+      console.error('[App] 加载会话列表失败:', e);
+      setConversations([]);
+    }
   };
 
   const switchConversation = async (id: string) => {
@@ -119,7 +129,7 @@ function App() {
                 value={currentWorkspaceId || ''}
                 onChange={(e) => switchWorkspace(e.target.value)}
             >
-                {workspaces.map(w => (
+                {Array.isArray(workspaces) && workspaces.map(w => (
                     <option key={w.id} value={w.id}>{w.name}</option>
                 ))}
             </select>
@@ -130,7 +140,7 @@ function App() {
                 <h3 className="text-gray-400 font-bold text-xs uppercase">Conversations</h3>
                 <button onClick={createConversation} className="text-blue-400 hover:text-blue-300 text-xs">+</button>
             </div>
-            {conversations.map(c => (
+            {Array.isArray(conversations) && conversations.map(c => (
                 <div 
                     key={c.id}
                     onClick={() => switchConversation(c.id)}
