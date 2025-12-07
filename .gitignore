@@ -44,5 +44,8 @@ data/
 .DS_Store
 Thumbs.db
 
+# 个人文档
+slspersonaldocs/
+
 
 
