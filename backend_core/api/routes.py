@@ -8,6 +8,8 @@ from pathlib import Path
 from datetime import datetime
 import json
 import os
+import sys
+import traceback
 
 router = APIRouter()
 
@@ -35,6 +37,29 @@ CONVERSATIONS_FILE = DATA_DIR / "conversations.json"
 
 # 全局前端日志文件（整个session共用）
 frontend_log_file = None
+
+# 全局 Agent 实例（懒加载）
+_agent_instance = None
+
+
+def get_agent():
+    """获取或创建 Agent 实例（懒加载）"""
+    global _agent_instance
+    if _agent_instance is None:
+        try:
+            # 确保 backend_core 在 Python path 中
+            backend_core_dir = Path(__file__).parent.parent
+            if str(backend_core_dir) not in sys.path:
+                sys.path.insert(0, str(backend_core_dir))
+            
+            from core.base.agent import Agent
+            _agent_instance = Agent(workspace_root=str(BASE_DIR))
+            print(f"[API] ✅ Agent 初始化成功，工作空间: {BASE_DIR}")
+        except Exception as e:
+            print(f"[API] ❌ Agent 初始化失败: {e}")
+            traceback.print_exc()
+            return None
+    return _agent_instance
 
 
 def init_frontend_log():
@@ -124,6 +149,19 @@ def load_json_file(filepath: Path, default=None):
         print(f"Error loading {filepath}: {e}")
         return default
 
+
+def save_json_file(filepath: Path, data: Any):
+    """保存 JSON 文件"""
+    try:
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving {filepath}: {e}")
+        return False
+
+
 @router.get("/api/workspaces")
 async def get_workspaces():
     """获取工作空间列表"""
@@ -169,15 +207,93 @@ async def get_context(conv_id: str):
     
     return {"data": {"messages": []}}
 
+
 @router.post("/api/agent/chat")
 async def chat(body: ChatMessage):
-    """发送消息 (Mock Echo)"""
-    # 这里应该调用 LLM Service
-    # 暂时返回 Mock 回复
-    return {
-        "status": "success",
-        "data": {
-            "response": f"我收到了你的消息: {body.message} (Backend is running in minimal mode)",
-            "structured_context": None
+    """
+    发送消息给 Agent，调用 LLM 并返回响应
+    """
+    agent = get_agent()
+    
+    if agent is None:
+        # Agent 初始化失败，返回错误提示
+        return {
+            "status": "error",
+            "data": {
+                "response": "Agent 初始化失败，请检查后端日志。",
+                "structured_context": None
+            }
         }
-    }
+    
+    try:
+        # 获取会话历史作为上下文
+        conversations = load_json_file(CONVERSATIONS_FILE)
+        conv = next((c for c in conversations if c["id"] == body.conversation_id), None)
+        context_history = conv.get("context_messages", []) if conv else []
+        
+        print(f"\n[API] 📨 收到聊天请求")
+        print(f"[API] 会话ID: {body.conversation_id}")
+        print(f"[API] 消息: {body.message[:100]}...")
+        print(f"[API] 历史消息数: {len(context_history)}")
+        
+        # 调用 Agent (异步版本，因为 FastAPI 已经运行在事件循环中)
+        result = await agent.run(
+            user_message=body.message,
+            context_history=context_history,
+            session_id=body.conversation_id
+        )
+        
+        # 提取响应 (Agent 返回的字段是 "message")
+        response_text = result.get("message", result.get("response", result.get("content", "")))
+        if not response_text and "error" in result:
+            response_text = f"执行出错: {result['error']}"
+        
+        
+        # 更新会话历史
+        if conv:
+            if "context_messages" not in conv:
+                conv["context_messages"] = []
+            
+            # 添加用户消息
+            conv["context_messages"].append({
+                "role": "user",
+                "content": body.message,
+                "timestamp": datetime.now().timestamp()
+            })
+            
+            # 添加助手回复
+            conv["context_messages"].append({
+                "role": "assistant",
+                "content": response_text,
+                "timestamp": datetime.now().timestamp()
+            })
+            
+            # 更新 last_active
+            conv["last_active"] = datetime.now().timestamp()
+            
+            # 保存更新后的会话
+            save_json_file(CONVERSATIONS_FILE, conversations)
+        
+        print(f"[API] ✅ Agent 响应完成，长度: {len(response_text)}")
+        
+        return {
+            "status": "success",
+            "data": {
+                "response": response_text,
+                "structured_context": result.get("structured_context"),
+                "tool_calls": result.get("tool_calls_history", [])
+            }
+        }
+        
+    except Exception as e:
+        error_msg = f"Agent 执行失败: {str(e)}"
+        print(f"[API] ❌ {error_msg}")
+        traceback.print_exc()
+        
+        return {
+            "status": "error",
+            "data": {
+                "response": error_msg,
+                "structured_context": None
+            }
+        }

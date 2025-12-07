@@ -6,9 +6,9 @@ from typing import Dict, Any, List, Optional
 import json
 from core.models.task import Phase
 from core.executors.task_executor import TaskExecutor
-from core.tool_enforcer import ToolEnforcer
-from core.validators import RuleValidator
-from core.structured_context import StructuredContext
+from core.utils.tool_enforcer import ToolEnforcer
+from core.validators.rule_validator import RuleValidator
+from core.context.structured_context import StructuredContext
 from utils.logger import safe_print as print
 
 

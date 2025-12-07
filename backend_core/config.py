@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     
     # 服务配置
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = 11241
     debug: bool = True
     
     # 安全配置

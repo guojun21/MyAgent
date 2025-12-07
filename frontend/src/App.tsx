@@ -69,7 +69,7 @@ function App() {
     } catch (e) {
       console.error('[App] 加载会话列表失败:', e);
       setConversations([]);
-    }
+      }
   };
 
   const switchConversation = async (id: string) => {

@@ -3,7 +3,7 @@ Agent 执行循环 - 负责多轮对话和工具调用的主循环
 """
 from typing import Dict, Any, List, Optional
 import json
-from core.tool_executor import ToolExecutor
+from core.executors.tool_executor import ToolExecutor
 from utils.logger import safe_print as print
 
 class AgentLoop:

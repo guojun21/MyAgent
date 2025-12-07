@@ -9,7 +9,7 @@ interface LogEntry {
 }
 
 class SimpleLogger {
-  private readonly BACKEND_URL = 'http://localhost:8000/api/logs/frontend';
+  private readonly BACKEND_URL = 'http://localhost:11241/api/logs/frontend';
   private readonly STORAGE_KEY = 'failed_logs';
   
   constructor() {

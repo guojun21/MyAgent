@@ -6,7 +6,7 @@ import requests
 from typing import Dict, Any, Optional, List
 
 class RemoteFileService:
-    def __init__(self, base_url: str = "http://localhost:8001"):
+    def __init__(self, base_url: str = "http://localhost:11241"):
         self.base_url = base_url
     
     def call_endpoint(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:

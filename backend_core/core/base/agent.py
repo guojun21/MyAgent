@@ -4,11 +4,11 @@ Agent 主入口类
 import asyncio
 from typing import Dict, Any, List, Optional
 from services.llm_service import get_llm_service, LLMService
-from core.tool_manager import ToolManager
+from core.utils.tool_manager import ToolManager
 from core.executors.task_executor import TaskExecutor
 from core.executors.phase_executor import PhaseExecutor
-from core.message_builder import MessageBuilder
-from core.agent_loop import AgentLoop
+from core.context.message_builder import MessageBuilder
+from core.base.agent_loop import AgentLoop
 from utils.logger import safe_print as print
 
 class Agent:
@@ -57,7 +57,7 @@ class Agent:
         print("="*80 + "\n")
         
         # 设置session用于API日志
-        if session_id:
+        if session_id and hasattr(self.llm_service, 'api_logger'):
             self.llm_service.api_logger.set_session(session_id)
         
         # 初始化Context历史

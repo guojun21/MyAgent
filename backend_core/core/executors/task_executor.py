@@ -6,9 +6,9 @@ from typing import Dict, Any, List, Optional
 import json
 import asyncio
 from core.models.task import Task, Phase
-from core.tool_enforcer import ToolEnforcer
-from core.validators import RuleValidator
-from core.structured_context import RoundData
+from core.utils.tool_enforcer import ToolEnforcer
+from core.validators.rule_validator import RuleValidator
+from core.context.structured_context import RoundData
 from utils.logger import safe_print as print
 
 
