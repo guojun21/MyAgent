@@ -261,12 +261,24 @@ async def chat(body: ChatMessage):
                 "timestamp": datetime.now().timestamp()
             })
             
-            # 添加助手回复
-            conv["context_messages"].append({
+            # 添加助手回复（包含工具调用和结构化上下文）
+            assistant_msg = {
                 "role": "assistant",
                 "content": response_text,
                 "timestamp": datetime.now().timestamp()
-            })
+            }
+            
+            # 保存工具调用历史
+            tool_calls_history = result.get("tool_calls_history", [])
+            if tool_calls_history:
+                assistant_msg["tool_calls"] = tool_calls_history
+            
+            # 保存结构化上下文
+            structured_context = result.get("structured_context")
+            if structured_context:
+                assistant_msg["structured_context"] = structured_context
+            
+            conv["context_messages"].append(assistant_msg)
             
             # 更新 last_active
             conv["last_active"] = datetime.now().timestamp()

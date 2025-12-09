@@ -7,6 +7,7 @@ interface Message {
   role: string;
   content: string;
   structured_context?: StructuredContextData;
+  tool_calls?: any[];
 }
 
 function App() {
@@ -87,7 +88,13 @@ function App() {
   const loadContext = async (id: string) => {
       const ctx = await api.getContext(id);
       if (ctx && ctx.messages) {
-          setMessages(ctx.messages);
+          // 确保消息包含tool_calls和structured_context
+          const messagesWithMetadata = ctx.messages.map((msg: Message) => ({
+              ...msg,
+              tool_calls: msg.tool_calls || [],
+              structured_context: msg.structured_context || undefined
+          }));
+          setMessages(messagesWithMetadata);
       }
   };
 
@@ -103,9 +110,27 @@ function App() {
 
       try {
           const res = await api.sendMessage(userMsg, currentConversationId);
-          // Reload context to get the full structured response
-          // Alternatively, construct it from res.data if structure matches
-          loadContext(currentConversationId);
+          
+          // Use response data directly instead of reloading context
+          if (res.status === 'success' && res.data) {
+              // Clean up response content - remove JSON tool call blocks if present
+              let cleanedContent = res.data.response || '';
+              
+              // Remove JSON code blocks that look like tool calls
+              cleanedContent = cleanedContent.replace(/```json\s*\{[\s\S]*?"tools"[\s\S]*?\}\s*```/g, '');
+              cleanedContent = cleanedContent.replace(/```\s*\{[\s\S]*?"tools"[\s\S]*?\}\s*```/g, '');
+              
+              const assistantMsg: Message = {
+                  role: 'assistant',
+                  content: cleanedContent.trim(),
+                  structured_context: res.data.structured_context,
+                  tool_calls: res.data.tool_calls || []
+              };
+              setMessages(prev => [...prev, assistantMsg]);
+          } else {
+              // Fallback: reload context if response structure doesn't match
+              loadContext(currentConversationId);
+          }
       } catch (e) {
           console.error(e);
           alert('Send failed');
@@ -167,13 +192,56 @@ function App() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.map((msg, idx) => (
                   <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-3xl rounded-lg p-3 ${msg.role === 'user' ? 'bg-blue-100' : 'bg-white border border-gray-200'}`}>
-                          <div className="font-bold text-xs text-gray-500 mb-1 uppercase">{msg.role}</div>
-                          <div className="whitespace-pre-wrap">{msg.content}</div>
+                      <div className={`max-w-3xl rounded-lg p-4 ${msg.role === 'user' ? 'bg-blue-100' : 'bg-white border border-gray-200'} shadow-sm`}>
+                          <div className="font-semibold text-xs text-gray-600 mb-2 uppercase tracking-wide">{msg.role}</div>
+                          <div className={`whitespace-pre-wrap text-base leading-relaxed ${msg.role === 'user' ? 'text-gray-900' : 'text-gray-800'}`}>
+                              {msg.content || <span className="text-gray-400 italic">(空消息)</span>}
+                          </div>
+                          
+                          {/* Render Tool Calls if available */}
+                          {msg.tool_calls && msg.tool_calls.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">🔧 工具调用 ({msg.tool_calls.length}):</div>
+                                  {msg.tool_calls.map((toolCall: any, idx: number) => {
+                                      // Handle different tool call formats
+                                      const toolName = toolCall.name || toolCall.tool || toolCall.function?.name || 'unknown';
+                                      const toolArgs = toolCall.args || toolCall.arguments || toolCall.function?.arguments || {};
+                                      const toolResult = toolCall.result !== undefined ? toolCall.result : null;
+                                      
+                                      return (
+                                          <div key={idx} className="mb-2 p-2 bg-gray-50 rounded border border-gray-200 text-sm">
+                                              <div className="font-mono text-xs font-semibold text-blue-600 mb-1">
+                                                  {idx + 1}. {toolName}
+                                              </div>
+                                              {toolArgs && Object.keys(toolArgs).length > 0 && (
+                                                  <div className="text-xs text-gray-600 mb-1">
+                                                      <span className="font-semibold">参数:</span>
+                                                      <pre className="mt-1 text-xs bg-white p-2 rounded overflow-x-auto border border-gray-200">
+                                                          {typeof toolArgs === 'string' ? toolArgs : JSON.stringify(toolArgs, null, 2)}
+                                                      </pre>
+                                                  </div>
+                                              )}
+                                              {toolResult !== null && toolResult !== undefined && (
+                                                  <div className="text-xs text-gray-600 mt-2">
+                                                      <span className="font-semibold">结果:</span>
+                                                      <pre className="mt-1 text-xs bg-white p-2 rounded overflow-x-auto max-h-40 overflow-y-auto border border-gray-200">
+                                                          {typeof toolResult === 'string' 
+                                                              ? toolResult 
+                                                              : JSON.stringify(toolResult, null, 2)}
+                                                      </pre>
+                                                  </div>
+                                              )}
+                                          </div>
+                                      );
+                                  })}
+                              </div>
+                          )}
                           
                           {/* Render Structured Context if available */}
                           {msg.structured_context && (
-                              <StructuredContext data={msg.structured_context} />
+                              <div className="mt-3">
+                                  <StructuredContext data={msg.structured_context} />
+                              </div>
                           )}
                       </div>
                   </div>
