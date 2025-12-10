@@ -268,8 +268,8 @@ async def chat(body: ChatMessage):
                 "timestamp": datetime.now().timestamp()
             }
             
-            # 保存工具调用历史
-            tool_calls_history = result.get("tool_calls_history", [])
+            # 保存工具调用历史（agent_loop 返回 tool_calls，兼容两种字段名）
+            tool_calls_history = result.get("tool_calls_history") or result.get("tool_calls", [])
             if tool_calls_history:
                 assistant_msg["tool_calls"] = tool_calls_history
             
@@ -293,7 +293,7 @@ async def chat(body: ChatMessage):
             "data": {
                 "response": response_text,
                 "structured_context": result.get("structured_context"),
-                "tool_calls": result.get("tool_calls_history", [])
+                "tool_calls": result.get("tool_calls_history") or result.get("tool_calls", [])
             }
         }
         

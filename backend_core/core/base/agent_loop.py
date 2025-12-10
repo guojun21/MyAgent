@@ -37,12 +37,12 @@ class AgentLoop:
             print(f"[Agent.run] 第 {iterations} 次迭代")
             print(f"{'='*60}")
             
-            # 第一次迭代：Planner阶段（强制调用plan_tool_call）
+            # 第一次迭代：Planner阶段（强制调用planner工具）
             if is_first_iteration:
-                print(f"[Agent.run] 🎯 Planner阶段：强制调用plan_tool_call")
+                print(f"[Agent.run] 🎯 Planner阶段：强制调用planner工具")
                 tool_choice = "required"
-                # 只提供plan_tool_call工具
-                planner_tools = [t for t in tools if t['function']['name'] == 'plan_tool_call']
+                # 只提供planner工具（注意：工具定义用的是 planner，不是 plan_tool_call）
+                planner_tools = [t for t in tools if t['function']['name'] == 'planner']
                 current_tools = planner_tools
             else:
                 # 后续迭代：正常调用所有工具
@@ -180,8 +180,8 @@ class AgentLoop:
         print(f"\n[Agent.run] 🎯 解析Planner的计划...")
         plan_tool_call = llm_response["tool_calls"][0]
         
-        if plan_tool_call["function"]["name"] != "plan_tool_call":
-            print(f"[Agent.run] ⚠️⚠️ 严重错误：第一次迭代应该调用plan_tool_call")
+        if plan_tool_call["function"]["name"] not in ["plan_tool_call", "planner"]:
+            print(f"[Agent.run] ⚠️⚠️ 严重错误：第一次迭代应该调用planner工具")
             # 强制进入普通执行模式
             return {"break_loop": True, "is_first_iteration_complete": True}
 
